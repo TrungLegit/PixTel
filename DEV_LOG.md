@@ -40,6 +40,17 @@
 
 ## Nhật Ký Cập Nhật (Newest First)
 
+### [2026-11-25 23:41] — TrungLegit (AI) — Tạo Báo Cáo Hình Ảnh Item & Model Sprite (`docs/ITEM_VISUAL_REPORT.md`)
+- **Commit / Branch:** `main`
+- **Giai đoạn / Version:** `PIXTEL v2.7` — Item Visual Reference & Model Handoff
+- **Đã làm (Done):**
+  - Xuất 3 bảng ảnh đối chiếu sprite `24×24 → 4× Nearest` trong `docs/media/items/`: [sheet-icons-atlas.png](docs/media/items/sheet-icons-atlas.png) (64 icon), [sheet-paperdoll-atlas.png](docs/media/items/sheet-paperdoll-atlas.png) (77 frame Paper-Doll), và [sheet-items-todo-models.png](docs/media/items/sheet-items-todo-models.png) (30 item ưu tiên vẽ/sửa model gồm 8 Cổ vật ẩn, 8 trang bị Archetype & 14 tiêu thụ/nguyên liệu).
+  - Tạo báo cáo [docs/ITEM_VISUAL_REPORT.md](docs/ITEM_VISUAL_REPORT.md) kèm bảng tổng hợp 94 item, danh sách file code/atlas và prompt mẫu để gửi cho Artist/AI chỉnh model.
+- **File chính đã sửa / thêm:** `docs/ITEM_VISUAL_REPORT.md`, `docs/media/items/sheet-icons-atlas.png`, `docs/media/items/sheet-paperdoll-atlas.png`, `docs/media/items/sheet-items-todo-models.png`, `DEV_LOG.md`
+- **Kiểm tra (Verified):** Kiểm tra trực quan cả 3 file PNG đã xuất (`read_file`) đảm bảo sắc nét, không đè chữ, khớp 100% metadata atlas.
+- **Lưu ý / Handoff (Breaking changes / Đang dở):** Không thay đổi code runtime.
+- **Gợi ý bước tiếp theo (Next Steps):** Gửi `docs/ITEM_VISUAL_REPORT.md` cho bạn/AI để vẽ model riêng cho 8 Cổ vật ẩn & các item chưa có frame atlas.
+
 ### [2026-11-25 23:31] — TrungLegit (AI) — Sửa lỗi deploy GitHub Pages (`Found 0 artifact(s)`)
 - **Commit / Branch:** `main`
 - **Giai đoạn / Version:** `PIXTEL v2.7` — CI/CD GitHub Pages Fix

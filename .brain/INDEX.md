@@ -1,5 +1,5 @@
 # Project Brain Index
-*Generated: 2026-11-25T16:30:56.403484+00:00*
+*Generated: 2026-11-25T16:41:24.666847+00:00*
 
 ## Description
 > **Thế giới mở 16-Bit Action RPG trên trình duyệt (PC · Mobile PWA · Co-op 2–4 Người)** — Khởi đầu tay không tại **Thị Trấn Khởi Nguyên**, săn trang bị **khóa chặt theo Class**, luyện **Ma Trận Luyện
@@ -19,8 +19,8 @@
 - `file:tests/featureTests.ts` (file, 30 links): Merged 13/13 v2.7 test suites (Hidden Relics, Mobile Twin-Stick, Co-op WS Server) with strict class-locked weapon and ruins_weapon tests.
 - `file:src/systems/inventorySystem.ts` (file, 24 links): Added getValidEquippedWeapon/hasValidEquippedWeapon guards across bonuses, passives, set effects, stats, and auto-unequip.
 - `file:src/ui/HUD.ts` (file, 21 links): Merged v2.7 Co-op party roster & toolbar with getValidEquippedWeapon bare-handed/skill-lock display.
+- `file:src/data/equipments.ts` (file, 18 links): Locked all 8 former universal weapons strictly to prism_knight (7 swords/axes/mauls) or bit_rogue (wpn_void_scythe).
 - `file:src/graphics/pixelfxHeroModels.ts` (file, 17 links): Prioritized wpn_void_scythe renderer branch ahead of halberd check for Bit Rogue scythe visuals.
-- `file:src/data/equipments.ts` (file, 17 links): Locked all 8 former universal weapons strictly to prism_knight (7 swords/axes/mauls) or bit_rogue (wpn_void_scythe).
 - `file:src/ui/DialogueModal.ts` (file, 13 links): Added green/red Class compatibility tags on equipment items in Mira shop.
 
 ## Recent Decisions
@@ -31,12 +31,12 @@
 - **Hidden Items System (Craft-Only & Boss-Drop Only)** (`decision:20261125143028-hidden-items-system-craftonly`): Added 8 isHidden items (4 craft_only, 4 boss_only) strictly isolated from shops/chests/normal mobs, masked as ??? until discovered, permanently unlocked in localStorage, and integrated with combat passives, VFX, and Paper-Doll shimmer.
 
 ## Stale Files (Need Re-reading)
-- `file:.agents/skills/codixel/package.json` (.agents/skills/codixel/package.json)
-- `file:.agents/skills/pixelfx/SKILL.md` (.agents/skills/pixelfx/SKILL.md)
 - `file:.brain/INDEX.md` (.brain/INDEX.md)
 - `file:.brain/edges.jsonl` (.brain/edges.jsonl)
 - `file:.brain/nodes.jsonl` (.brain/nodes.jsonl)
 - `file:DEV_LOG.md` (DEV_LOG.md)
+- `file:.agents/skills/codixel/package.json` (.agents/skills/codixel/package.json)
+- `file:.agents/skills/pixelfx/SKILL.md` (.agents/skills/pixelfx/SKILL.md)
 - `file:README.md` (README.md)
 - `file:scripts/extract_enemy_sprites.py` (scripts/extract_enemy_sprites.py)
 - `file:src/graphics/enemyAtlas.ts` (src/graphics/enemyAtlas.ts)
