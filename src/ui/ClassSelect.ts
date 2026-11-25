@@ -8,16 +8,16 @@ import type { PixTelOpenWorldGame } from "../game";
 import { sfx } from "../audio/chiptuneSynth";
 
 const LOGO_GLYPHS: Record<string, string[]> = {
-  P: ["11110", "10001", "10001", "11110", "10000", "10000", "10000"],
-  I: ["11111", "00100", "00100", "00100", "00100", "00100", "11111"],
-  X: ["10001", "01010", "00100", "00100", "01010", "10001", "10001"],
-  T: ["11111", "00100", "00100", "00100", "00100", "00100", "00100"],
-  E: ["11111", "10000", "10000", "11110", "10000", "10000", "11111"],
-  L: ["10000", "10000", "10000", "10000", "10000", "10000", "11111"],
-  "1": ["00100", "01100", "00100", "00100", "00100", "00100", "01110"],
-  "6": ["01110", "10000", "10000", "11110", "10001", "10001", "01110"],
-  "-": ["00000", "00000", "00000", "11111", "00000", "00000", "00000"],
-  B: ["11110", "10001", "10001", "11110", "10001", "10001", "11110"],
+  P: ["1111110", "1100011", "1100011", "1111110", "1100000", "1100000", "1100000"],
+  I: ["1111111", "0001100", "0001100", "0001100", "0001100", "0001100", "1111111"],
+  X: ["1100011", "1100011", "0110110", "0001100", "0110110", "1100011", "1100011"],
+  T: ["1111111", "0001100", "0001100", "0001100", "0001100", "0001100", "0001100"],
+  E: ["1111111", "1100000", "1100000", "1111110", "1100000", "1100000", "1111111"],
+  L: ["1100000", "1100000", "1100000", "1100000", "1100000", "1100000", "1111111"],
+  "1": ["0001100", "0011100", "0001100", "0001100", "0001100", "0001100", "0111110"],
+  "6": ["0011110", "0110000", "1100000", "1111110", "1100011", "1100011", "0111110"],
+  "-": ["0000000", "0000000", "0000000", "1111111", "0000000", "0000000", "0000000"],
+  B: ["1111110", "1100011", "1100011", "1111110", "1100011", "1100011", "1111110"],
 };
 
 interface CardPreview {
@@ -74,7 +74,7 @@ export class ClassSelectUI {
     this.logoCtx.imageSmoothingEnabled = false;
     this.logoBuffer = document.createElement("canvas");
     this.logoBuffer.width = 240;
-    this.logoBuffer.height = 80;
+    this.logoBuffer.height = 88;
     this.logoBufferCtx = this.logoBuffer.getContext("2d")!;
     this.logoBufferCtx.imageSmoothingEnabled = false;
 
@@ -400,9 +400,9 @@ export class ClassSelectUI {
     px(105, 31, 30, 2, "#f7c74d");
 
     const letters = "PIXTEL";
-    const scale = 3;
-    const glyphWidth = 5 * scale;
-    const gap = 5;
+    const scale = 4;
+    const glyphWidth = 7 * scale;
+    const gap = 4;
     const startX = Math.floor((width - (letters.length * glyphWidth + (letters.length - 1) * gap)) / 2);
     const startY = 37;
     const colors = [
@@ -433,9 +433,9 @@ export class ClassSelectUI {
     });
 
     const badge = "16-BIT";
-    const badgeWidth = badge.length * 5 + (badge.length - 1);
+    const badgeWidth = badge.length * 7 + (badge.length - 1);
     const badgeX = Math.floor((width - badgeWidth) / 2);
-    const badgeY = 64;
+    const badgeY = 74;
     px(badgeX - 5, badgeY - 2, badgeWidth + 10, 11, "#03050a");
     px(badgeX - 4, badgeY - 1, badgeWidth + 8, 9, "#171d2d");
     px(badgeX - 4, badgeY - 1, badgeWidth + 8, 1, "#52def5");
@@ -444,7 +444,7 @@ export class ClassSelectUI {
       glyph.forEach((row, rowIndex) => {
         for (let col = 0; col < row.length; col++) {
           if (row[col] === "1") {
-            px(badgeX + index * 6 + col, badgeY + rowIndex, 1, 1, rowIndex < 3 ? "#ffffff" : "#8cecff");
+            px(badgeX + index * 8 + col, badgeY + rowIndex, 1, 1, rowIndex < 3 ? "#ffffff" : "#8cecff");
           }
         }
       });
