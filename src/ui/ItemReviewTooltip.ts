@@ -1,5 +1,6 @@
 import { getClassDef } from "../data/classes";
 import { ELEMENT_META } from "../data/elements";
+import { ENEMIES } from "../data/enemies";
 import { SET_BONUSES } from "../data/equipments";
 import {
   CONSUMABLE_GROUP_LABELS,
@@ -208,6 +209,34 @@ export class ItemReviewTooltip {
     }
 
     const { def, inst, isEquipped, sourceKind } = resolved;
+
+    // Mask un-unlocked hidden items completely to avoid leaking secrets
+    if (def.isHidden && !this.game.isHiddenItemUnlocked(def.id)) {
+      this.root.innerHTML = `
+        <div class="review-head-plaque">
+          <div style="width:72px;height:72px;border:2px dashed #9b7ce0;background:#120e1a;display:flex;align-items:center;justify-content:center;color:#ffe066;font-size:24px;font-weight:700">?</div>
+          <div class="review-head-meta">
+            <div class="review-badges-row">
+              <span class="review-wax-seal" style="color:#ffe066;border-color:#ff9922;background:#301b3d">✦ ẨN</span>
+              <span class="review-rarity-txt" style="color:#c266ff">[Cổ Vật Bí Ẩn]</span>
+            </div>
+            <div class="review-item-name" style="color:#ffe066">??? — Cổ Vật Chưa Mở Khóa</div>
+            <div class="review-sub-line">Thông số & danh tính bị phong ấn</div>
+          </div>
+        </div>
+        <div class="rope-divider"></div>
+        <div class="review-lore">“${def.hiddenHint ?? "Khám phá Lò Rèn Lăng Kính hoặc đánh bại Boss để giải phong ấn cổ vật này."}”</div>
+      `;
+      this.pedestalCanvas = null;
+      this.pedestalCtx = null;
+      this.currentDef = null;
+      this.liveFx = null;
+      this.root.classList.remove("hidden");
+      this.root.setAttribute("aria-hidden", "false");
+      this._position(mx, my);
+      return;
+    }
+
     const rInfo = RARITY_INFO[def.rarity];
     const tInfo = getTierBadge(def);
     const aura = resolveUiAuraKind(def.rarity, inst.enhanceLevel);
@@ -287,6 +316,13 @@ export class ItemReviewTooltip {
       const passiveHtml = def.passiveDesc
         ? `<div class="review-doll-note" style="border-left-color:#b85a14;color:#4a2308">✦ ${def.passiveDesc}</div>`
         : "";
+      const hiddenSourceNote = def.isHidden
+        ? `<div class="review-doll-note" style="border-left-color:#ff9922;color:#5c2106">✦ CỔ VẬT ẨN · ${
+            def.hiddenSource === "craft_only"
+              ? "Nguồn: Chỉ Chế Tạo tại Lò Rèn Lăng Kính"
+              : `Nguồn: Độc quyền Boss ${def.sourceBossId ? ENEMIES[def.sourceBossId]?.name ?? def.sourceBossId : ""}`
+          }</div>`
+        : "";
 
       // Set bonus block
       let setHtml = "";
@@ -312,6 +348,7 @@ export class ItemReviewTooltip {
       bodyHtml = `
         <div class="review-stats-grid">${statLines}</div>
         ${infuseNote}
+        ${hiddenSourceNote}
         ${passiveHtml}
         ${dollFeatures.length ? `<div class="review-doll-note">✦ Paper-Doll: ${dollFeatures.join(" · ")}</div>` : ""}
         ${setHtml}

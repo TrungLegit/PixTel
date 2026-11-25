@@ -15,7 +15,7 @@
 - **Các hệ thống chính đã hoàn thiện:**
   - **Thế giới mở & Đồ họa 16-Bit:** Bản đồ liền mạch `160×160` tile (`480×270` integer-scaled Canvas 2D), Thị Trấn Khởi Nguyên + 4 quần xã, cơ chế Khôi phục sắc màu (Bleached → Restored), 9 Trụ Sắc Màu & Dịch chuyển nhanh `[M]`, Dual-Grid visuals.
   - **Chiến đấu & Lớp nhân vật:** 4 Class (`Prism Knight`, `Chroma Mage`, `Bit Rogue` melee LMB, `Pixel Tinker`), ma trận phản ứng **9 nguyên tố theo cặp**, kỹ năng `[E]`, tuyệt kỹ `[Q]`, đồng bộ VFX `pixelfx`, animation 122-frame monster atlas & boss seals (gồm Phase 2/3 Eraser totems).
-  - **Trang bị, Túi đồ & Lò Rèn:** Hệ thống trang bị 5 ô (`helmet`, `armor`, `weapon`, `boots`, `accessory`), giao diện Túi đồ 16-bit `[I/B]`, Paper-Doll pixel rendering trực tiếp trên nhân vật, 5-tier codixel items + vintage rope hover frame, phân bổ chỉ số (stat allocation), Rune Matrix Forge & Prism Forge `+0 → +10` (8-pigment +5 forge & 15+ bản vẽ), Loot Table nảy/tự hút & Rương Sắc Màu.
+  - **Trang bị, Túi đồ & Lò Rèn:** Hệ thống trang bị 5 ô (`helmet`, `armor`, `weapon`, `boots`, `accessory`), giao diện Túi đồ 16-bit `[I/B]`, Paper-Doll pixel rendering trực tiếp trên nhân vật, 5-tier codixel items + vintage rope hover frame, phân bổ chỉ số (stat allocation), Rune Matrix Forge & Prism Forge `+0 → +10` (8-pigment +5 forge & bản vẽ chế tạo), **8 Vật phẩm ẩn (`isHidden: true`: 4 `craft_only` + 4 `boss_only`)** với cơ chế che thông số `???` & lưu mở khóa vĩnh viễn qua `localStorage`, Loot Table nảy/tự hút & Rương Sắc Màu.
   - **Nội dung & Hướng dẫn:** Cốt truyện Aethel-16 & Lore Codex, Quest overhaul, Cẩm nang tân thủ 5 tab, `README.md` kèm video MP4 / GIF / screenshots, và Rule `DEV_LOG.md`.
 - **Trọng tâm tiếp theo (Active / Next Focus Areas):**
   - *(Thành viên tiếp theo khi bắt đầu task mới hãy ghi rõ mình đang nhận phần nào tại đây hoặc thêm bản ghi mới bên dưới sau khi hoàn tất.)*
@@ -39,6 +39,20 @@
 ---
 
 ## Nhật Ký Cập Nhật (Newest First)
+
+### [2026-11-25 21:30] — TrungLegit (AI) — Hệ thống Vật phẩm ẩn (`Craft-Only` & `Boss-Drop Only`)
+- **Commit / Branch:** `main`
+- **Giai đoạn / Version:** `PIXTEL v2.6+` — Hidden Relics System
+- **Đã làm (Done):**
+  - Tạo [src/data/hiddenItems.ts](src/data/hiddenItems.ts) gồm **8 Vật phẩm ẩn** (`isHidden: true`, Epic/Legendary trải đều 5 ô): 4 món `craft_only` (*Kiếm Thất Sắc Nguyên Thủy*, *Vương Miện Aethel-16*, *Thánh Giáp Hồi Sắc*, *Ấn Hút Mạch Lăng Kính*) và 4 món `boss_only` (*Áo Giáp Cổ Thụ Bất Diệt*, *Mũ Nhãn Rồng Lăng Kính*, *Hài Hổ Phách Vô Ảnh*, *Thần Kiếm Xóa Sắc — Null Sever*).
+  - Bổ sung 3 nội tại mới (`restored_prism_surge`, `energy_siphon_magnet`, `set_resonance_echo`) tích hợp vào `recalculatePlayerStats()`, `CombatSystem`, tầm hút loot (`+60px`) và hồi phục sau hạ quái.
+  - Bảo đảm tuyệt đối không rò rỉ vào Shop thường, `pickRandomEquipByRarity()` (rương/rơi ngẫu nhiên) hay bảng drop quái thường; lần đầu hạ mỗi Boss đảm bảo rơi cổ vật ẩn kèm `pixtel/rainbow-burst` + `waypoint-pillar` + `playHiddenDrop()`.
+  - Ẩn danh tính & chỉ số (`??? — Bản Thiết Kế Bí Ẩn` / `??? — Cổ Vật Chưa Mở Khóa`) trên tab `✦ Bản Vẽ Ẩn` của `ForgeModal` và `ItemReviewTooltip` trước khi mở khóa; lưu mở khóa vĩnh viễn trong `localStorage` (`pixtel_hidden_unlocks_v1` + `SaveDataV2.unlockedHiddenItems`).
+  - Thêm bộ test thứ 11 vào `tests/featureTests.ts` kiểm tra toàn bộ điều kiện ẩn, `craft_only`, `boss_only`, save/load và chỉ số.
+- **File chính đã sửa / thêm:** `src/data/hiddenItems.ts`, `src/data/types.ts`, `src/data/items.ts`, `src/data/recipes.ts`, `src/world/entities.ts`, `src/systems/saveSystem.ts`, `src/systems/inventorySystem.ts`, `src/systems/forgeSystem.ts`, `src/systems/combat.ts`, `src/audio/chiptuneSynth.ts`, `src/game.ts`, `src/ui/ForgeModal.ts`, `src/ui/ItemReviewTooltip.ts`, `tests/featureTests.ts`
+- **Kiểm tra (Verified):** `npm run typecheck`, `npm run build`, `11/11` feature test suites pass, và kiểm thử headless Chrome UI (`✦ Bản Vẽ Ẩn` masked `???` -> giải mã -> chế tạo -> lưu `localStorage`).
+- **Lưu ý / Handoff (Breaking changes / Đang dở):** Không có breaking change; các save cũ v2/v3 tự tương thích và tự đồng bộ mở khóa khi nhặt/chế tạo đồ ẩn.
+- **Gợi ý bước tiếp theo (Next Steps):** Commit & push lên `main`; có thể thêm mục tra cứu Bộ Sưu Tập Cổ Vật Ẩn vào Cẩm Nang `[H]` nếu muốn.
 
 ### [2026-11-25 20:48] — TrungLegit (AI) — Thiết lập Team Vibe-Code Rule & `DEV_LOG.md`
 - **Commit / Branch:** `main`
