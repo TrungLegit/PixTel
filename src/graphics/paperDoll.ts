@@ -6,6 +6,7 @@ import type {
   ItemDef,
   ItemInstance,
 } from "../data/types";
+import { drawCodixelOverlay } from "./codixelAtlas";
 import { sprites } from "./pixelSprites";
 
 export type HeroFacingDir = "down" | "up" | "left" | "right";
@@ -16,7 +17,7 @@ export interface PaperDollOptions {
   equipment: Partial<Record<EquipSlot, ItemInstance>>;
   x: number; // bottom-center X on canvas
   y: number; // bottom-center Y on canvas
-  scale?: number; // 1 for 480x270 map, 4 for 96x96 UI preview
+  scale?: number; // 1 for 480x270 map, 4 for UI preview
   walkFrame: number;
   facing: number; // 1 = right, -1 = left
   facingDir?: HeroFacingDir;
@@ -24,7 +25,9 @@ export interface PaperDollOptions {
   hitFlash?: boolean;
   bleached?: boolean;
   time?: number;
-  chargePct?: number; // 0..1 when charging
+  chargePct?: number;
+  aegisActive?: boolean;
+  buffActive?: boolean;
 }
 
 /** Converts a hex color into cool Bleached grayscale for unrestored world areas. */
@@ -84,16 +87,16 @@ export function getWeaponAnchorOffset(
   if (facingDir === "up") {
     return { dx: f * 5, dy: animState === "attack" ? -14 : -11 };
   }
-  if (animState === "attack") return { dx: f * 8, dy: -8 };
+  if (animState === "attack") return { dx: f * 9, dy: -8 };
   if (animState === "charge") return { dx: -f * 4, dy: -10 };
   if (animState === "dash") return { dx: -f * 6, dy: -7 };
-  return { dx: f * 6, dy: -9 };
+  return { dx: f * 7, dy: -10 };
 }
 
 /**
- * Layered Paper-Doll Pixel Renderer:
- * Draw order: Base Body -> Boots -> Armor -> Helmet -> Weapon -> Accessory Orb.
- * Synced with 4-direction facing, horizontal flip, animation state, Bleached state, and hitFlash.
+ * Layered codixel Paper-Doll Pixel Renderer:
+ * Draw order: Back Cape/Wings -> Base Body -> Boots -> Armor -> Helmet -> Weapon -> Orbiting Accessory -> Active Aegis.
+ * Renders ALL 5 slots + tiers visibly on both the Open-World map and Inventory preview!
  */
 export function drawPaperDollHero(ctx: CanvasRenderingContext2D, opts: PaperDollOptions) {
   const {
@@ -110,13 +113,15 @@ export function drawPaperDollHero(ctx: CanvasRenderingContext2D, opts: PaperDoll
     bleached = false,
     time = 0,
     chargePct = 0,
+    aegisActive = false,
+    buffActive = false,
   } = opts;
 
   ctx.imageSmoothingEnabled = false;
-  const wf = ((walkFrame % 4) + 4) % 4;
+  const wf = ((Math.floor(walkFrame) % 4) + 4) % 4;
   const f: 1 | -1 = facing < 0 ? -1 : 1;
 
-  // Animation vertical bob & horizontal lean
+  // Frame-synced vertical bob & horizontal lean
   let bobY = 0;
   let leanX = 0;
   if (animState === "idle") {
@@ -136,8 +141,11 @@ export function drawPaperDollHero(ctx: CanvasRenderingContext2D, opts: PaperDoll
 
   const ox = Math.round(x - 8 * scale + leanX * scale);
   const oy = Math.round(y - 16 * scale + bobY * scale);
+  // 24x24 codixel overlay wraps centered around the 16x16 hero with 4px margins on all 4 sides
+  const pdX = ox - 4 * scale;
+  const pdY = oy - 4 * scale;
+  const pdSize = 24 * scale;
 
-  // Pixel plot helper respecting horizontal flip around 16px local width
   const px = (gx: number, gy: number, pw: number, ph: number, col: string) => {
     const rx = f < 0 ? 16 - gx - pw : gx;
     ctx.fillStyle = col;
@@ -150,7 +158,25 @@ export function drawPaperDollHero(ctx: CanvasRenderingContext2D, opts: PaperDoll
   };
 
   // =========================================================================
-  // LAYER 1: BASE BODY (Thân nhân vật)
+  // LAYER 0: BACK CAPE / WINGS (Drawn behind body!)
+  // =========================================================================
+  const aDef = equipment.armor ? ITEMS[equipment.armor.defId] : undefined;
+  const bDef = equipment.boots ? ITEMS[equipment.boots.defId] : undefined;
+  const hDef = equipment.helmet ? ITEMS[equipment.helmet.defId] : undefined;
+  const wInst = equipment.weapon;
+  const wDef = wInst ? ITEMS[wInst.defId] : undefined;
+  const accDef = equipment.accessory ? ITEMS[equipment.accessory.defId] : undefined;
+
+  if (!hitFlash && aDef) {
+    const capeKey = aDef.capeKey ?? `cape_t${aDef.tier ?? 1}`;
+    const swayY = animState === "run" ? ((wf & 1) ? -1 * scale : 0) : 0;
+    if (facingDir !== "up") {
+      drawCodixelOverlay(ctx, capeKey, pdX, pdY + swayY, pdSize, pdSize, f < 0, bleached);
+    }
+  }
+
+  // =========================================================================
+  // LAYER 1: BASE BODY (16x16 Hero Class Sprite)
   // =========================================================================
   const sp = sprites.getHero(classId, wf);
   const baseImg = hitFlash
@@ -166,225 +192,160 @@ export function drawPaperDollHero(ctx: CanvasRenderingContext2D, opts: PaperDoll
         : sp.right;
 
   ctx.drawImage(baseImg, ox, oy, 16 * scale, 16 * scale);
-
-  // During hitFlash, keep crisp solid white flash silhouette
   if (hitFlash) return;
 
-  // Back-view subtle head/hood shading when moving North (facingDir === "up")
+  // Active ATK/Buff Aura Halo under/behind character torso
+  if (buffActive && !bleached) {
+    const pulse = (Math.floor(time * 10) & 1) === 0;
+    px(3, 14, 10, 1, pulse ? "#ffe066" : "#ff8844");
+  }
+
+  // Back-view subtle shading when moving North
   if (facingDir === "up") {
     px(6, 4, 4, 2, bleached ? "#606675" : "#222536");
   }
 
   // =========================================================================
-  // LAYER 2: BOOTS (Giày — khớp bước chạy)
+  // LAYER 2: BOOTS (Synced with walk stride!)
   // =========================================================================
-  const bDef = equipment.boots ? ITEMS[equipment.boots.defId] : undefined;
-  const bStyle = resolveStyle(bDef);
-  if (bStyle && bDef?.id !== "bts_starter") {
-    const b = getPalette(bStyle, bleached);
-    const strideShift = animState === "run" && wf === 1 ? 1 : animState === "run" && wf === 3 ? -1 : 0;
-    const lx = 4 - strideShift;
-    const rx = 9 + strideShift;
-    px(lx, 13, 3, 2, b.primary);
-    px(rx, 13, 3, 2, b.primary);
-    px(lx, 13, 2, 1, b.accent);
-    px(rx, 13, 2, 1, b.accent);
-    if (b.shape === "greaves" || b.shape === "treads" || b.shape === "void_step") {
-      px(lx, 12, 3, 1, b.outline);
-      px(rx, 12, 3, 1, b.outline);
-    }
-    if (b.shape === "void_step") {
-      px(lx, 15, 3, 1, b.accent);
-      px(rx, 15, 3, 1, b.accent);
+  if (bDef) {
+    const strideIdx = animState === "run" && wf % 2 === 1 ? 1 : 0;
+    const bootsBase = bDef.paperDollKey ?? `boots_t${bDef.tier ?? 1}`;
+    const drew = drawCodixelOverlay(
+      ctx,
+      `${bootsBase}_${strideIdx}`,
+      pdX,
+      pdY,
+      pdSize,
+      pdSize,
+      f < 0,
+      bleached
+    );
+    if (!drew) {
+      const bStyle = resolveStyle(bDef);
+      if (bStyle) {
+        const b = getPalette(bStyle, bleached);
+        const shift = strideIdx;
+        px(4 - shift, 13, 3, 2, b.primary);
+        px(9 + shift, 13, 3, 2, b.primary);
+      }
     }
   }
 
   // =========================================================================
-  // LAYER 3: ARMOR (Áo giáp / Giáp vai / Áo choàng)
+  // LAYER 3: ARMOR (Chestplate & Pauldrons + North Backplate)
   // =========================================================================
-  const aDef = equipment.armor ? ITEMS[equipment.armor.defId] : undefined;
-  const aStyle = resolveStyle(aDef);
-  if (aStyle && aDef?.id !== "arm_cloth") {
-    const a = getPalette(aStyle, bleached);
-    if (facingDir === "up") {
-      // Back view: armored backplate or flowing mantle cape
-      px(5, 7, 6, 5, a.primary);
-      px(6, 8, 4, 3, a.accent);
-      if (a.shape === "mantle" || a.shape === "aegis") {
-        px(4, 7, 1, 6, a.outline);
-        px(11, 7, 1, 6, a.outline);
-        px(5, 11, 6, 2, a.outline);
-      }
-    } else {
-      // Front / side chestplate + pauldrons
-      px(6, 7, 4, 3, a.primary);
-      px(7, 7, 2, 2, a.accent);
-      if (a.shape === "plate" || a.shape === "aegis" || a.shape === "mantle") {
-        px(3, 7, 3, 2, a.primary);
-        px(10, 7, 3, 2, a.primary);
-        px(4, 6, 2, 1, a.accent);
-        px(10, 6, 2, 1, a.accent);
-      } else {
+  if (aDef) {
+    const armorKey = aDef.paperDollKey ?? `armor_t${aDef.tier ?? 1}`;
+    const drew = drawCodixelOverlay(ctx, armorKey, pdX, pdY, pdSize, pdSize, f < 0, bleached);
+    if (!drew) {
+      const aStyle = resolveStyle(aDef);
+      if (aStyle) {
+        const a = getPalette(aStyle, bleached);
+        px(6, 7, 4, 3, a.primary);
         px(4, 7, 2, 2, a.primary);
         px(10, 7, 2, 2, a.primary);
       }
-      if (a.shape === "mantle") {
-        px(5, 10, 6, 1, a.accent);
+    }
+    // When moving up (North view), draw back cape OVER the back torso so it drapes cleanly
+    if (facingDir === "up") {
+      const capeKey = aDef.capeKey ?? `cape_t${aDef.tier ?? 1}`;
+      drawCodixelOverlay(ctx, capeKey, pdX, pdY, pdSize, pdSize, f < 0, bleached);
+    }
+  }
+
+  // =========================================================================
+  // LAYER 4: HELMET (Hoods, Plumes, Visors, Horns, Floating Halo!)
+  // =========================================================================
+  if (hDef) {
+    const helmetKey = hDef.paperDollKey ?? `helmet_t${hDef.tier ?? 1}`;
+    const drew = drawCodixelOverlay(ctx, helmetKey, pdX, pdY, pdSize, pdSize, f < 0, bleached);
+    if (!drew) {
+      const hStyle = resolveStyle(hDef);
+      if (hStyle) {
+        const h = getPalette(hStyle, bleached);
+        px(4, 1, 8, 2, h.primary);
+        px(5, 2, 6, 1, h.accent);
       }
     }
   }
 
   // =========================================================================
-  // LAYER 4: HELMET (Mũ / Kính / Vương miện)
+  // LAYER 5: WEAPON (Idle, Run, Attack Swing, Charge Pullback & Spark)
   // =========================================================================
-  const hDef = equipment.helmet ? ITEMS[equipment.helmet.defId] : undefined;
-  const hStyle = resolveStyle(hDef);
-  if (hStyle && hDef?.id !== "hlm_starter") {
-    const h = getPalette(hStyle, bleached);
-    const hx = h.offsetX ?? 0;
-    const hy = h.offsetY ?? 0;
-
-    if (h.shape === "halo") {
-      // Floating Prism Halo + Royal Diadem
-      px(5 + hx, 0 + hy, 6, 1, h.accent);
-      px(4 + hx, 1 + hy, 8, 1, h.primary);
-      px(6 + hx, 1 + hy, 4, 1, "#ffffff");
-      px(5 + hx, 2 + hy, 6, 1, h.outline);
-    } else if (h.shape === "crown") {
-      px(4 + hx, 1 + hy, 1, 2, h.accent);
-      px(7 + hx, 0 + hy, 2, 3, h.accent);
-      px(11 + hx, 1 + hy, 1, 2, h.accent);
-      px(4 + hx, 2 + hy, 8, 2, h.primary);
-      px(5 + hx, 3 + hy, 6, 1, h.outline);
-    } else if (h.shape === "visor") {
-      px(4 + hx, 1 + hy, 8, 2, h.primary);
-      px(5 + hx, 1 + hy, 6, 1, h.outline);
-      if (facingDir !== "up") {
-        px(5 + hx, 3 + hy, 6, 1, h.accent);
-      }
-    } else {
-      // Crest / Hood
-      px(6 + hx, 0 + hy, 4, 1, h.accent);
-      px(4 + hx, 1 + hy, 8, 2, h.primary);
-      px(5 + hx, 2 + hy, 6, 1, h.accent);
-    }
-  }
-
-  // =========================================================================
-  // LAYER 5: WEAPON (Vũ khí khớp 4 hướng & 5 trạng thái animation)
-  // =========================================================================
-  const wInst = equipment.weapon;
-  const wDef = wInst ? ITEMS[wInst.defId] : undefined;
-  const wStyle = resolveStyle(wDef);
-  if (wStyle) {
-    const w = getPalette(wStyle, bleached);
-    const wxOff = w.offsetX ?? 0;
-    const wyOff = w.offsetY ?? 0;
-
-    // Determine pose offset by animState
-    let swingX = 0;
-    let swingY = 0;
-    let horizontalAttack = false;
-    if (animState === "run") {
-      swingY = wf % 2 === 1 ? -1 : 0;
-    } else if (animState === "attack") {
-      horizontalAttack = true;
-      swingX = 2;
-      swingY = 1;
-    } else if (animState === "charge") {
-      swingX = -2;
-      swingY = -1;
+  if (wDef) {
+    const isAtk = animState === "attack";
+    const poseSuffix = isAtk ? "_atk" : "_idle";
+    const wBase = wDef.paperDollKey ?? `wpn_sword_t${wDef.tier ?? 1}`;
+    let swingShiftX = 0;
+    let swingShiftY = 0;
+    if (animState === "charge") {
+      swingShiftX = -f * 2 * scale;
+      swingShiftY = -1 * scale;
     } else if (animState === "dash") {
-      swingX = -2;
-      swingY = 1;
+      swingShiftX = -f * 2 * scale;
+      swingShiftY = 1 * scale;
+    } else if (animState === "run") {
+      swingShiftY = wf % 2 === 1 ? -1 * scale : 0;
     }
 
-    const hx = 12 + wxOff + swingX;
-    const hy = (facingDir === "up" ? 4 : 5) + wyOff + swingY;
+    const drew = drawCodixelOverlay(
+      ctx,
+      `${wBase}${poseSuffix}`,
+      pdX + swingShiftX,
+      pdY + swingShiftY,
+      pdSize,
+      pdSize,
+      f < 0,
+      bleached
+    );
 
-    if (w.shape === "staff") {
-      if (horizontalAttack) {
-        px(11, 7, 5, 1, "#7c583c");
-        px(15, 6, 3, 3, w.primary);
-        px(16, 7, 1, 1, w.accent);
-      } else {
-        px(hx, hy + 2, 1, 8, "#7c583c");
-        px(hx - 1, hy - 1, 3, 3, w.outline);
-        px(hx, hy, 2, 2, w.primary);
-        px(hx, hy, 1, 1, w.accent);
-      }
-    } else if (w.shape === "carbine") {
-      const gy = 8 + wyOff + (animState === "attack" ? 0 : swingY);
-      const gx = 11 + wxOff + (animState === "attack" ? 1 : 0);
-      px(gx, gy - 1, 5, 3, w.outline);
-      px(gx, gy, 5, 2, w.primary);
-      px(gx + 3, gy, 2, 1, w.accent);
-      px(gx, gy + 2, 1, 2, "#4a3a30");
-    } else if (w.shape === "daggers") {
-      if (horizontalAttack) {
-        px(12, 7, 4, 1, w.primary);
-        px(15, 7, 2, 1, w.accent);
-        px(1, 8, 3, 1, w.primary);
-      } else {
-        px(hx, hy + 1, 1, 4, w.primary);
-        px(hx, hy, 1, 1, w.accent);
-        px(2, hy + 2, 1, 4, w.primary);
-        px(2, hy + 1, 1, 1, w.accent);
-      }
-    } else {
-      // Sword / Greatsword / Halberd / Sovereign
-      const isHeavy = w.shape === "greatsword" || w.shape === "halberd" || w.shape === "sovereign";
-      if (horizontalAttack) {
-        const len = isHeavy ? 7 : 5;
-        px(11, 7, len, 2, w.outline);
-        px(12, 7, len - 1, 1, w.primary);
-        px(12 + len - 3, 7, 2, 1, w.accent);
-        px(11, 6, 1, 3, "#ffe066");
-      } else {
-        const bladeH = isHeavy ? 7 : 5;
-        const topY = hy - (isHeavy ? 3 : 1);
-        px(hx - 1, topY - 1, 3, bladeH + 2, w.outline);
-        px(hx, topY, 1, bladeH, w.primary);
-        px(hx, topY, 1, 2, w.accent);
-        if (w.shape === "sovereign" || w.shape === "halberd") {
-          px(hx - 1, topY + 2, 1, 2, w.accent);
-        }
-        px(hx - 1, topY + bladeH, 3, 1, bleached ? "#a0a6b3" : "#ffe066");
-        px(hx, topY + bladeH + 1, 1, 2, "#694127");
+    if (!drew) {
+      const wStyle = resolveStyle(wDef);
+      if (wStyle) {
+        const w = getPalette(wStyle, bleached);
+        px(12, 5, 1, 6, w.primary);
       }
     }
 
-    // Charge glint at weapon tip when holding LMB
-    if (animState === "charge" && chargePct > 0.25 && !bleached) {
+    // Charge glint on weapon when holding LMB
+    if (animState === "charge" && chargePct > 0.22 && !bleached) {
       const sparkCol = chargePct >= 1 ? "#ffe066" : "#5ef2ff";
-      px(hx, Math.max(0, hy - 2), 2, 2, sparkCol);
+      px(11, 2, 2, 2, sparkCol);
     }
   }
 
   // =========================================================================
-  // LAYER 6: ACCESSORY ORB (Phụ kiện phát sáng nhỏ xoay cạnh nhân vật)
+  // LAYER 6: ORBITING ACCESSORY (Ring Gem or Pix-Chip visible on Map & UI!)
   // =========================================================================
-  const accDef = equipment.accessory ? ITEMS[equipment.accessory.defId] : undefined;
-  const accStyle = resolveStyle(accDef);
-  if (accStyle) {
-    const acc = getPalette(accStyle, bleached);
-    if (scale >= 2) {
-      // Full orbiting jewel in Inventory 4x stage
-      const w = ctx.canvas.width;
-      const h = ctx.canvas.height;
-      const ax = Math.round(w / 2 + Math.cos(time * 2.8) * 32);
-      const ay = Math.round(h / 2 - 8 + Math.sin(time * 2.8) * 9);
-      ctx.fillStyle = acc.outline;
-      ctx.fillRect(ax - 4, ay - 4, 8, 8);
-      ctx.fillStyle = acc.primary;
-      ctx.fillRect(ax - 3, ay - 3, 6, 6);
-      ctx.fillStyle = acc.accent;
-      ctx.fillRect(ax - 2, ay - 2, 2, 2);
-    } else if (accDef && accDef.id !== "rng_copper") {
-      // Compact 2x2 pixel spark orbiting gently in world view
-      const bob = Math.round(Math.sin(time * 3.5) * 1.5);
-      px(1, 5 + bob, 2, 2, acc.primary);
-      px(1, 5 + bob, 1, 1, acc.accent);
+  if (accDef) {
+    const accKey =
+      accDef.paperDollKey ??
+      (accDef.iconKind === "core" ? `acc_chip_t${accDef.tier ?? 1}` : `acc_ring_t${accDef.tier ?? 1}`);
+    const orbR = scale >= 2 ? 12 * scale : 10;
+    const orbX = Math.round(x + Math.cos(time * 2.8) * orbR - 12 * (scale >= 2 ? 1 : 0.45));
+    const orbY = Math.round(y - 9 * scale + Math.sin(time * 2.8) * (scale >= 2 ? 3 * scale : 3) - 12 * (scale >= 2 ? 1 : 0.45));
+    const orbDrawSize = scale >= 2 ? 24 : 11;
+    const drew = drawCodixelOverlay(ctx, accKey, orbX, orbY, orbDrawSize, orbDrawSize, false, bleached);
+    if (!drew) {
+      const accStyle = resolveStyle(accDef);
+      if (accStyle) {
+        const acc = getPalette(accStyle, bleached);
+        px(1, 5 + Math.round(Math.sin(time * 3.5) * 1.5), 2, 2, acc.primary);
+      }
     }
+  }
+
+  // =========================================================================
+  // LAYER 7: ACTIVE CRYSTAL AEGIS FLASK BARRIER (Hộ Thuẫn Pha Lê)
+  // =========================================================================
+  if (aegisActive && !bleached) {
+    const phase = Math.floor(time * 6) & 1;
+    const c1 = phase ? "#5ef2ff" : "#38b6ff";
+    const c2 = phase ? "#ffffff" : "#5ef2ff";
+    px(0, 2, 1, 10, c1);
+    px(15, 2, 1, 10, c1);
+    px(2, 0, 12, 1, c2);
+    px(2, 14, 12, 1, c1);
   }
 }

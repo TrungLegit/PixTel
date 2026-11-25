@@ -4,6 +4,25 @@ export type BiomeId = "town" | "meadow" | "quartz" | "amber" | "ruins";
 
 export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
 
+export type ItemTier = 1 | 2 | 3 | 4 | 5;
+
+export type ConsumableGroup = "hp" | "stamina" | "power" | "aegis";
+
+export interface ConsumableSpec {
+  group: ConsumableGroup;
+  hpPct?: number;
+  staminaPct?: number;
+  speedPct?: number;
+  atkPct?: number;
+  critBonus?: number;
+  defPct?: number;
+  shieldSec?: number;
+  invulnSec?: number;
+  overdriveGain?: number;
+  durationSec?: number;
+  cleanseSlow?: boolean;
+}
+
 export type EquipSlot = "weapon" | "helmet" | "armor" | "boots" | "accessory";
 
 export const EQUIP_SLOTS: readonly EquipSlot[] = [
@@ -85,9 +104,13 @@ export interface ItemDef {
   name: string;
   category: ItemType;
   rarity: Rarity;
+  tier?: ItemTier;
   slot?: EquipSlot;
   iconColor: string;
   iconKind?: ItemIconKind;
+  spriteKey?: string;
+  paperDollKey?: string;
+  capeKey?: string;
   visualColor?: string;
   accentColor?: string;
   visualStyle?: EquipVisualStyle;
@@ -100,6 +123,7 @@ export interface ItemDef {
   buyPrice?: number;
   baseStats?: StatBonus;
   consumableKind?: "hp_potion" | "stamina_elixir" | "chroma_tonic";
+  consumableSpec?: ConsumableSpec;
 }
 
 export interface ItemInstance {

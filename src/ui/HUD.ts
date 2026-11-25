@@ -1,7 +1,9 @@
 import { getClassDef } from "../data/classes";
 import { ENEMIES } from "../data/enemies";
+import { CONSUMABLE_GROUP_LABELS, ITEMS, getTierBadge } from "../data/items";
 import { BIOME_CONFIGS, TILE_SIZE, TOWN_NPCS, WAYPOINTS, WORLD_CAMPS, WORLD_COLS, WORLD_ROWS } from "../data/worldConfig";
-import { HOTKEY_CONSUMABLES } from "../systems/inventorySystem";
+import { onCodixelReady } from "../graphics/codixelAtlas";
+import { uiRarityFx } from "../vfx/uiRarityFx";
 import type { PixTelOpenWorldGame } from "../game";
 import { sfx } from "../audio/chiptuneSynth";
 
@@ -25,6 +27,7 @@ export class HudUI {
   private miniCanvas: HTMLCanvasElement;
   private miniCtx: CanvasRenderingContext2D;
   private toastContainer: HTMLElement;
+  private cachedHotbarIcons = ["", "", "", ""];
 
   constructor(game: PixTelOpenWorldGame) {
     this.game = game;
@@ -33,6 +36,11 @@ export class HudUI {
     this.miniCtx = this.miniCanvas.getContext("2d")!;
     this.miniCtx.imageSmoothingEnabled = false;
     this.toastContainer = document.getElementById("toast-stack")!;
+
+    onCodixelReady(() => {
+      this.cachedHotbarIcons.fill("");
+      this.update();
+    });
 
     // Quick toolbar buttons
     document.getElementById("hud-btn-map")!.addEventListener("click", () => this.game.toggleModal("world_map"));
@@ -48,10 +56,11 @@ export class HudUI {
     // Clickable minimap opens World Map [M]
     this.miniCanvas.addEventListener("click", () => this.game.toggleModal("world_map"));
 
-    // Clickable consumable buttons
+    // Clickable consumable buttons [1]-[4]
     document.getElementById("slot-c1")!.addEventListener("click", () => this.game.useConsumableSlot(1));
     document.getElementById("slot-c2")!.addEventListener("click", () => this.game.useConsumableSlot(2));
     document.getElementById("slot-c3")!.addEventListener("click", () => this.game.useConsumableSlot(3));
+    document.getElementById("slot-c4")!.addEventListener("click", () => this.game.useConsumableSlot(4));
 
     // Clickable [F] prompt
     document.getElementById("interact-prompt")!.addEventListener("click", () => this.game.interactNearest());
@@ -108,8 +117,9 @@ export class HudUI {
     }
     const wpnLv = this.game.inv.getWeaponEnhanceLevel();
     if (wpnLv > 0) extraBits.push(`<span style="color:#ffe066">Vũ khí +${wpnLv}</span>`);
-    if (p.atkBuffTime > 0) extraBits.push(`<span style="color:#ffee44">ATK+30% (${Math.ceil(p.atkBuffTime)}s)</span>`);
-    if (p.speedBuffTime > 0) extraBits.push(`<span style="color:#44ee88">SPD+28% (${Math.ceil(p.speedBuffTime)}s)</span>`);
+    if (p.atkBuffTime > 0) extraBits.push(`<span style="color:#ffee44">ATK+${Math.round((p.atkBuffPct || 0.3) * 100)}% (${Math.ceil(p.atkBuffTime)}s)</span>`);
+    if (p.speedBuffTime > 0) extraBits.push(`<span style="color:#44ee88">SPD+${Math.round((p.speedBuffPct || 0.28) * 100)}% (${Math.ceil(p.speedBuffTime)}s)</span>`);
+    if (p.aegisTime > 0) extraBits.push(`<span style="color:#5ef2ff">AEGIS -${Math.round((p.defBuffPct || 0.35) * 100)}% (${Math.ceil(p.aegisTime)}s)</span>`);
     document.getElementById("hud-status-line")!.innerHTML = extraBits.join(" · ");
 
     // Boss HP Bar
@@ -165,11 +175,46 @@ export class HudUI {
     document.getElementById("skill-dash-cd")!.textContent = p.dashCd > 0 ? `${p.dashCd.toFixed(1)}s` : "READY";
     document.getElementById("slot-dash")!.classList.toggle("on-cd", p.dashCd > 0);
 
-    // Quick Consumables [1] [2] [3]
-    for (let i = 0; i < 3; i++) {
-      const cnt = this.game.inv.countItem(HOTKEY_CONSUMABLES[i]);
-      document.getElementById(`c${i + 1}-qty`)!.textContent = `x${cnt}`;
-      document.getElementById(`slot-c${i + 1}`)!.classList.toggle("empty", cnt <= 0);
+    // Quick Smart Consumables [1] [2] [3] [4] with codixel icons & Tier badges
+    const fallbackDefIds = ["pot_hp_small", "pot_stamina_minor", "pot_might_brew", "pot_aegis_flask"];
+    for (let i = 0; i < 4; i++) {
+      const slotNum = (i + 1) as 1 | 2 | 3 | 4;
+      const group = this.game.inv.getHotkeyGroupForSlot(slotNum);
+      const bestId = this.game.inv.findBestConsumableForGroup(group);
+      const totalCnt = this.game.inv.countConsumableGroup(group);
+      const activeId = bestId ?? fallbackDefIds[i];
+      const def = ITEMS[activeId];
+      const tInfo = getTierBadge(def);
+      const grpInfo = CONSUMABLE_GROUP_LABELS[group];
+
+      const btnEl = document.getElementById(`slot-c${slotNum}`)!;
+      btnEl.classList.toggle("empty", totalCnt <= 0);
+      btnEl.classList.toggle("rarity-rare", def?.rarity === "rare");
+      btnEl.classList.toggle("rarity-epic", def?.rarity === "epic");
+      btnEl.classList.toggle("rarity-legendary", def?.rarity === "legendary");
+      btnEl.dataset.reviewDef = activeId;
+      btnEl.dataset.reviewSource = "hud";
+      if (def) {
+        btnEl.removeAttribute("title");
+      } else {
+        btnEl.title = `[${slotNum}] ${grpInfo.label}`;
+      }
+
+      document.getElementById(`c${slotNum}-qty`)!.textContent = `x${totalCnt}`;
+      const tierEl = document.getElementById(`c${slotNum}-tier`)!;
+      tierEl.textContent = tInfo.badge;
+      tierEl.style.color = tInfo.color;
+      tierEl.style.borderColor = tInfo.color;
+
+      if (this.cachedHotbarIcons[i] !== activeId && def) {
+        this.cachedHotbarIcons[i] = activeId;
+        const cv = document.getElementById(`c${slotNum}-icon`) as HTMLCanvasElement | null;
+        if (cv) {
+          cv.dataset.iconDef = activeId;
+          cv.dataset.iconEnh = "0";
+          uiRarityFx.paintIconCanvas(cv);
+        }
+      }
     }
 
     // [F] Interact Prompt

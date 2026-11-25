@@ -1,12 +1,21 @@
 import { getClassDef } from "../data/classes";
+import { SET_BONUSES, STARTER_WEAPON_BY_CLASS, type SetBonusDef } from "../data/equipments";
 import {
+  CONSUMABLE_HOTKEY_GROUPS,
   ITEMS,
   createItemInstance,
   getDismantleShardYield,
   getItemEffectiveStats,
+  getItemTier,
   type NormalizedEquipStats,
 } from "../data/items";
-import { EQUIP_SLOTS, type ClassId, type EquipSlot, type ItemInstance } from "../data/types";
+import {
+  EQUIP_SLOTS,
+  type ClassId,
+  type ConsumableGroup,
+  type EquipSlot,
+  type ItemInstance,
+} from "../data/types";
 import type { PlayerEntity } from "../world/entities";
 
 export const MAX_BAG_SLOTS = 32;
@@ -15,11 +24,19 @@ export const HOTKEY_CONSUMABLES: readonly string[] = [
   "pot_hp",
   "pot_stamina",
   "pot_tonic",
+  "pot_aegis_flask",
 ];
+
+export interface ActiveSetStatus {
+  def: SetBonusDef;
+  count: number;
+  twoActive: boolean;
+  fourActive: boolean;
+}
 
 /**
  * Recomputes total player stats (maxHp, atk, def, spd, crit, elementBonus)
- * from base class stats + level progression + equipped gear & enhancement levels.
+ * from base class stats + level progression + equipped gear + enhancement + active Set Bonuses.
  */
 export function recalculatePlayerStats(
   player: PlayerEntity,
@@ -30,15 +47,16 @@ export function recalculatePlayerStats(
   const ratio = player.hp / prevMax;
   const cdef = getClassDef(player.classId);
   const eq = inv.getTotalEquipBonuses();
+  const sets = inv.getActiveSetBonusStats();
   const lv = player.level - 1;
 
-  player.maxHp = cdef.baseStats.hp + lv * 16 + eq.maxHp;
-  player.atk = cdef.baseStats.atk + lv * 3 + eq.atk;
-  player.def = cdef.baseStats.def + Math.floor(lv * 1.2) + eq.def;
-  player.spd = cdef.baseStats.spd + eq.spd;
-  player.crit = Math.min(90, cdef.baseStats.crit + eq.crit);
+  player.maxHp = cdef.baseStats.hp + lv * 16 + eq.maxHp + sets.maxHp;
+  player.atk = cdef.baseStats.atk + lv * 3 + eq.atk + sets.atk;
+  player.def = cdef.baseStats.def + Math.floor(lv * 1.2) + eq.def + sets.def;
+  player.spd = cdef.baseStats.spd + eq.spd + sets.spd;
+  player.crit = Math.min(95, cdef.baseStats.crit + eq.crit + sets.crit);
   player.critMult = cdef.baseStats.critMult;
-  player.elementBonus = eq.elementBonus;
+  player.elementBonus = eq.elementBonus + sets.elementBonus;
 
   if (preserveHpRatio) {
     player.hp = Math.min(player.maxHp, Math.max(1, Math.round(ratio * player.maxHp)));
@@ -49,26 +67,29 @@ export function recalculatePlayerStats(
 
 /**
  * Manages player gold, 5 equipment slots (helmet, armor, weapon, boots, accessory),
- * 32-slot bag, stat comparisons, dismantling, and 1-3 quick consumables.
+ * 32-slot bag, stat comparisons, active set bonuses, dismantling, and smart 1-4 consumables.
  */
 export class InventorySystem {
   gold = 120;
   equipment: Partial<Record<EquipSlot, ItemInstance>> = {};
   bag: ItemInstance[] = [];
 
-  resetStarterKit() {
+  resetStarterKit(classId: ClassId = "prism_knight") {
     this.gold = 120;
+    const starterWpn = STARTER_WEAPON_BY_CLASS[classId] ?? "wpn_starter";
     this.equipment = {
       helmet: createItemInstance("hlm_starter", 1, 0),
       armor: createItemInstance("arm_cloth", 1, 0),
-      weapon: createItemInstance("wpn_starter", 1, 0),
+      weapon: createItemInstance(starterWpn, 1, 0),
       boots: createItemInstance("bts_starter", 1, 0),
       accessory: createItemInstance("rng_copper", 1, 0),
     };
     this.bag = [
-      createItemInstance("pot_hp", 4, 0),
-      createItemInstance("pot_stamina", 2, 0),
-      createItemInstance("pot_tonic", 1, 0),
+      createItemInstance("pot_hp_small", 3, 0),
+      createItemInstance("pot_hp", 2, 0),
+      createItemInstance("pot_stamina_minor", 2, 0),
+      createItemInstance("pot_might_brew", 1, 0),
+      createItemInstance("pot_aegis_flask", 1, 0),
       createItemInstance("mat_iron_ore", 3, 0),
       createItemInstance("mat_glitch_core", 2, 0),
     ];
@@ -302,5 +323,87 @@ export class InventorySystem {
 
   getWeaponEnhanceLevel(): number {
     return this.equipment.weapon?.enhanceLevel ?? 0;
+  }
+
+  /** Returns active Set Bonuses for any equipped setId >= 2 pieces. */
+  getActiveSetBonuses(): ActiveSetStatus[] {
+    const counts: Record<string, number> = {};
+    for (const slot of EQUIP_SLOTS) {
+      const eq = this.equipment[slot];
+      const def = eq ? ITEMS[eq.defId] : undefined;
+      if (def?.setId && SET_BONUSES[def.setId]) {
+        counts[def.setId] = (counts[def.setId] ?? 0) + 1;
+      }
+    }
+    const out: ActiveSetStatus[] = [];
+    for (const [setId, count] of Object.entries(counts)) {
+      const def = SET_BONUSES[setId];
+      if (!def || count < 2) continue;
+      out.push({
+        def,
+        count,
+        twoActive: count >= 2,
+        fourActive: count >= 4,
+      });
+    }
+    return out;
+  }
+
+  getActiveSetBonusStats(): NormalizedEquipStats {
+    const sum: NormalizedEquipStats = {
+      atk: 0,
+      def: 0,
+      maxHp: 0,
+      spd: 0,
+      crit: 0,
+      elementBonus: 0,
+    };
+    for (const st of this.getActiveSetBonuses()) {
+      const apply = (b: { atk?: number; def?: number; maxHp?: number; spd?: number; crit?: number; elementBonus?: number }) => {
+        sum.atk += b.atk ?? 0;
+        sum.def += b.def ?? 0;
+        sum.maxHp += b.maxHp ?? 0;
+        sum.spd += b.spd ?? 0;
+        sum.crit += b.crit ?? 0;
+        sum.elementBonus += b.elementBonus ?? 0;
+      };
+      if (st.twoActive) apply(st.def.twoPiece);
+      if (st.fourActive) apply(st.def.fourPiece);
+    }
+    return sum;
+  }
+
+  /** Finds the highest-tier consumable available in bag matching a hotkey group (hp/stamina/power/aegis). */
+  findBestConsumableForGroup(group: ConsumableGroup): string | null {
+    let bestId: string | null = null;
+    let bestTier = -1;
+    for (const b of this.bag) {
+      if (b.qty <= 0) continue;
+      const def = ITEMS[b.defId];
+      if (!def || def.category !== "consumable") continue;
+      const g = def.consumableSpec?.group;
+      if (g !== group) continue;
+      const t = getItemTier(def);
+      if (t > bestTier) {
+        bestTier = t;
+        bestId = def.id;
+      }
+    }
+    return bestId;
+  }
+
+  countConsumableGroup(group: ConsumableGroup): number {
+    let total = 0;
+    for (const b of this.bag) {
+      const def = ITEMS[b.defId];
+      if (def?.category === "consumable" && def.consumableSpec?.group === group) {
+        total += b.qty;
+      }
+    }
+    return total;
+  }
+
+  getHotkeyGroupForSlot(slot1Based: 1 | 2 | 3 | 4): ConsumableGroup {
+    return CONSUMABLE_HOTKEY_GROUPS[slot1Based - 1] ?? "hp";
   }
 }

@@ -6,9 +6,12 @@ import { InventoryModalUI } from "./ui/InventoryModal";
 import { ForgeModalUI } from "./ui/ForgeModal";
 import { WorldMapModalUI } from "./ui/WorldMapModal";
 import { QuestJournalModalUI } from "./ui/QuestJournalModal";
+import { ItemReviewTooltip } from "./ui/ItemReviewTooltip";
+import { installRopeFrameAssets } from "./graphics/ropeFrame";
 import { sfx } from "./audio/chiptuneSynth";
 
 function bootstrap() {
+  installRopeFrameAssets();
   const canvas = document.getElementById("game-canvas") as HTMLCanvasElement;
   const pauseModal = document.getElementById("modal-pause")!;
   const victoryModal = document.getElementById("modal-victory")!;
@@ -20,11 +23,13 @@ function bootstrap() {
   let forge: ForgeModalUI;
   let worldMap: WorldMapModalUI;
   let journal: QuestJournalModalUI;
+  let itemTooltip: ItemReviewTooltip;
 
   const game = new PixTelOpenWorldGame(canvas, {
     onHudUpdate: () => hud?.update(),
     onToast: (msg, tone) => hud?.toast(msg, tone),
     onModalChange: (modal: ModalId, payload?: unknown) => {
+      itemTooltip?.hide();
       classSelect?.hide();
       dialogue?.hide();
       inventory?.hide();
@@ -74,6 +79,7 @@ function bootstrap() {
   forge = new ForgeModalUI(game);
   worldMap = new WorldMapModalUI(game);
   journal = new QuestJournalModalUI(game);
+  itemTooltip = new ItemReviewTooltip(game);
 
   // Pause Modal Controls
   document.getElementById("btn-pause-resume")!.addEventListener("click", () => {
