@@ -14,7 +14,17 @@ import {
   WORLD_H,
   WORLD_W,
 } from "./data/worldConfig";
-import type { ActiveBossLock, BiomeId, ClassId, LoreTabletDef, SaveDataV2, StatAllocKey, WaypointDef } from "./data/types";
+import {
+  EQUIP_SLOTS,
+  type ActiveBossLock,
+  type BiomeId,
+  type ClassId,
+  type LoreTabletDef,
+  type RecipeDef,
+  type SaveDataV2,
+  type StatAllocKey,
+  type WaypointDef,
+} from "./data/types";
 import { ColorRestorationSystem } from "./graphics/colorRestoration";
 import { drawCodixelEnemy, getCodixelEnemySize } from "./graphics/enemyAtlas";
 import {
@@ -93,6 +103,8 @@ export class PixTelOpenWorldGame {
   readonly turrets: TurretEntity[] = [];
   readonly hazards: HazardEntity[] = [];
   discoveredLore = new Set<string>();
+  unlockedHiddenItems = new Set<string>();
+  defeatedBossIds = new Set<string>();
 
   camX = 0;
   camY = 0;
@@ -142,6 +154,7 @@ export class PixTelOpenWorldGame {
 
     sprites.init();
     this.vfx.warmup();
+    this.unlockedHiddenItems = new Set(this.saveSys.loadHiddenUnlocks());
     this._initBlankPlayer("prism_knight");
     this.colorSys.reset();
     this.tileRenderer.syncOverviewMap(this.world, this.colorSys);
@@ -211,6 +224,9 @@ export class PixTelOpenWorldGame {
       hasWindDancer: false,
       hasChromaBlessing: false,
       hasQuakeImpact: false,
+      hasRestoredPrismSurge: false,
+      hasEnergySiphon: false,
+      hasSetResonance: false,
       grimoireTimer: 1.5,
       perfectDashWindow: 0,
       chromaCounterTimer: 0,
@@ -302,6 +318,7 @@ export class PixTelOpenWorldGame {
     this.quests.reset();
     this.colorSys.reset();
     this.discoveredLore.clear();
+    this.defeatedBossIds.clear();
     this.spawner.reset([]);
     this.stats = { kills: 0, mined: 0, chestsOpened: 0, bossesDefeated: 0, reactionsTriggered: 0 };
 
@@ -346,6 +363,17 @@ export class PixTelOpenWorldGame {
     this.quests.loadState(data.quests);
     this.colorSys.loadUnlocked(data.unlockedWaypoints);
     this.discoveredLore = new Set(data.discoveredLore ?? []);
+    this.defeatedBossIds = new Set(data.defeatedBossIds ?? []);
+    for (const hid of this.saveSys.loadHiddenUnlocks()) this.unlockedHiddenItems.add(hid);
+    for (const hid of data.unlockedHiddenItems ?? []) this.unlockedHiddenItems.add(hid);
+    for (const slot of EQUIP_SLOTS) {
+      const eq = this.inv.equipment[slot];
+      if (eq && ITEMS[eq.defId]?.isHidden) this.unlockedHiddenItems.add(eq.defId);
+    }
+    for (const b of this.inv.bag) {
+      if (ITEMS[b.defId]?.isHidden) this.unlockedHiddenItems.add(b.defId);
+    }
+    this.saveSys.saveHiddenUnlocks(this.unlockedHiddenItems);
     this.spawner.reset(data.openedChests, data.unlockedWaypoints);
     this.stats = { reactionsTriggered: 0, ...data.stats };
     this.tutorialCompleted = Boolean(data.tutorialCompleted);
@@ -431,6 +459,8 @@ export class PixTelOpenWorldGame {
       unlockedWaypoints: Array.from(this.colorSys.unlockedWaypoints),
       openedChests: this.spawner.getOpenedChestIds(),
       discoveredLore: Array.from(this.discoveredLore),
+      unlockedHiddenItems: Array.from(this.unlockedHiddenItems),
+      defeatedBossIds: Array.from(this.defeatedBossIds),
       tutorialCompleted: this.tutorialCompleted,
       quests: this.quests.exportState(),
       stats: { ...this.stats },
@@ -831,6 +861,34 @@ export class PixTelOpenWorldGame {
     this.ui.onHudUpdate();
   }
 
+  isHiddenItemUnlocked(defId: string): boolean {
+    if (this.unlockedHiddenItems.has(defId)) return true;
+    for (const slot of EQUIP_SLOTS) {
+      if (this.inv.equipment[slot]?.defId === defId) return true;
+    }
+    return this.inv.bag.some((b) => b.defId === defId);
+  }
+
+  canRevealHiddenRecipe(recipe: RecipeDef): boolean {
+    if (!recipe.isHiddenRecipe) return true;
+    if (this.isHiddenItemUnlocked(recipe.resultDefId)) return true;
+    if (recipe.revealMaterialId && this.inv.countItem(recipe.revealMaterialId) > 0) return true;
+    return false;
+  }
+
+  unlockHiddenItem(defId: string): boolean {
+    const def = ITEMS[defId];
+    if (!def?.isHidden) return false;
+    const isFirst = !this.unlockedHiddenItems.has(defId);
+    this.unlockedHiddenItems.add(defId);
+    this.saveSys.saveHiddenUnlocks(this.unlockedHiddenItems);
+    if (isFirst) {
+      sfx.playHiddenUnlock();
+      this.ui.onToast(`✦ MỞ KHÓA CỔ VẬT ẨN: ${def.name}! (Lưu vĩnh viễn)`, "epic");
+    }
+    return isFirst;
+  }
+
   private _pickupGroundLoot(loot: (typeof this.spawner.groundLoot)[number]) {
     const idx = this.spawner.groundLoot.indexOf(loot);
     if (idx < 0) return;
@@ -875,6 +933,11 @@ export class PixTelOpenWorldGame {
         loot.item.qty > 1 ? `+${loot.item.qty} ITEM` : `LOOT!`,
         { color: RARITY_INFO[def.rarity].color, crit: isRare }
       );
+      if (def.isHidden) {
+        this.unlockHiddenItem(def.id);
+        this.vfx.spawnLive("pixtel/rainbow-burst", { x: loot.x, y: loot.y - 6, priority: 6, maxLife: 1.1 });
+        this.saveGame(false);
+      }
       if (def.category === "equipment") {
         this.ui.onToast(`Đã nhặt [${RARITY_INFO[def.rarity].label}] ${def.name}! Nhấn [I / B] để xem.`, isRare ? "epic" : "good");
       }
@@ -1006,6 +1069,7 @@ export class PixTelOpenWorldGame {
       },
       notify: (msg, tone = "info") => this.ui.onToast(msg, tone),
       onGainXp: (amt) => this.gainXp(amt),
+      defeatedBossIds: this.defeatedBossIds,
       getBossLock: () => this.activeBossLock,
       onBossLockTrigger: (boss) => this.triggerBossLock(boss),
       onBossDefeated: (enemy) => {
@@ -1279,12 +1343,38 @@ export class PixTelOpenWorldGame {
       }
     }
 
+    // Hidden Gear Shimmer Particles (respects Bleached vs Restored state!)
+    let hasHiddenEquipped = false;
+    for (const slot of EQUIP_SLOTS) {
+      const eq = this.inv.equipment[slot];
+      if (eq && ITEMS[eq.defId]?.isHidden) {
+        hasHiddenEquipped = true;
+        break;
+      }
+    }
+    if (hasHiddenEquipped && Math.random() < 0.28) {
+      const bleachedHere = !this.colorSys.isWorldPosRestored(p.x, p.y);
+      const col = bleachedHere
+        ? "#cfd6e3"
+        : CHROMA_RAINBOW[Math.floor(this.time * 10 + Math.random() * 6) % CHROMA_RAINBOW.length];
+      this.vfx.spawnPixelDot(
+        p.x + (Math.random() - 0.5) * 14,
+        p.y - 4 - Math.random() * 12,
+        (Math.random() - 0.5) * 10,
+        -12,
+        col,
+        0.36,
+        1
+      );
+    }
+
     // Combat, Enemies, Spawners, VFX
     this.combat.update(combatCtx, dt);
     this.spawner.update(dt, p.x, p.y, this.vfx);
     this.vfx.update(dt);
 
-    // Magnetic Pull + Auto-pickup when walking near Ground Loot
+    // Magnetic Pull + Auto-pickup when walking near Ground Loot (boosted +60px by Energy Siphon!)
+    const magnetBonus = p.hasEnergySiphon ? 60 : 0;
     for (let i = this.spawner.groundLoot.length - 1; i >= 0; i--) {
       const l = this.spawner.groundLoot[i];
       if (l.age < 0.28) continue;
@@ -1292,10 +1382,10 @@ export class PixTelOpenWorldGame {
       const dy = p.y - l.y;
       const d = Math.hypot(dx, dy);
       const isEquip = l.kind === "item" && l.item && ITEMS[l.item.defId]?.category === "equipment";
-      const magnetRadius = isEquip ? 44 : 58;
+      const magnetRadius = (isEquip ? 44 : 58) + magnetBonus;
       if (d < magnetRadius && d > 1) {
         if (!isEquip || this.inv.bag.length < 40) {
-          const pull = (isEquip ? 140 : 185) * dt;
+          const pull = (isEquip ? 145 + magnetBonus * 0.6 : 190 + magnetBonus * 0.8) * dt;
           l.x += (dx / d) * Math.min(d, pull);
           l.y += (dy / d) * Math.min(d, pull);
         }
@@ -1448,10 +1538,20 @@ export class PixTelOpenWorldGame {
           ctx.fillRect(sx - 6, vy - 6, 12, 12);
           drawItemIcon(ctx, def, 12, sx - 6, vy - 6);
 
-          // High-rarity pixelfx orbiting aura + glints (Rare / Epic / Legendary)
-          if (isHighRarity) {
-            const auraAtlas = this.vfx.getAtlas(`item-aura-${l.rarity}`);
-            const auraScale = l.rarity === "legendary" ? 0.95 : l.rarity === "epic" ? 0.88 : 0.8;
+          // Hidden Relic exclusive rainbow ground pulse + legendary aura!
+          if (def.isHidden) {
+            const pulseCol = CHROMA_RAINBOW[Math.floor(this.time * 8) % CHROMA_RAINBOW.length];
+            ctx.fillStyle = pulseCol;
+            ctx.fillRect(sx - 9, vy - 9, 18, 1);
+            ctx.fillRect(sx - 9, vy + 8, 18, 1);
+            ctx.fillRect(sx - 9, vy - 9, 1, 18);
+            ctx.fillRect(sx + 8, vy - 9, 1, 18);
+          }
+
+          // High-rarity pixelfx orbiting aura + glints (Rare / Epic / Legendary / Hidden)
+          if (isHighRarity || def.isHidden) {
+            const auraAtlas = this.vfx.getAtlas(`item-aura-${def.isHidden ? "legendary" : l.rarity}`);
+            const auraScale = def.isHidden || l.rarity === "legendary" ? 1.0 : l.rarity === "epic" ? 0.88 : 0.8;
             this.vfx.drawAtlasInstance(
               ctx,
               auraAtlas,

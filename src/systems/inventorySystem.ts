@@ -76,6 +76,17 @@ export function recalculatePlayerStats(
   player.hasWindDancer = passives.has("wind_dancer");
   player.hasChromaBlessing = passives.has("chroma_blessing");
   player.hasQuakeImpact = passives.has("quake_impact");
+  player.hasRestoredPrismSurge = passives.has("restored_prism_surge");
+  player.hasEnergySiphon = passives.has("energy_siphon_magnet");
+  player.hasSetResonance = passives.has("set_resonance_echo");
+
+  if (player.hasSetResonance) {
+    const hasActiveSet = inv.getActiveSetBonuses().length > 0;
+    const pct = hasActiveSet ? 0.08 : 0.04;
+    player.atk = Math.round(player.atk * (1 + pct));
+    player.def = Math.round(player.def * (1 + pct));
+    player.elementBonus += hasActiveSet ? 10 : 6;
+  }
 
   if (preserveHpRatio) {
     player.hp = Math.min(player.maxHp, Math.max(1, Math.round(ratio * player.maxHp)));

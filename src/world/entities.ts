@@ -83,6 +83,9 @@ export interface PlayerEntity {
   hasWindDancer: boolean;
   hasChromaBlessing: boolean;
   hasQuakeImpact: boolean;
+  hasRestoredPrismSurge: boolean;
+  hasEnergySiphon: boolean;
+  hasSetResonance: boolean;
   grimoireTimer: number;
 
   // Advanced 60FPS Combat Rhythm & 9-Element Reaction Buffs
