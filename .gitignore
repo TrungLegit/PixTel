@@ -1,0 +1,3 @@
+.brain/*.lock
+node_modules/
+dist/

@@ -1,0 +1,17 @@
+{
+  "name": "pixtel",
+  "version": "2.0.0",
+  "description": "PIXTEL — Open-World 16-Bit Top-Down Pixel Action RPG powered by Vite, TypeScript & pixelfx",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vite": "^6.0.11"
+  },
+  "license": "MIT"
+}

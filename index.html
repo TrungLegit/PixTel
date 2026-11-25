@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PIXTEL — 16-Bit Open-World Action RPG</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div id="app-shell">
+    <!-- Main 16-Bit Pixel Open-World Canvas (480x270 integer-scaled) -->
+    <canvas id="game-canvas" width="480" height="270"></canvas>
+
+    <!-- IN-GAME HUD -->
+    <div id="hud-layer" class="hidden">
+      <!-- Top-Left Hero Panel -->
+      <div class="hud-panel hud-top-left">
+        <div class="hud-hero-row">
+          <div id="hud-class-badge" class="hud-class-badge">Vệ Binh Lăng Kính · LV.1</div>
+          <div id="hud-gold" class="hud-gold">120 G</div>
+        </div>
+        <div class="px-bar hp-bar">
+          <div id="hud-hp-fill" class="px-bar-fill"></div>
+          <span id="hud-hp-text" class="px-bar-lbl">HP 155/155</span>
+        </div>
+        <div class="px-bar xp-bar">
+          <div id="hud-xp-fill" class="px-bar-fill"></div>
+          <span id="hud-xp-text" class="px-bar-lbl">XP 0/90</span>
+        </div>
+        <div class="hud-meta-row">
+          <span id="hud-biome">THỊ TRẤN KHỞI NGUYÊN (SAFE)</span>
+        </div>
+        <div class="hud-meta-row">
+          <span id="hud-restore" style="color:#5ef2ff">Màu: 5% · Trụ 1/9</span>
+        </div>
+        <div id="hud-status-line" class="hud-status-line"></div>
+      </div>
+
+      <!-- Top-Center Boss HP Bar -->
+      <div id="hud-boss-bar" class="hud-panel hud-boss-bar hidden">
+        <div id="hud-boss-name" class="boss-name">THE ERASER</div>
+        <div class="px-bar boss-hp">
+          <div id="hud-boss-fill" class="px-bar-fill"></div>
+          <span id="hud-boss-hp" class="px-bar-lbl">2600 / 2600</span>
+        </div>
+      </div>
+
+      <!-- Top-Right Minimap + Toolbar + Quest Tracker -->
+      <div class="hud-top-right">
+        <div class="hud-toolbar">
+          <button id="hud-btn-map" class="hud-mini-btn" title="Bản đồ thế giới [M]">M·MAP</button>
+          <button id="hud-btn-bag" class="hud-mini-btn" title="Túi đồ [I]">I·TÚI</button>
+          <button id="hud-btn-quest" class="hud-mini-btn" title="Nhiệm vụ [J]">J·NV</button>
+          <button id="hud-btn-save" class="hud-mini-btn" title="Lưu nhanh">LƯU</button>
+          <button id="hud-btn-mute" class="hud-mini-btn" title="Bật/Tắt âm thanh">SFX</button>
+          <button id="hud-btn-pause" class="hud-mini-btn" title="Tạm dừng [ESC]">ESC</button>
+        </div>
+        <div class="minimap-wrap" title="Nhấn để mở Bản Đồ Thế Giới [M]">
+          <canvas id="minimap-canvas" width="108" height="108"></canvas>
+          <span class="minimap-tag">BẢN ĐỒ [M]</span>
+        </div>
+        <div class="hud-panel quest-tracker">
+          <div class="qt-hdr">NHIỆM VỤ [J]</div>
+          <div id="hud-quest-list"></div>
+        </div>
+      </div>
+
+      <!-- Toast Notifications -->
+      <div id="toast-stack" class="toast-stack"></div>
+
+      <!-- [F] World Interact Prompt -->
+      <button id="interact-prompt" class="interact-prompt hidden">[F] Tương tác</button>
+
+      <!-- Bottom Skill & Consumable Hotbar -->
+      <div class="hud-bottom-bar">
+        <div class="skill-slot" title="Đánh thường / Giữ Chuột trái để Tụ Lực">
+          <span class="key-cap">LMB</span>
+          <span class="slot-title">Đánh / Tụ</span>
+          <span class="slot-sub">COMBO</span>
+        </div>
+        <div id="slot-skill-e" class="skill-slot">
+          <span class="key-cap">E</span>
+          <span id="skill-e-name" class="slot-title">Kỹ Năng</span>
+          <span id="skill-e-cd" class="slot-sub">READY</span>
+        </div>
+        <div id="slot-skill-q" class="skill-slot">
+          <span class="key-cap">Q</span>
+          <span id="skill-q-name" class="slot-title">Tuyệt Kỹ</span>
+          <span id="skill-q-cd" class="slot-sub">35%</span>
+        </div>
+        <div id="slot-dash" class="skill-slot">
+          <span class="key-cap">SPC</span>
+          <span class="slot-title">Dash</span>
+          <span id="skill-dash-cd" class="slot-sub">READY</span>
+        </div>
+        <div class="hotbar-sep"></div>
+        <button id="slot-c1" class="skill-slot cons-slot" title="Bình Máu Sắc Độ (+45% HP)">
+          <span class="key-cap">1</span>
+          <span class="slot-title" style="color:#ff5577">Máu</span>
+          <span id="c1-qty" class="slot-sub">x4</span>
+        </button>
+        <button id="slot-c2" class="skill-slot cons-slot" title="Tinh Chất Thể Lực (Full Stamina + SPD)">
+          <span class="key-cap">2</span>
+          <span class="slot-title" style="color:#44ee88">Thể Lực</span>
+          <span id="c2-qty" class="slot-sub">x2</span>
+        </button>
+        <button id="slot-c3" class="skill-slot cons-slot" title="Dược Phẩm Quang Phổ (+30% ATK & +15% Crit)">
+          <span class="key-cap">3</span>
+          <span class="slot-title" style="color:#ffee44">Quang Phổ</span>
+          <span id="c3-qty" class="slot-sub">x1</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- SCREEN: CLASS SELECT / TITLE / CLASS ALTAR -->
+    <div id="screen-class-select" class="overlay-screen">
+      <div class="class-select-box">
+        <div class="title-header">
+          <h1 class="pixel-logo">PIXTEL</h1>
+          <div id="class-select-subtitle" class="title-sub">
+            THẾ GIỚI MỞ 16-BIT ACTION RPG — Đánh thức Trụ Sắc Màu & tiêu diệt The Eraser
+          </div>
+        </div>
+        <div id="class-grid" class="class-grid"></div>
+        <div class="title-controls-hint">
+          <b>WASD</b> Di chuyển · <b>Shift</b> Chạy · <b>Space</b> Dash · <b>LMB / Giữ</b> Combo & Tụ lực · <b>E / Q</b> Kỹ năng · <b>F</b> Tương tác · <b>1-3</b> Bình thuốc · <b>I / J / M</b> Túi / Nhiệm vụ / Bản đồ
+        </div>
+        <div class="title-actions">
+          <button id="btn-continue-save" class="px-btn good big hidden">▶ TIẾP TỤC PHIÊU LƯU (SAVE)</button>
+          <button id="btn-start-adventure" class="px-btn primary big">BẮT ĐẦU PHIÊU LƯU MỚI</button>
+          <button id="btn-close-class-select" class="px-btn big hidden">ĐÓNG</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: NPC DIALOGUE / SHOP / QUESTS -->
+    <div id="modal-dialogue" class="modal-backdrop hidden">
+      <div class="modal-box modal-lg">
+        <div class="modal-header">
+          <div id="dialogue-npc-title">NPC</div>
+          <button id="btn-close-dialogue" class="px-btn sm">✕ ĐÓNG</button>
+        </div>
+        <div id="dialogue-body" class="modal-scroll"></div>
+      </div>
+    </div>
+
+    <!-- MODAL: INVENTORY & EQUIPMENT [I] -->
+    <div id="modal-inventory" class="modal-backdrop hidden">
+      <div class="modal-box modal-xl">
+        <div class="modal-header">
+          <div>TÚI ĐỒ & TRANG BỊ [I]</div>
+          <button id="btn-close-inventory" class="px-btn sm">✕ ĐÓNG</button>
+        </div>
+        <div id="inv-hero-stats" class="inv-hero-stats"></div>
+        <div class="inv-layout">
+          <div class="inv-left">
+            <div class="section-hdr">4 Ô TRANG BỊ ĐANG MẶC</div>
+            <div id="inv-equip-slots" class="equip-grid"></div>
+            <div class="section-hdr">CHI TIẾT & SO SÁNH CHỈ SỐ</div>
+            <div id="inv-item-detail" class="item-detail-box"></div>
+          </div>
+          <div class="inv-right">
+            <div class="section-hdr">TÚI ĐỒ (32 Ô)</div>
+            <div id="inv-bag-grid" class="bag-grid"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: BLACKSMITH PRISM FORGE -->
+    <div id="modal-forge" class="modal-backdrop hidden">
+      <div class="modal-box modal-xl">
+        <div class="modal-header">
+          <div>⚒ LÒ RÈN LĂNG KÍNH — <span id="forge-gold-val" style="color:#ffe066">0 G</span></div>
+          <button id="btn-close-forge" class="px-btn sm">✕ ĐÓNG</button>
+        </div>
+        <div class="forge-top-bar">
+          <div class="forge-tabs">
+            <button id="forge-tab-enhance" class="px-btn active">CƯỜNG HÓA (+0 → +10)</button>
+            <button id="forge-tab-craft" class="px-btn">CHẾ TẠO (LAM / TÍM / CAM)</button>
+          </div>
+          <div class="forge-canvas-wrap">
+            <canvas id="forge-vfx-canvas" width="220" height="72"></canvas>
+            <span class="fx-tag">PIXELFX FORGE</span>
+          </div>
+        </div>
+        <div id="forge-content" class="modal-scroll"></div>
+      </div>
+    </div>
+
+    <!-- MODAL: WORLD MAP & FAST TRAVEL [M] -->
+    <div id="modal-world-map" class="modal-backdrop hidden">
+      <div class="modal-box modal-xl">
+        <div class="modal-header">
+          <div>BẢN ĐỒ THẾ GIỚI & DỊCH CHUYỂN NHANH [M]</div>
+          <button id="btn-close-map" class="px-btn sm">✕ ĐÓNG</button>
+        </div>
+        <div id="world-map-stats" class="map-stats-bar"></div>
+        <div class="map-layout">
+          <div class="map-canvas-col">
+            <canvas id="world-map-canvas" width="320" height="320"></canvas>
+            <div class="map-legend">
+              <span><i style="background:#ffe066"></i> Bạn</span>
+              <span><i style="background:#38f2ff"></i> Trụ Đã Mở (Click để Dịch chuyển)</span>
+              <span><i style="background:#7c8291"></i> Trụ Tắt</span>
+              <span><i style="background:#ff2e55"></i> Đấu Trường Boss</span>
+            </div>
+          </div>
+          <div class="map-list-col">
+            <div class="section-hdr">DANH SÁCH TRỤ SẮC MÀU (9)</div>
+            <div id="waypoint-fast-list" class="wp-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: QUEST JOURNAL [J] -->
+    <div id="modal-journal" class="modal-backdrop hidden">
+      <div class="modal-box modal-lg">
+        <div class="modal-header">
+          <div>SỔ NHIỆM VỤ [J]</div>
+          <button id="btn-close-journal" class="px-btn sm">✕ ĐÓNG</button>
+        </div>
+        <div id="journal-body" class="modal-scroll"></div>
+      </div>
+    </div>
+
+    <!-- MODAL: PAUSE [ESC] -->
+    <div id="modal-pause" class="modal-backdrop hidden">
+      <div class="modal-box modal-sm">
+        <div class="modal-header">
+          <div>TẠM DỪNG [ESC]</div>
+        </div>
+        <div class="pause-actions">
+          <button id="btn-pause-resume" class="px-btn primary">▶ TIẾP TỤC CHƠI</button>
+          <button id="btn-pause-save" class="px-btn good">💾 LƯU TIẾN TRÌNH</button>
+          <button id="btn-pause-title" class="px-btn">🏠 VỀ MÀN HÌNH CHÍNH</button>
+          <button id="btn-pause-reset" class="px-btn warn">🗑 XÓA SAVE & CHƠI MỚI</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: WORLD BOSS VICTORY -->
+    <div id="modal-victory" class="modal-backdrop hidden">
+      <div class="modal-box modal-md">
+        <div class="modal-header">
+          <div id="victory-title" style="color:#ffe066">CHIẾN THẮNG!</div>
+        </div>
+        <div class="victory-body">
+          <p id="victory-desc"></p>
+          <div id="victory-stats" class="victory-stats"></div>
+          <button id="btn-victory-continue" class="px-btn primary big">TIẾP TỤC KHÁM PHÁ THẾ GIỚI MỞ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
