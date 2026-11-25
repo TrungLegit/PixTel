@@ -40,6 +40,28 @@
 
 ## Nhật Ký Cập Nhật (Newest First)
 
+### [2026-11-25 15:02] — GitHub Copilot — Đồng bộ nhánh font với main
+- **Commit / Branch:** `feat/vietnamese-pixel-game-font` (merge `origin/main`)
+- **Giai đoạn / Version:** `PIXTEL v2.6+` — Merge & Hidden Relics
+- **Đã làm (Done):**
+  - Tích hợp các cập nhật mới từ `main`, bao gồm hệ thống Vật phẩm ẩn và 11 bộ kiểm thử tính năng.
+  - Hợp nhất đồ thị Project Brain từ hai nhánh, compact các node trùng và tạo lại index.
+- **File chính đã sửa / thêm:** `.brain/INDEX.md`, `.brain/nodes.jsonl`, `.brain/edges.jsonl`, `DEV_LOG.md`
+- **Kiểm tra (Verified):** `npm ci`, `npm run build`, `npm run test` (11/11 suites), `brain.py lint`; build còn cảnh báo bundle JS lớn hơn 500 kB.
+- **Lưu ý / Handoff (Breaking changes / Đang dở):** Không có xung đột mã nguồn; font Pixelify cục bộ và hệ thống Vật phẩm ẩn cùng tồn tại.
+- **Gợi ý bước tiếp theo (Next Steps):** Tiếp tục kiểm thử gameplay cho Vật phẩm ẩn đã được tích hợp.
+
+### [2026-11-25 14:50] — GitHub Copilot — Tự lưu trữ font Pixelify hỗ trợ tiếng Việt
+- **Commit / Branch:** `feat/vietnamese-pixel-game-font`
+- **Giai đoạn / Version:** `PIXTEL v2.6+` — Font & Typography
+- **Đã làm (Done):**
+  - Chuyển toàn bộ giao diện và nhãn canvas Bản Đồ sang Pixelify Sans Variable theo phong cách pixel/Minecraft, hỗ trợ dấu tiếng Việt qua Latin Extended.
+  - Đóng gói font từ npm theo SIL OFL 1.1, bỏ phụ thuộc Google Fonts bên ngoài và thêm bản quyền/giấy phép vào tài nguyên public.
+- **File chính đã sửa / thêm:** `package.json`, `package-lock.json`, `index.html`, `src/main.ts`, `style.css`, `src/ui/WorldMapModal.ts`, `public/licenses/Pixelify-Sans-OFL.txt`
+- **Kiểm tra (Verified):** `npm ci`, `npm run build`, `npm run test` (10/10 suites), `git diff --check`; Playwright xác nhận font Vietnamese Latin Extended tải từ local và giao diện hiển thị trên desktop/mobile.
+- **Lưu ý / Handoff (Breaking changes / Đang dở):** Không còn yêu cầu mạng Google Fonts để hiển thị chữ.
+- **Gợi ý bước tiếp theo (Next Steps):** Mở draft PR riêng cho phần font; PR màn hình khởi đầu đã được merge.
+
 ### [2026-11-25 14:38] — GitHub Copilot — Tinh chỉnh chữ PIXTEL theo font pixel khối
 - **Commit / Branch:** `feat/epic-pixel-grid-title-screen`
 - **Giai đoạn / Version:** `PIXTEL v2.6+` — Title Screen Polish

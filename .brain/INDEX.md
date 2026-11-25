@@ -1,5 +1,5 @@
 # Project Brain Index
-*Generated: 2026-11-25T14:46:16.224230+00:00*
+*Generated: 2026-11-25T15:05:58.075498+00:00*
 
 ## Description
 > **Thế giới mở 16-Bit Action RPG trên trình duyệt** — Chiến đấu thời gian thực, đánh thức các **Trụ Sắc Màu**, khôi phục bảng màu 16-bit cho vùng đất bị **Nhiễu Trắng** và đánh bại **The Eraser**.
@@ -8,8 +8,8 @@
 - **src/** (161 files)
 - **.agents/** (38 files)
 - **(root)/** (14 files)
+- **.brain/** (3 files)
 - **scripts/** (2 files)
-- **.github/** (1 files)
 
 ## Central Nodes
 - `file:src/game.ts` (file, 67 links): Game controller managing permanent hidden item unlocks, Bleached/Restored shimmer, Energy Siphon magnet, and drop halos.
@@ -20,22 +20,19 @@
 - `file:src/ui/ItemReviewTooltip.ts` (file, 25 links): Vintage parchment hover tooltip masking un-unlocked hidden items (???) and displaying exclusive source tags when unlocked.
 - `file:src/ui/ForgeModal.ts` (file, 22 links): Rune Matrix Forge modal with Hidden Blueprints filter tab, ??? secrecy masking, level checks, and unlock triggers.
 - `file:src/systems/inventorySystem.ts` (file, 21 links): 5-slot inventory & recalculatePlayerStats() supporting restored_prism_surge, energy_siphon_magnet, and set_resonance_echo.
+- `file:src/main.ts` (file, 20 links): Imported the local Pixelify Sans variable font before bootstrapping the game UI.
 - `file:src/world/entities.ts` (file, 20 links): PlayerEntity runtime flags including hasRestoredPrismSurge, hasEnergySiphon, and hasSetResonance.
-- `file:src/systems/forgeSystem.ts` (file, 17 links): Rune Matrix Forge system enforcing requiredLevel and rare materials on hidden craft_only blueprints.
 
 ## Recent Decisions
+- **Self-hosted Vietnamese pixel UI font** (`decision:20261125144603-selfhosted-vietnamese-pixel-ui`): Use the OFL-licensed Pixelify Sans variable font from a local npm package as the primary game-wide UI font, removing Google Fonts runtime requests to keep Vietnamese glyph rendering available offline.
 - **Resolve current main conflicts without dropping branch history** (`decision:20261125144411-resolve-current-main-conflicts`): Use a merge commit to retain both histories; preserve both DEV_LOG entries and let project-brain tooling compact the graph and regenerate its digest rather than hand-editing graph files.
 - **Block-pixel logo lettering** (`decision:20261125143734-blockpixel-logo-lettering`): Broaden the PIXTEL canvas wordmark into a chunky 7x7 bitmap alphabet inspired by the user's Vietnamese Minecraft font reference, while keeping custom glyphs and the current chroma crest.
 - **Hidden Items System (Craft-Only & Boss-Drop Only)** (`decision:20261125143028-hidden-items-system-craftonly`): Added 8 isHidden items (4 craft_only, 4 boss_only) strictly isolated from shops/chests/normal mobs, masked as ??? until discovered, permanently unlocked in localStorage, and integrated with combat passives, VFX, and Paper-Doll shimmer.
 - **Epic pixel-grid title screen** (`decision:20261125142812-epic-pixelgrid-title-screen`): Use the existing class-select overlay as PIXTEL's startup screen, replacing its plain wordmark with an animated low-resolution chroma crest and adding a crisp pixel-grid backdrop while preserving existing start, continue, and tutorial actions.
-- **Mandatory Team Vibe-Code DEV_LOG Rule** (`decision:20261125140711-mandatory-team-vibecode-devlog`): Added DEV_LOG.md seeded from git history and enforced read-before-coding and write-after-coding log rules across AGENTS.md, GEMINI.md, .github/copilot-instructions.md, and CLAUDE.md.
 
 ## Stale Files (Need Re-reading)
-- `file:package-lock.json` (package-lock.json)
-- `file:package.json` (package.json)
 - `file:scripts/extract_enemy_sprites.py` (scripts/extract_enemy_sprites.py)
 - `file:scripts/generate_codixel_assets.mjs` (scripts/generate_codixel_assets.mjs)
-- `file:src/main.ts` (src/main.ts)
 - `file:src/vfx/fxAtlas.ts` (src/vfx/fxAtlas.ts)
 - `file:src/vfx/pixelfx/core/act.js` (src/vfx/pixelfx/core/act.js)
 - `file:src/vfx/pixelfx/core/actor.js` (src/vfx/pixelfx/core/actor.js)
@@ -85,3 +82,4 @@
 - `file:src/vfx/pixelfx/fx/melee/heavy-cleave.js` (src/vfx/pixelfx/fx/melee/heavy-cleave.js)
 - `file:src/vfx/pixelfx/fx/melee/spin-slash.js` (src/vfx/pixelfx/fx/melee/spin-slash.js)
 - `file:src/vfx/pixelfx/fx/melee/sword-slash.js` (src/vfx/pixelfx/fx/melee/sword-slash.js)
+- `file:src/vfx/pixelfx/fx/melee/thrust.js` (src/vfx/pixelfx/fx/melee/thrust.js)
