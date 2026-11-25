@@ -1,6 +1,7 @@
 import { getClassDef } from "./data/classes";
 import { ENEMIES } from "./data/enemies";
-import { ITEMS, RARITY_INFO } from "./data/items";
+import { STARTER_WEAPON_BY_CLASS } from "./data/equipments";
+import { CONSUMABLE_GROUP_LABELS, ITEMS, RARITY_INFO, createItemInstance } from "./data/items";
 import { LORE_TABLETS } from "./data/lore";
 import {
   BIOME_CONFIGS,
@@ -20,6 +21,7 @@ import {
   type HeroAnimState,
 } from "./graphics/paperDoll";
 import { sprites } from "./graphics/pixelSprites";
+import { drawItemIcon } from "./graphics/itemIcons";
 import { TileRenderer } from "./graphics/tileRenderer";
 import { VfxManager } from "./vfx/vfxManager";
 import { rasterText, textWidth } from "./vfx/pixelfx/core/font.js";
@@ -33,7 +35,7 @@ import type {
   ProjectileEntity,
   TurretEntity,
 } from "./world/entities";
-import { HOTKEY_CONSUMABLES, InventorySystem, recalculatePlayerStats } from "./systems/inventorySystem";
+import { InventorySystem, recalculatePlayerStats } from "./systems/inventorySystem";
 import { QuestSystem } from "./systems/questSystem";
 import { ForgeSystem } from "./systems/forgeSystem";
 import { SaveSystem } from "./systems/saveSystem";
@@ -194,7 +196,13 @@ export class PixTelOpenWorldGame {
       quickChargeTimer: 0,
       bleachDebuffTime: 0,
       speedBuffTime: 0,
+      speedBuffPct: 0,
       atkBuffTime: 0,
+      atkBuffPct: 0,
+      atkBuffCrit: 0,
+      defBuffTime: 0,
+      defBuffPct: 0,
+      aegisTime: 0,
       coatingTime: 0,
       coatingElement: null,
       respawnWaypointId: "wp_town",
@@ -218,7 +226,7 @@ export class PixTelOpenWorldGame {
     this.hazards.length = 0;
     this.vfx.clearAll();
 
-    this.inv.resetStarterKit();
+    this.inv.resetStarterKit(classId);
     this.quests.reset();
     this.colorSys.reset();
     this.discoveredLore.clear();
@@ -287,6 +295,11 @@ export class PixTelOpenWorldGame {
       return;
     }
     this.player.classId = classId;
+    const starterSet = new Set(Object.values(STARTER_WEAPON_BY_CLASS));
+    const curWpn = this.inv.equipment.weapon;
+    if (!curWpn || (starterSet.has(curWpn.defId) && curWpn.enhanceLevel === 0)) {
+      this.inv.equipment.weapon = createItemInstance(STARTER_WEAPON_BY_CLASS[classId], 1, 0);
+    }
     this.turrets.length = 0;
     this.player.stormTime = 0;
     this.player.cloneTime = 0;
@@ -382,11 +395,17 @@ export class PixTelOpenWorldGame {
     this.ui.onHudUpdate();
   }
 
-  /** Uses quick consumable hotkey 1, 2, 3, or 4. */
+  /** Uses quick consumable hotkey 1, 2, 3, or 4 (automatically picks highest-tier item in that group). */
   useConsumableSlot(slot1Based: 1 | 2 | 3 | 4) {
     if (!this.running || this.activeModal !== null) return;
-    const defId = HOTKEY_CONSUMABLES[slot1Based - 1];
-    if (defId) this.useConsumableById(defId);
+    const group = this.inv.getHotkeyGroupForSlot(slot1Based);
+    const bestId = this.inv.findBestConsumableForGroup(group);
+    if (!bestId) {
+      const grpInfo = CONSUMABLE_GROUP_LABELS[group];
+      this.ui.onToast(`Đã hết vật phẩm nhóm ${grpInfo.label}! Mua thêm tại Thương Nhân Mira.`, "warn");
+      return;
+    }
+    this.useConsumableById(bestId);
   }
 
   useConsumableById(defId: string): boolean {
@@ -404,30 +423,86 @@ export class PixTelOpenWorldGame {
       return false;
     }
 
-    if (def.consumableKind === "hp_potion") {
+    if (def.consumableKind === "chroma_coating") {
+      this.player.coatingTime = def.consumableSpec?.durationSec ?? 25.0;
+      this.player.bleachDebuffTime = 0;
+      this.vfx.spawnLive("pixtel/overdrive-aura", { x: this.player.x, y: this.player.y, follow: this.player, maxLife: 1.2 });
+      this.vfx.spawnDamageText(this.player.x, this.player.y - 12, `CHROMA COATING!`, { color: "#ff66d8", crit: true });
+      sfx.playOverdrive();
+      this.ui.onToast(`Đã phủ ${def.name} (+20% ELEM & xoay vòng nguyên tố)!`, "good");
+      this.ui.onHudUpdate();
+      return true;
+    }
+
+    const spec = def.consumableSpec;
+    if (spec) {
+      if (spec.hpPct && spec.hpPct > 0) {
+        const heal = Math.round(this.player.maxHp * spec.hpPct);
+        this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal);
+        this.vfx.spawnPooled(spec.hpPct >= 0.9 ? "heal-aoe" : "heal-burst", { x: this.player.x, y: this.player.y - 6 });
+        this.vfx.spawnDamageText(this.player.x, this.player.y - 12, `+${heal} HP`, {
+          color: "#44ee88",
+          crit: spec.hpPct >= 0.65,
+        });
+      }
+      if (spec.staminaPct && spec.staminaPct > 0) {
+        this.player.stamina = Math.min(
+          this.player.maxStamina,
+          this.player.stamina + Math.round(this.player.maxStamina * spec.staminaPct)
+        );
+        this.player.exhausted = false;
+      }
+      if (spec.speedPct && spec.durationSec) {
+        this.player.speedBuffTime = Math.max(this.player.speedBuffTime, spec.durationSec);
+        this.player.speedBuffPct = Math.max(this.player.speedBuffPct, spec.speedPct);
+        this.vfx.spawnLive("status/haste", { x: this.player.x, y: this.player.y, follow: this.player, maxLife: 1.2 });
+        this.vfx.spawnDamageText(this.player.x, this.player.y - 12, `HASTE +${Math.round(spec.speedPct * 100)}%`, {
+          color: "#44ee88",
+        });
+      }
+      if ((spec.atkPct || spec.critBonus) && spec.durationSec) {
+        this.player.atkBuffTime = Math.max(this.player.atkBuffTime, spec.durationSec);
+        this.player.atkBuffPct = Math.max(this.player.atkBuffPct, spec.atkPct ?? 0);
+        this.player.atkBuffCrit = Math.max(this.player.atkBuffCrit, spec.critBonus ?? 0);
+        this.vfx.spawnLive("pixtel/overdrive-aura", { x: this.player.x, y: this.player.y, follow: this.player, maxLife: 1.2 });
+        this.vfx.spawnDamageText(this.player.x, this.player.y - 14, `ATK +${Math.round((spec.atkPct ?? 0) * 100)}%!`, {
+          color: "#ffe066",
+          crit: true,
+        });
+      }
+      if ((spec.defPct || spec.shieldSec) && (spec.durationSec || spec.shieldSec)) {
+        const dur = spec.shieldSec ?? spec.durationSec ?? 6;
+        this.player.defBuffTime = Math.max(this.player.defBuffTime, spec.durationSec ?? dur);
+        this.player.defBuffPct = Math.max(this.player.defBuffPct, spec.defPct ?? 0.35);
+        this.player.aegisTime = Math.max(this.player.aegisTime, dur);
+        this.vfx.spawnLive("impacts/shield-block", { x: this.player.x, y: this.player.y, follow: this.player, maxLife: 1.1 });
+        this.vfx.spawnDamageText(this.player.x, this.player.y - 14, `AEGIS SHIELD!`, {
+          color: "#5ef2ff",
+          crit: true,
+        });
+      }
+      if (spec.invulnSec && spec.invulnSec > 0) {
+        this.player.invuln = Math.max(this.player.invuln, spec.invulnSec);
+        this.vfx.spawnPooled("waypoint-pillar", { x: this.player.x, y: this.player.y });
+      }
+      if (spec.overdriveGain && spec.overdriveGain > 0) {
+        this.player.overdrive = Math.min(100, this.player.overdrive + spec.overdriveGain);
+        this.vfx.spawnDamageText(this.player.x, this.player.y - 20, `+${spec.overdriveGain}% [Q]!`, {
+          color: "#ff66d8",
+          crit: true,
+        });
+      }
+
+      if (spec.group === "power" || (spec.overdriveGain ?? 0) > 0) sfx.playOverdrive();
+      else if (spec.group === "aegis") sfx.playBlock();
+      else sfx.playLootPickup(true);
+      this.ui.onToast(`Đã dùng ${def.name}!`, "good");
+    } else if (def.consumableKind === "hp_potion") {
       const heal = Math.round(this.player.maxHp * 0.45);
       this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal);
       this.vfx.spawnPooled("heal-burst", { x: this.player.x, y: this.player.y - 6 });
       this.vfx.spawnDamageText(this.player.x, this.player.y - 12, `+${heal} HP`, { color: "#44ee88", crit: true });
       sfx.playLootPickup(true);
-    } else if (def.consumableKind === "stamina_elixir") {
-      this.player.stamina = this.player.maxStamina;
-      this.player.exhausted = false;
-      this.player.speedBuffTime = 8.0;
-      this.vfx.spawnLive("status/haste", { x: this.player.x, y: this.player.y, follow: this.player, maxLife: 1.2 });
-      this.vfx.spawnDamageText(this.player.x, this.player.y - 12, `HASTE +28%`, { color: "#44ee88" });
-      sfx.playLootPickup(true);
-    } else if (def.consumableKind === "chroma_tonic") {
-      this.player.atkBuffTime = 12.0;
-      this.vfx.spawnLive("pixtel/overdrive-aura", { x: this.player.x, y: this.player.y, follow: this.player, maxLife: 1.2 });
-      this.vfx.spawnDamageText(this.player.x, this.player.y - 12, `ATK +30%!`, { color: "#ffe066", crit: true });
-      sfx.playOverdrive();
-    } else if (def.consumableKind === "chroma_coating") {
-      this.player.coatingTime = 25.0;
-      this.player.bleachDebuffTime = 0;
-      this.vfx.spawnLive("pixtel/overdrive-aura", { x: this.player.x, y: this.player.y, follow: this.player, maxLife: 1.2 });
-      this.vfx.spawnDamageText(this.player.x, this.player.y - 12, `CHROMA COATING!`, { color: "#ff66d8", crit: true });
-      sfx.playOverdrive();
     }
 
     this.ui.onHudUpdate();
@@ -591,7 +666,18 @@ export class PixTelOpenWorldGame {
       this.spawner.groundLoot.splice(idx, 1);
       const isRare = def.rarity === "rare" || def.rarity === "epic" || def.rarity === "legendary";
       sfx.playLootPickup(isRare);
-      this.vfx.spawnPooled("collect-burst", { x: loot.x, y: loot.y });
+      const burstPreset =
+        def.rarity === "legendary"
+          ? "collect-burst-legendary"
+          : def.rarity === "epic"
+            ? "collect-burst-epic"
+            : def.rarity === "rare"
+              ? "collect-burst-rare"
+              : "collect-burst";
+      this.vfx.spawnPooled(burstPreset, { x: loot.x, y: loot.y });
+      if (def.rarity === "legendary") {
+        this.vfx.spawnPooled("crit-gold", { x: loot.x, y: loot.y - 6, scale: 0.9 });
+      }
       this.vfx.spawnDamageText(
         loot.x,
         loot.y - 8,
@@ -799,7 +885,7 @@ export class PixTelOpenWorldGame {
       this.world.moveWithCollision(p, p.dashVx * dt, p.dashVy * dt, p.radius);
     } else if (moving) {
       const sprintMult = p.sprinting ? 1.48 : 1.0;
-      const buffMult = p.speedBuffTime > 0 ? 1.28 : 1.0;
+      const buffMult = p.speedBuffTime > 0 ? 1 + (p.speedBuffPct || 0.28) : 1.0;
       const exhaustSlow = p.exhausted ? 0.84 : 1.0;
       const chargeSlow = p.charging && p.chargeTime > 0.18 ? 0.65 : 1.0;
       const spd = p.spd * sprintMult * buffMult * exhaustSlow * chargeSlow;
@@ -1036,15 +1122,37 @@ export class PixTelOpenWorldGame {
         this.vfx.drawAtlasInstance(ctx, coinAtlas, sx, vy, this.time + l.bobPhase);
       } else if (l.item) {
         const def = ITEMS[l.item.defId];
-        if (def?.category === "equipment") {
+        const isHighRarity =
+          l.rarity === "rare" || l.rarity === "epic" || l.rarity === "legendary";
+        if (def && (def.category === "equipment" || isHighRarity)) {
           const beam = this.vfx.getAtlas(RARITY_INFO[l.rarity].beamPreset);
           this.vfx.drawAtlasInstance(ctx, beam, sx, sy - 6, this.time + l.bobPhase, 0, false, 1, 0.95);
-          ctx.fillStyle = "#100c18";
-          ctx.fillRect(sx - 4, vy - 4, 8, 8);
+
+          // Crisp 16x16 pixel drop pedestal + 12x12 codixel item icon
+          ctx.fillStyle = "#0b0914";
+          ctx.fillRect(sx - 8, vy - 8, 16, 16);
           ctx.fillStyle = RARITY_INFO[l.rarity].color;
-          ctx.fillRect(sx - 3, vy - 3, 6, 6);
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(sx - 2, vy - 2, 2, 2);
+          ctx.fillRect(sx - 7, vy - 7, 14, 14);
+          ctx.fillStyle = "#141022";
+          ctx.fillRect(sx - 6, vy - 6, 12, 12);
+          drawItemIcon(ctx, def, 12, sx - 6, vy - 6);
+
+          // High-rarity pixelfx orbiting aura + glints (Rare / Epic / Legendary)
+          if (isHighRarity) {
+            const auraAtlas = this.vfx.getAtlas(`item-aura-${l.rarity}`);
+            const auraScale = l.rarity === "legendary" ? 0.95 : l.rarity === "epic" ? 0.88 : 0.8;
+            this.vfx.drawAtlasInstance(
+              ctx,
+              auraAtlas,
+              sx,
+              vy,
+              this.time + l.bobPhase,
+              0,
+              false,
+              auraScale,
+              1
+            );
+          }
         } else {
           this.vfx.drawAtlasInstance(ctx, shardAtlas, sx, vy, this.time + l.bobPhase);
         }
@@ -1425,6 +1533,8 @@ export class PixTelOpenWorldGame {
               bleached: heroBleached,
               time: this.time,
               chargePct,
+              aegisActive: p.aegisTime > 0 || p.shieldTime > 0,
+              buffActive: p.atkBuffTime > 0,
             });
           }
 

@@ -4,16 +4,18 @@ import {
   SLOT_LABELS,
   getItemEffectiveStats,
   getItemMilestoneSummary,
+  getTierBadge,
 } from "../data/items";
 import { FORGE_RECIPES } from "../data/recipes";
 import type { InfusableElement } from "../data/types";
-import { drawItemIcon } from "../graphics/itemIcons";
+import { onCodixelReady } from "../graphics/codixelAtlas";
 import {
   CATALYST_BONUS_PCT,
   CATALYST_SHARD_COST,
   ELEMENT_DISPLAY,
   INFUSE_GOLD_COST,
 } from "../systems/forgeSystem";
+import { uiRarityFx } from "../vfx/uiRarityFx";
 import { createFrame, clearFrame, createFx, PAL } from "../vfx/pixelfx/core/index.js";
 import { PIXELFX_MODS } from "../vfx/vfxManager";
 import type { PixelfxFrame, PixelfxInstance } from "../vfx/pixelfxTypes";
@@ -95,6 +97,12 @@ export class ForgeModalUI {
       sfx.playUiClick();
       this.tab = "craft";
       this.render();
+    });
+
+    onCodixelReady(() => {
+      if (!this.root.classList.contains("hidden")) {
+        this.render();
+      }
     });
   }
 
@@ -218,14 +226,16 @@ export class ForgeModalUI {
       .map(({ item, equipped }) => {
         const def = ITEMS[item.defId];
         const col = RARITY_INFO[def.rarity].color;
+        const tInfo = getTierBadge(def);
         const sel = item.uid === this.selectedUid ? "selected" : "";
         const infBadge =
           item.enhanceLevel >= 5 && item.infusedElement
             ? `<span style="color:${ELEMENT_DISPLAY[item.infusedElement].color};font-size:10px">[${ELEMENT_DISPLAY[item.infusedElement].label}]</span>`
             : "";
         return `
-          <div class="forge-list-item ${sel}" data-pick="${item.uid}" style="border-color:${col}">
-            <canvas class="px-item-icon" width="16" height="16" data-icon-def="${def.id}"></canvas>
+          <div class="forge-list-item rarity-${def.rarity} ${sel}" data-pick="${item.uid}" data-review-uid="${item.uid}" style="border-color:${col}">
+            <canvas class="px-item-icon" width="32" height="32" data-icon-def="${def.id}" data-icon-enh="${item.enhanceLevel}"></canvas>
+            <span class="tier-pill" style="color:${tInfo.color};background:${tInfo.bg}">${tInfo.badge}</span>
             <span style="color:${col};flex:1">${def.name} ${item.enhanceLevel > 0 ? `+${item.enhanceLevel}` : ""} ${infBadge}</span>
             ${equipped ? `<span class="eq-badge">ĐANG MẶC</span>` : ""}
           </div>
@@ -253,7 +263,7 @@ export class ForgeModalUI {
           .map((m) => {
             const have = this.game.inv.countItem(m.defId);
             const ok = have >= m.qty;
-            return `<div class="mat-row ${ok ? "ok" : "miss"}">${ITEMS[m.defId]?.name}: ${have}/${m.qty}</div>`;
+            return `<div class="mat-row ${ok ? "ok" : "miss"}" data-review-def="${m.defId}">${ITEMS[m.defId]?.name}: ${have}/${m.qty}</div>`;
           })
           .join("");
 
@@ -416,18 +426,20 @@ export class ForgeModalUI {
     const cards = FORGE_RECIPES.map((rec) => {
       const def = ITEMS[rec.resultDefId];
       const rInfo = RARITY_INFO[def.rarity];
+      const tInfo = getTierBadge(def);
       const check = this.game.forge.canCraft(rec, this.game.inv);
       const mats = rec.materials
         .map((m) => {
           const have = this.game.inv.countItem(m.defId);
-          return `<span class="craft-mat ${have >= m.qty ? "ok" : "miss"}">${ITEMS[m.defId]?.name} ${have}/${m.qty}</span>`;
+          return `<span class="craft-mat ${have >= m.qty ? "ok" : "miss"}" data-review-def="${m.defId}">${ITEMS[m.defId]?.name} ${have}/${m.qty}</span>`;
         })
         .join("");
 
       return `
-        <div class="craft-card" style="border-color:${rInfo.color}">
+        <div class="craft-card rarity-${def.rarity}" data-review-def="${def.id}" style="border-color:${rInfo.color}">
           <div class="craft-head">
-            <canvas class="px-item-icon" width="16" height="16" data-icon-def="${def.id}"></canvas>
+            <canvas class="px-item-icon" width="32" height="32" data-icon-def="${def.id}" data-icon-enh="0"></canvas>
+            <span class="tier-pill" style="color:${tInfo.color};background:${tInfo.bg}">${tInfo.badge}</span>
             <b style="color:${rInfo.color}">${def.name}</b>
             <span class="craft-rarity" style="color:${rInfo.color}">[${rInfo.label}]</span>
           </div>
@@ -466,13 +478,6 @@ export class ForgeModalUI {
   }
 
   private _paintIcons() {
-    this.contentEl.querySelectorAll<HTMLCanvasElement>("canvas[data-icon-def]").forEach((cv) => {
-      const defId = cv.dataset.iconDef;
-      if (!defId || !ITEMS[defId]) return;
-      const ctx = cv.getContext("2d");
-      if (!ctx) return;
-      ctx.clearRect(0, 0, cv.width, cv.height);
-      drawItemIcon(ctx, ITEMS[defId], cv.width, 0, 0);
-    });
+    uiRarityFx.syncContainer(this.contentEl);
   }
 }

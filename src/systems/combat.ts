@@ -79,7 +79,7 @@ export class CombatSystem {
     target?: EnemyEntity
   ): { dmg: number; crit: boolean; counterUsed: boolean } {
     const { player, colorSys } = ctx;
-    const buffMult = player.atkBuffTime > 0 ? 1.3 : 1.0;
+    const buffMult = player.atkBuffTime > 0 ? 1 + (player.atkBuffPct || 0.3) : 1.0;
     const counterUsed = player.chromaCounterTimer > 0;
     const counterMult = counterUsed ? 1.55 : 1.0;
     const coatingBonus = player.coatingTime > 0 ? 20 : 0;
@@ -102,7 +102,7 @@ export class CombatSystem {
       vulnCrit +
       (counterUsed ? 25 : 0) +
       (player.cloneTime > 0 ? 25 : 0) +
-      (player.atkBuffTime > 0 ? 15 : 0);
+      (player.atkBuffTime > 0 ? (player.atkBuffCrit || 15) : 0);
     const crit = Math.random() * 100 < critChance;
     const base =
       player.atk *
@@ -1427,7 +1427,9 @@ export class CombatSystem {
       return;
     }
 
-    const dmg = Math.max(2, Math.round(rawAmount - player.def * 0.6));
+    const mitigated = Math.max(2, Math.round(rawAmount - player.def * 0.6));
+    const shieldScale = player.defBuffTime > 0 || player.aegisTime > 0 ? 1 - Math.min(0.6, player.defBuffPct || 0.35) : 1;
+    const dmg = Math.max(1, Math.round(mitigated * shieldScale));
     player.hp = Math.max(0, player.hp - dmg);
     player.hitFlash = 0.22;
     player.invuln = 0.55;
@@ -1436,8 +1438,8 @@ export class CombatSystem {
     }
     sfx.playPlayerHit();
     ctx.addShake(3.8);
-    vfx.spawnPooled("hit-fire", { x: player.x, y: player.y - 6 });
-    vfx.spawnDamageText(player.x, player.y - 12, `-${dmg}`, { color: "#ff4466" });
+    vfx.spawnPooled(player.aegisTime > 0 ? "hit-cyan" : "hit-fire", { x: player.x, y: player.y - 6 });
+    vfx.spawnDamageText(player.x, player.y - 12, `-${dmg}`, { color: player.aegisTime > 0 ? "#5ef2ff" : "#ff4466" });
 
     if (player.hp <= 0) {
       // Check Undying Totem Charm in bag before defeat!
@@ -1480,8 +1482,22 @@ export class CombatSystem {
 
     if (player.shieldTime > 0) player.shieldTime = Math.max(0, player.shieldTime - dt);
     if (player.cloneTime > 0) player.cloneTime = Math.max(0, player.cloneTime - dt);
-    if (player.speedBuffTime > 0) player.speedBuffTime = Math.max(0, player.speedBuffTime - dt);
-    if (player.atkBuffTime > 0) player.atkBuffTime = Math.max(0, player.atkBuffTime - dt);
+    if (player.speedBuffTime > 0) {
+      player.speedBuffTime = Math.max(0, player.speedBuffTime - dt);
+      if (player.speedBuffTime <= 0) player.speedBuffPct = 0;
+    }
+    if (player.atkBuffTime > 0) {
+      player.atkBuffTime = Math.max(0, player.atkBuffTime - dt);
+      if (player.atkBuffTime <= 0) {
+        player.atkBuffPct = 0;
+        player.atkBuffCrit = 0;
+      }
+    }
+    if (player.defBuffTime > 0) {
+      player.defBuffTime = Math.max(0, player.defBuffTime - dt);
+      if (player.defBuffTime <= 0) player.defBuffPct = 0;
+    }
+    if (player.aegisTime > 0) player.aegisTime = Math.max(0, player.aegisTime - dt);
 
     // Orbiting Grimoire / Satellite Passive (image_8 / image_15)
     if (player.hasOrbitGrimoire) {

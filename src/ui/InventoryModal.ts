@@ -5,9 +5,12 @@ import {
   SLOT_LABELS,
   getDismantleShardYield,
   getItemEffectiveStats,
+  getTierBadge,
 } from "../data/items";
 import { EQUIP_SLOTS, type EquipSlot } from "../data/types";
-import { drawEquippedHeroPreview, drawItemIcon } from "../graphics/itemIcons";
+import { onCodixelReady } from "../graphics/codixelAtlas";
+import { drawEquippedHeroPreview } from "../graphics/itemIcons";
+import { uiRarityFx } from "../vfx/uiRarityFx";
 import type { PixTelOpenWorldGame } from "../game";
 import { sfx } from "../audio/chiptuneSynth";
 
@@ -47,6 +50,12 @@ export class InventoryModalUI {
     this.statsEl = document.getElementById("inv-hero-stats")!;
     this.bagEl = document.getElementById("inv-bag-grid")!;
     this.detailEl = document.getElementById("inv-item-detail")!;
+
+    onCodixelReady(() => {
+      if (!this.root.classList.contains("hidden")) {
+        this.render();
+      }
+    });
 
     document.getElementById("btn-close-inventory")!.addEventListener("click", () => {
       sfx.playUiClick();
@@ -95,7 +104,8 @@ export class InventoryModalUI {
       this.game.inv.equipment,
       walkFrame,
       facing,
-      this.animTime
+      this.animTime,
+      { aegisActive: p.aegisTime > 0 || p.shieldTime > 0, buffActive: p.atkBuffTime > 0 }
     );
   }
 
@@ -143,6 +153,27 @@ export class InventoryModalUI {
       <div class="stat-pill"><span>MẢNH LK</span><b style="color:#5ef2ff">${shardsCount}</b></div>
     `;
 
+    // 1b. Active Set Bonuses
+    const setsEl = document.getElementById("inv-set-bonuses");
+    if (setsEl) {
+      const sets = inv.getActiveSetBonuses();
+      if (sets.length === 0) {
+        setsEl.innerHTML = "";
+      } else {
+        setsEl.innerHTML = sets
+          .map(
+            (s) => `
+            <div class="set-pill" style="border-color:${s.def.color}">
+              <b style="color:${s.def.color}">★ ${s.def.name} (${s.count}/4)</b>
+              <div style="color:${s.twoActive ? "#44ee88" : "#6c738e"}">${s.def.twoPieceLabel}</div>
+              <div style="color:${s.fourActive ? "#ffe066" : "#6c738e"}">${s.def.fourPieceLabel}</div>
+            </div>
+          `
+          )
+          .join("");
+      }
+    }
+
     // 2. 5 Equipment Slots (Helmet, Armor, Weapon, Boots, Accessory)
     this.equipEl.innerHTML = EQUIP_SLOTS.map((slot) => {
       const it = inv.equipment[slot];
@@ -158,13 +189,15 @@ export class InventoryModalUI {
       }
       const def = ITEMS[it.defId];
       const col = RARITY_INFO[def.rarity].color;
+      const tInfo = getTierBadge(def);
       const sel = this.selectedUid === it.uid ? "selected" : "";
       return `
-        <div class="equip-slot ${sel}" data-uid="${it.uid}" style="border-color:${col}">
-          <canvas class="px-item-icon" width="24" height="24" data-icon-def="${def.id}"></canvas>
+        <div class="equip-slot rarity-${def.rarity} ${sel}" data-uid="${it.uid}" data-review-uid="${it.uid}" style="border-color:${col}">
+          <canvas class="px-item-icon" width="32" height="32" data-icon-def="${def.id}" data-icon-enh="${it.enhanceLevel}"></canvas>
           <div class="equip-slot-info">
             <div class="slot-top">
               <span class="slot-lbl">${SLOT_LABELS[slot]}</span>
+              <span class="tier-pill" style="color:${tInfo.color};background:${tInfo.bg}">${tInfo.badge}</span>
               ${it.enhanceLevel > 0 ? `<span class="enh-tag">+${it.enhanceLevel}</span>` : ""}
             </div>
             <div class="slot-name" style="color:${col}">${def.name}</div>
@@ -183,12 +216,14 @@ export class InventoryModalUI {
       }
       const def = ITEMS[it.defId];
       const col = RARITY_INFO[def.rarity].color;
+      const tInfo = getTierBadge(def);
       const sel = this.selectedUid === it.uid ? "selected" : "";
       const classMismatch =
         def.requiredClass && def.requiredClass !== "all" && def.requiredClass !== p.classId;
       bagHtml += `
-        <div class="bag-cell ${sel}" data-uid="${it.uid}" style="border-color:${col}" title="${def.name}">
-          <canvas class="px-item-icon" width="32" height="32" data-icon-def="${def.id}"></canvas>
+        <div class="bag-cell rarity-${def.rarity} ${sel}" data-uid="${it.uid}" data-review-uid="${it.uid}" style="border-color:${col}">
+          <canvas class="px-item-icon" width="32" height="32" data-icon-def="${def.id}" data-icon-enh="${it.enhanceLevel}"></canvas>
+          <span class="bag-tier" style="color:${tInfo.color}">${tInfo.badge}</span>
           ${it.qty > 1 ? `<span class="bag-qty">x${it.qty}</span>` : ""}
           ${it.enhanceLevel > 0 ? `<span class="bag-enh">+${it.enhanceLevel}</span>` : ""}
           ${classMismatch ? `<span class="bag-lock" title="Khác Class">✕</span>` : ""}
@@ -197,10 +232,10 @@ export class InventoryModalUI {
     }
     this.bagEl.innerHTML = bagHtml;
 
-    // Paint procedural 16x16 pixel icons onto all cell canvases
-    this._paintAllIcons(this.root);
+    // Paint codixel icons & attach live pixelfx high-rarity slot auras
+    uiRarityFx.syncContainer(this.root);
 
-    // Bind click selection & live hover tooltip preview
+    // Bind click selection (hover review is handled globally by vintage rope ItemReviewTooltip)
     this.root.querySelectorAll("[data-uid]").forEach((el) => {
       const uid = (el as HTMLElement).dataset.uid ?? null;
       el.addEventListener("click", () => {
@@ -209,7 +244,7 @@ export class InventoryModalUI {
         this.render();
       });
       el.addEventListener("mouseenter", () => {
-        if (this.hoveredUid !== uid) {
+        if (!this.selectedUid && this.hoveredUid !== uid) {
           this.hoveredUid = uid;
           this._renderDetail();
         }
@@ -217,7 +252,7 @@ export class InventoryModalUI {
       el.addEventListener("mouseleave", () => {
         if (this.hoveredUid === uid) {
           this.hoveredUid = null;
-          this._renderDetail();
+          if (!this.selectedUid) this._renderDetail();
         }
       });
     });
@@ -226,21 +261,11 @@ export class InventoryModalUI {
   }
 
   private _paintAllIcons(container: HTMLElement) {
-    container.querySelectorAll<HTMLCanvasElement>("canvas[data-icon-def]").forEach((cv) => {
-      const defId = cv.dataset.iconDef;
-      if (!defId || !ITEMS[defId]) return;
-      const ctx = cv.getContext("2d");
-      if (!ctx) return;
-      ctx.clearRect(0, 0, cv.width, cv.height);
-      const size = Math.min(cv.width, cv.height);
-      const scale = Math.max(1, Math.floor(size / 16));
-      const pad = Math.floor((size - 16 * scale) / 2);
-      drawItemIcon(ctx, ITEMS[defId], 16 * scale, pad, pad);
-    });
+    uiRarityFx.syncContainer(container);
   }
 
   private _renderDetail() {
-    const activeUid = this.hoveredUid ?? this.selectedUid;
+    const activeUid = this.selectedUid ?? this.hoveredUid;
     if (!activeUid) {
       this.detailEl.innerHTML = `<div class="detail-empty">Di chuột hoặc chọn một vật phẩm trong Túi / Ô Trang Bị để xem chỉ số so sánh, Trang bị hoặc Phân rã thành Mảnh Lăng Kính.</div>`;
       return;
@@ -257,6 +282,7 @@ export class InventoryModalUI {
     const { item, location } = found;
     const def = ITEMS[item.defId];
     const rInfo = RARITY_INFO[def.rarity];
+    const tInfo = getTierBadge(def);
 
     const classReqText =
       def.requiredClass && def.requiredClass !== "all"
@@ -322,11 +348,12 @@ export class InventoryModalUI {
 
     this.detailEl.innerHTML = `
       <div class="detail-head" style="color:${rInfo.color}">
-        <canvas class="px-item-icon" width="24" height="24" data-icon-def="${def.id}"></canvas>
+        <canvas class="px-item-icon" width="32" height="32" data-icon-def="${def.id}" data-icon-enh="${item.enhanceLevel}"></canvas>
+        <span class="tier-pill" style="color:${tInfo.color};background:${tInfo.bg}">${tInfo.badge}</span>
         <span>${def.name} ${item.enhanceLevel > 0 ? `+${item.enhanceLevel}` : ""}</span>
       </div>
       <div class="detail-sub">
-        [${rInfo.label}] ${def.slot ? `· ${SLOT_LABELS[def.slot]}` : ""}
+        ${tInfo.label} · [${rInfo.label}] ${def.slot ? `· ${SLOT_LABELS[def.slot]}` : ""}
         ${location !== "bag" ? "· ĐANG MẶC" : ""}
         <span style="color:${classMismatch ? "#ff4466" : "#99a3c4"}">${classReqText}</span>
       </div>

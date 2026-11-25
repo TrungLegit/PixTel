@@ -83,7 +83,13 @@ export interface PlayerEntity {
 
   // Consumable temporary buffs
   speedBuffTime: number;
+  speedBuffPct: number;
   atkBuffTime: number;
+  atkBuffPct: number;
+  atkBuffCrit: number;
+  defBuffTime: number;
+  defBuffPct: number;
+  aegisTime: number;
   coatingTime: number;
   coatingElement: InfusableElement | null;
   respawnWaypointId: string;

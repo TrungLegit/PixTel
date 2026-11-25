@@ -1,4 +1,5 @@
 import type { ClassId, EquipSlot, ItemDef, ItemIconKind, ItemInstance } from "../data/types";
+import { drawCodixelIcon } from "./codixelAtlas";
 import { drawPaperDollHero } from "./paperDoll";
 
 // 16x16 pixel silhouettes for crisp procedural 16-bit icons
@@ -342,7 +343,8 @@ function inferIconKind(def: ItemDef): ItemIconKind {
 }
 
 /**
- * Draws a crisp 16x16 pixel-art icon for any item onto the target 2D canvas.
+ * Draws a crisp pixel-art icon for any item:
+ * uses the high-craft 24x24 codixel atlas first, falling back to 16x16 matrices only while decoding.
  */
 export function drawItemIcon(
   ctx: CanvasRenderingContext2D,
@@ -352,9 +354,14 @@ export function drawItemIcon(
   offsetY = 0
 ) {
   ctx.imageSmoothingEnabled = false;
+  if (def.spriteKey && drawCodixelIcon(ctx, def.spriteKey, offsetX, offsetY, targetSize)) {
+    return;
+  }
+
   const kind = inferIconKind(def);
   const rows = ICON_MATRICES[kind];
   const scale = Math.max(1, Math.floor(targetSize / 16));
+  const pad = Math.floor((targetSize - 16 * scale) / 2);
   const pal: Record<string, string> = {
     k: def.visualStyle?.outline ?? "#100c18",
     m: def.visualStyle?.primary ?? def.visualColor ?? def.iconColor,
@@ -371,14 +378,14 @@ export function drawItemIcon(
       const col = pal[ch];
       if (!col) continue;
       ctx.fillStyle = col;
-      ctx.fillRect(offsetX + x * scale, offsetY + y * scale, scale, scale);
+      ctx.fillRect(offsetX + pad + x * scale, offsetY + pad + y * scale, scale, scale);
     }
   }
 }
 
 /**
  * Renders the 4x integer-scaled animated Character Preview in the Inventory UI,
- * delegating directly to the Paper-Doll pixel renderer for 1:1 map fidelity.
+ * delegating directly to the codixel-powered Paper-Doll renderer for 1:1 map fidelity.
  */
 export function drawEquippedHeroPreview(
   ctx: CanvasRenderingContext2D,
@@ -386,7 +393,8 @@ export function drawEquippedHeroPreview(
   equipment: Partial<Record<EquipSlot, ItemInstance>>,
   walkFrame: number,
   facing: 1 | -1,
-  time: number
+  time: number,
+  extra?: { aegisActive?: boolean; buffActive?: boolean }
 ) {
   const w = ctx.canvas.width;
   const h = ctx.canvas.height;
@@ -400,7 +408,7 @@ export function drawEquippedHeroPreview(
 
   const scale = 4;
   const centerX = Math.round(w / 2);
-  const footY = Math.round(h - 10);
+  const footY = Math.round(h - 14);
 
   ctx.fillStyle = "#262242";
   ctx.fillRect(centerX - 24, footY, 48, 6);
@@ -433,5 +441,7 @@ export function drawEquippedHeroPreview(
     hitFlash: false,
     bleached: false,
     time,
+    aegisActive: extra?.aegisActive,
+    buffActive: extra?.buffActive,
   });
 }

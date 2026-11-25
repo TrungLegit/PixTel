@@ -1,5 +1,7 @@
-import { ITEMS, MERCHANT_STOCK, RARITY_INFO } from "../data/items";
+import { ITEMS, MERCHANT_STOCK, RARITY_INFO, getTierBadge } from "../data/items";
 import { TOWN_NPCS } from "../data/worldConfig";
+import { onCodixelReady } from "../graphics/codixelAtlas";
+import { uiRarityFx } from "../vfx/uiRarityFx";
 import type { PixTelOpenWorldGame } from "../game";
 import { sfx } from "../audio/chiptuneSynth";
 
@@ -25,6 +27,12 @@ export class DialogueModalUI {
     document.getElementById("btn-close-dialogue")!.addEventListener("click", () => {
       sfx.playUiClick();
       this.game.setModal(null);
+    });
+
+    onCodixelReady(() => {
+      if (!this.root.classList.contains("hidden")) {
+        this.render();
+      }
     });
   }
 
@@ -56,29 +64,51 @@ export class DialogueModalUI {
     // Merchant Shop
     if (npc.kind === "merchant") {
       html += `<div class="section-hdr">CỬA HÀNG VẬT PHẨM (Vàng hiện có: <b style="color:#ffe066">${this.game.inv.gold} G</b>)</div>`;
-      html += `<div class="shop-grid">`;
-      for (const id of MERCHANT_STOCK) {
-        const def = ITEMS[id];
-        if (!def || !def.buyPrice) continue;
-        const owned = this.game.inv.countItem(id);
-        const canAfford = this.game.inv.gold >= def.buyPrice;
-        html += `
-          <div class="shop-item">
-            <div class="shop-item-top">
-              <span class="item-swatch" style="background:${def.iconColor}"></span>
-              <div>
-                <div style="color:${RARITY_INFO[def.rarity].color};font-weight:700">${def.name}</div>
-                <div class="shop-desc">${def.desc}</div>
+      const groups: { title: string; ids: string[] }[] = [
+        {
+          title: "Dược Phẩm Tiêu Thụ (Đa Tier)",
+          ids: MERCHANT_STOCK.filter((id) => ITEMS[id]?.category === "consumable"),
+        },
+        {
+          title: "Vũ Khí & Trang Bị",
+          ids: MERCHANT_STOCK.filter((id) => ITEMS[id]?.category === "equipment"),
+        },
+        {
+          title: "Nguyên Liệu Rèn",
+          ids: MERCHANT_STOCK.filter((id) => ITEMS[id]?.category === "material"),
+        },
+      ];
+
+      for (const g of groups) {
+        if (g.ids.length === 0) continue;
+        html += `<div class="shop-cat-hdr">${g.title}</div><div class="shop-grid">`;
+        for (const id of g.ids) {
+          const def = ITEMS[id];
+          if (!def || !def.buyPrice) continue;
+          const owned = this.game.inv.countItem(id);
+          const canAfford = this.game.inv.gold >= def.buyPrice;
+          const tInfo = getTierBadge(def);
+          html += `
+            <div class="shop-item rarity-${def.rarity}" data-review-def="${def.id}" style="border-color:${RARITY_INFO[def.rarity].color}">
+              <div class="shop-item-top">
+                <canvas class="px-item-icon" width="32" height="32" data-icon-def="${def.id}" data-icon-enh="0"></canvas>
+                <div>
+                  <div style="color:${RARITY_INFO[def.rarity].color};font-weight:700">
+                    <span class="tier-pill" style="color:${tInfo.color};background:${tInfo.bg}">${tInfo.badge}</span>
+                    ${def.name}
+                  </div>
+                  <div class="shop-desc">${def.desc}</div>
+                </div>
+              </div>
+              <div class="shop-item-foot">
+                <span class="shop-owned">Đang có: ${owned}</span>
+                <button class="px-btn ${canAfford ? "good" : "disabled"}" data-buy="${def.id}">Mua · ${def.buyPrice}G</button>
               </div>
             </div>
-            <div class="shop-item-foot">
-              <span class="shop-owned">Đang có: ${owned}</span>
-              <button class="px-btn ${canAfford ? "good" : "disabled"}" data-buy="${def.id}">Mua · ${def.buyPrice}G</button>
-            </div>
-          </div>
-        `;
+          `;
+        }
+        html += `</div>`;
       }
-      html += `</div>`;
       html += `
         <div class="npc-action-row">
           <button class="px-btn warn" data-action="sell-common">Bán Nhanh Toàn Bộ Trang Bị Thường (Trắng) Trong Túi</button>
@@ -92,7 +122,10 @@ export class DialogueModalUI {
       html += `<div class="section-hdr">NHIỆM VỤ TỪ ${npc.name.toUpperCase()}</div>`;
       for (const { def, state } of quests) {
         const rewardItems = (def.rewards.items ?? [])
-          .map((ri) => `${ITEMS[ri.defId]?.name ?? ri.defId} x${ri.qty}`)
+          .map(
+            (ri) =>
+              `<span class="reward-item-pill" data-review-def="${ri.defId}">${ITEMS[ri.defId]?.name ?? ri.defId} x${ri.qty}</span>`
+          )
           .join(", ");
         const speech =
           state === "completable"
@@ -127,6 +160,9 @@ export class DialogueModalUI {
     }
 
     this.bodyEl.innerHTML = html;
+
+    // Paint codixel icons & attach live pixelfx high-rarity slot auras
+    uiRarityFx.syncContainer(this.bodyEl);
 
     // Bind dynamic buttons
     this.bodyEl.querySelectorAll("[data-action='open-forge']").forEach((el) => {
