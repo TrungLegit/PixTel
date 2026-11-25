@@ -1,5 +1,6 @@
 import { ITEMS, RARITY_INFO, SLOT_LABELS, getItemEffectiveStats } from "../data/items";
 import { FORGE_RECIPES } from "../data/recipes";
+import { drawItemIcon } from "../graphics/itemIcons";
 import { createFrame, clearFrame, createFx, PAL } from "../vfx/pixelfx/core/index.js";
 import { PIXELFX_MODS } from "../vfx/vfxManager";
 import type { PixelfxFrame, PixelfxInstance } from "../vfx/pixelfxTypes";
@@ -206,7 +207,7 @@ export class ForgeModalUI {
         const sel = item.uid === this.selectedUid ? "selected" : "";
         return `
           <div class="forge-list-item ${sel}" data-pick="${item.uid}" style="border-color:${col}">
-            <span class="item-swatch" style="background:${def.iconColor}"></span>
+            <canvas class="px-item-icon" width="16" height="16" data-icon-def="${def.id}"></canvas>
             <span style="color:${col};flex:1">${def.name} ${item.enhanceLevel > 0 ? `+${item.enhanceLevel}` : ""}</span>
             ${equipped ? `<span class="eq-badge">ĐANG MẶC</span>` : ""}
           </div>
@@ -243,6 +244,8 @@ export class ForgeModalUI {
               ${curSt.def || nextSt.def ? `<div>DEF: ${curSt.def} → <b style="color:#44ee88">${nextSt.def}</b></div>` : ""}
               ${curSt.maxHp || nextSt.maxHp ? `<div>HP: ${curSt.maxHp} → <b style="color:#44ee88">${nextSt.maxHp}</b></div>` : ""}
               ${curSt.crit || nextSt.crit ? `<div>CRIT: ${curSt.crit}% → <b style="color:#44ee88">${nextSt.crit}%</b></div>` : ""}
+              ${curSt.spd || nextSt.spd ? `<div>SPD: ${curSt.spd} → <b style="color:#44ee88">${nextSt.spd}</b></div>` : ""}
+              ${curSt.elementBonus || nextSt.elementBonus ? `<div>ELEM: ${curSt.elementBonus}% → <b style="color:#44ee88">${nextSt.elementBonus}%</b></div>` : ""}
             </div>
             <div class="forge-mats">
               <div class="mat-row ${this.game.inv.gold >= info.goldCost ? "ok" : "miss"}">Vàng: ${this.game.inv.gold}/${info.goldCost} G</div>
@@ -264,6 +267,7 @@ export class ForgeModalUI {
         <div class="forge-panel">${rightHtml}</div>
       </div>
     `;
+    this._paintIcons();
 
     this.contentEl.querySelectorAll("[data-pick]").forEach((el) => {
       el.addEventListener("click", () => {
@@ -310,7 +314,7 @@ export class ForgeModalUI {
       return `
         <div class="craft-card" style="border-color:${rInfo.color}">
           <div class="craft-head">
-            <span class="item-swatch" style="background:${def.iconColor}"></span>
+            <canvas class="px-item-icon" width="16" height="16" data-icon-def="${def.id}"></canvas>
             <b style="color:${rInfo.color}">${def.name}</b>
             <span class="craft-rarity" style="color:${rInfo.color}">[${rInfo.label}]</span>
           </div>
@@ -327,6 +331,7 @@ export class ForgeModalUI {
     }).join("");
 
     this.contentEl.innerHTML = `${banner}<div class="craft-grid">${cards}</div>`;
+    this._paintIcons();
 
     this.contentEl.querySelectorAll("[data-craft]").forEach((el) => {
       el.addEventListener("click", () => {
@@ -343,6 +348,17 @@ export class ForgeModalUI {
         }
         this.render();
       });
+    });
+  }
+
+  private _paintIcons() {
+    this.contentEl.querySelectorAll<HTMLCanvasElement>("canvas[data-icon-def]").forEach((cv) => {
+      const defId = cv.dataset.iconDef;
+      if (!defId || !ITEMS[defId]) return;
+      const ctx = cv.getContext("2d");
+      if (!ctx) return;
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      drawItemIcon(ctx, ITEMS[defId], cv.width, 0, 0);
     });
   }
 }

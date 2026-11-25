@@ -15,6 +15,7 @@ export interface PlayerEntity {
   vx: number;
   vy: number;
   facing: number; // 1 = right, -1 = left
+  facingDir: "down" | "up" | "left" | "right";
   aimAngle: number;
   radius: number;
 
@@ -29,6 +30,7 @@ export interface PlayerEntity {
   spd: number;
   crit: number; // percentage 0..100
   critMult: number;
+  elementBonus: number; // % bonus elemental & skill damage
 
   // Stamina (Zelda / Genshin wheel)
   stamina: number;
@@ -61,6 +63,7 @@ export interface PlayerEntity {
   droneTick: number;
   elementIdx: number; // Chroma Mage 0:fire, 1:ice, 2:poison
   walkTime: number;
+  attackAnimTime: number;
 
   // Consumable temporary buffs
   speedBuffTime: number;
@@ -174,6 +177,10 @@ export interface GroundLootEntity {
   uid: number;
   x: number;
   y: number;
+  vx: number;
+  vy: number;
+  z: number;
+  vz: number;
   kind: "gold" | "item";
   gold?: number;
   item?: ItemInstance;

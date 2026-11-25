@@ -1,6 +1,7 @@
 import { getClassDef } from "../data/classes";
 import { ENEMIES } from "../data/enemies";
-import { ITEMS, RARITY_INFO, pickRandomEquipByRarity } from "../data/items";
+import { ITEMS, RARITY_INFO } from "../data/items";
+import { rollEnemyDropTable } from "../data/lootTables";
 import { CHROMA_RAINBOW } from "../data/worldConfig";
 import type { ElementType, Rarity } from "../data/types";
 import type {
@@ -64,19 +65,36 @@ function rollRarityUpgrade(minRarity: Rarity): Rarity {
  * - Mining resource nodes, Enemy patrol/aggro/leash AI, and 3 Regional/World Bosses with telegraphs
  */
 export class CombatSystem {
-  private _rollDamage(player: PlayerEntity, mult = 1, extraCrit = 0): { dmg: number; crit: boolean } {
+  private _rollDamage(
+    player: PlayerEntity,
+    mult = 1,
+    extraCrit = 0,
+    isElemental = false
+  ): { dmg: number; crit: boolean } {
     const buffMult = player.atkBuffTime > 0 ? 1.3 : 1.0;
+    const elemMult = isElemental ? 1 + (player.elementBonus || 0) / 100 : 1.0;
     const critChance =
       player.crit +
       extraCrit +
       (player.cloneTime > 0 ? 25 : 0) +
       (player.atkBuffTime > 0 ? 15 : 0);
     const crit = Math.random() * 100 < critChance;
-    const base = player.atk * mult * buffMult * (0.93 + Math.random() * 0.14);
+    const base = player.atk * mult * buffMult * elemMult * (0.93 + Math.random() * 0.14);
     return {
       dmg: Math.max(1, Math.round(crit ? base * player.critMult : base)),
       crit,
     };
+  }
+
+  private _syncFacingFromAngle(player: PlayerEntity, ang: number) {
+    const cx = Math.cos(ang);
+    const sy = Math.sin(ang);
+    player.facing = cx < 0 ? -1 : 1;
+    if (Math.abs(cx) >= Math.abs(sy)) {
+      player.facingDir = cx < 0 ? "left" : "right";
+    } else {
+      player.facingDir = sy < 0 ? "up" : "down";
+    }
   }
 
   /** Triggered on normal LMB press or release (<0.38s hold). */
@@ -87,10 +105,10 @@ export class CombatSystem {
     const cdef = getClassDef(player.classId);
     const speedFactor = player.cloneTime > 0 ? 0.5 : 1.0;
     player.atkCd = cdef.baseStats.atkCooldown * speedFactor;
+    player.attackAnimTime = 0.18;
 
     const ang = player.aimAngle;
-    const flip = Math.cos(ang) < 0;
-    player.facing = flip ? -1 : 1;
+    this._syncFacingFromAngle(player, ang);
 
     if (player.classId === "prism_knight") {
       const step = player.comboStep;
@@ -120,7 +138,7 @@ export class CombatSystem {
       const elem = ELEMENTS[player.elementIdx % 3];
       player.elementIdx = (player.elementIdx + 1) % 3;
       const preset = elem === "fire" ? "proj-fireball" : elem === "ice" ? "proj-icelance" : "proj-poison";
-      const { dmg, crit } = this._rollDamage(player, 1.05);
+      const { dmg, crit } = this._rollDamage(player, 1.05, 0, true);
       sfx.playMagic(ELEMENTS.indexOf(elem));
       this._spawnPlayerProj(ctx, {
         x: player.x + Math.cos(ang) * 10,
@@ -223,7 +241,8 @@ export class CombatSystem {
     player.atkCd = 0.42;
 
     const ang = player.aimAngle;
-    player.facing = Math.cos(ang) < 0 ? -1 : 1;
+    this._syncFacingFromAngle(player, ang);
+    player.attackAnimTime = 0.24;
     sfx.playChargeRelease();
     ctx.addShake(3.2);
 
@@ -757,7 +776,8 @@ export class CombatSystem {
       const pair = [e.element, incoming].sort().join("+");
       e.element = null;
       e.elementTime = 0;
-      const bonus = Math.round(ctx.player.atk * 1.45);
+      const elemMult = 1 + (ctx.player.elementBonus || 0) / 100;
+      const bonus = Math.round(ctx.player.atk * 1.45 * elemMult);
       e.hp -= bonus;
 
       if (pair === "fire+ice") {
@@ -827,21 +847,17 @@ export class CombatSystem {
       const gold = gMin + Math.floor(Math.random() * (gMax - gMin + 1));
       ctx.spawner.spawnGoldLoot(e.x, e.y, gold);
 
-      // Material drops
-      for (const m of edef.lootMaterials) {
-        if (Math.random() <= m.chance) {
-          ctx.spawner.spawnItemLoot(e.x, e.y, m.defId, e.isBoss ? 2 : 1);
-        }
-      }
-
-      // Equipment drop with pixelfx Loot Beam!
-      if (Math.random() <= edef.equipDropChance) {
-        const rarity = rollRarityUpgrade(edef.minRarity);
-        const eqId = pickRandomEquipByRarity(rarity);
-        ctx.spawner.spawnItemLoot(e.x, e.y, eqId, 1);
-        const eqDef = ITEMS[eqId];
-        if (eqDef && (rarity === "rare" || rarity === "epic" || rarity === "legendary")) {
-          ctx.notify(`Rơi trang bị [${RARITY_INFO[rarity].label}] ${eqDef.name}!`, "epic");
+      // Roll Biome / Elite / Boss Drop Table (materials + 5-slot equipments + Prism Shards)
+      const drops = rollEnemyDropTable(e.defId);
+      for (const d of drops) {
+        ctx.spawner.spawnItemLoot(e.x, e.y, d.itemId, d.qty, d.enhanceLevel);
+        const dropDef = ITEMS[d.itemId];
+        if (
+          dropDef &&
+          dropDef.category === "equipment" &&
+          (dropDef.rarity === "rare" || dropDef.rarity === "epic" || dropDef.rarity === "legendary")
+        ) {
+          ctx.notify(`Rơi trang bị [${RARITY_INFO[dropDef.rarity].label}] ${dropDef.name}!`, "epic");
         }
       }
     }

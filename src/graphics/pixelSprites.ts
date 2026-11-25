@@ -10,6 +10,8 @@ export interface CompiledSprite {
   left: HTMLCanvasElement;
   whiteRight: HTMLCanvasElement;
   whiteLeft: HTMLCanvasElement;
+  bleachedRight: HTMLCanvasElement;
+  bleachedLeft: HTMLCanvasElement;
   actor: PixelfxActor;
 }
 
@@ -38,6 +40,19 @@ function makeCanvas(w: number, h: number) {
   return { c, ctx };
 }
 
+function toBleachedHex(hexCol: string): string {
+  const c = hexCol.replace("#", "");
+  if (c.length !== 6) return hexCol;
+  const r = parseInt(c.slice(0, 2), 16);
+  const g = parseInt(c.slice(2, 4), 16);
+  const b = parseInt(c.slice(4, 6), 16);
+  const lum = Math.round(r * 0.3 + g * 0.59 + b * 0.11);
+  const br = Math.min(255, Math.round(lum * 0.94 + 8));
+  const bg = Math.min(255, Math.round(lum * 0.96 + 10));
+  const bb = Math.min(255, Math.round(lum * 1.04 + 14));
+  return `#${br.toString(16).padStart(2, "0")}${bg.toString(16).padStart(2, "0")}${bb.toString(16).padStart(2, "0")}`;
+}
+
 function compileMatrix(rows: string[], pal: Record<string, string>): CompiledSprite {
   const h = rows.length;
   const w = rows[0].length;
@@ -45,6 +60,8 @@ function compileMatrix(rows: string[], pal: Record<string, string>): CompiledSpr
   const { c: left, ctx: lCtx } = makeCanvas(w, h);
   const { c: whiteRight, ctx: wrCtx } = makeCanvas(w, h);
   const { c: whiteLeft, ctx: wlCtx } = makeCanvas(w, h);
+  const { c: bleachedRight, ctx: brCtx } = makeCanvas(w, h);
+  const { c: bleachedLeft, ctx: blCtx } = makeCanvas(w, h);
   const maskData = new Uint8Array(w * h);
   const pixels = new Uint32Array(w * h);
 
@@ -55,6 +72,7 @@ function compileMatrix(rows: string[], pal: Record<string, string>): CompiledSpr
       if (ch === "." || ch === " ") continue;
       const col = pal[ch];
       if (!col) continue;
+      const bCol = toBleachedHex(col);
       const u32 = hex(col);
       rCtx.fillStyle = col;
       rCtx.fillRect(x, y, 1, 1);
@@ -64,6 +82,10 @@ function compileMatrix(rows: string[], pal: Record<string, string>): CompiledSpr
       wrCtx.fillRect(x, y, 1, 1);
       wlCtx.fillStyle = "#ffffff";
       wlCtx.fillRect(w - 1 - x, y, 1, 1);
+      brCtx.fillStyle = bCol;
+      brCtx.fillRect(x, y, 1, 1);
+      blCtx.fillStyle = bCol;
+      blCtx.fillRect(w - 1 - x, y, 1, 1);
       maskData[y * w + x] = 1;
       pixels[y * w + x] = u32;
     }
@@ -76,6 +98,8 @@ function compileMatrix(rows: string[], pal: Record<string, string>): CompiledSpr
     left,
     whiteRight,
     whiteLeft,
+    bleachedRight,
+    bleachedLeft,
     actor: {
       mask: { w, h, data: maskData },
       pixels,

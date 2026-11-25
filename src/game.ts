@@ -13,6 +13,11 @@ import {
 } from "./data/worldConfig";
 import type { BiomeId, ClassId, SaveDataV2, WaypointDef } from "./data/types";
 import { ColorRestorationSystem } from "./graphics/colorRestoration";
+import {
+  drawPaperDollHero,
+  getWeaponAnchorOffset,
+  type HeroAnimState,
+} from "./graphics/paperDoll";
 import { sprites } from "./graphics/pixelSprites";
 import { TileRenderer } from "./graphics/tileRenderer";
 import { VfxManager } from "./vfx/vfxManager";
@@ -27,7 +32,7 @@ import type {
   ProjectileEntity,
   TurretEntity,
 } from "./world/entities";
-import { HOTKEY_CONSUMABLES, InventorySystem } from "./systems/inventorySystem";
+import { HOTKEY_CONSUMABLES, InventorySystem, recalculatePlayerStats } from "./systems/inventorySystem";
 import { QuestSystem } from "./systems/questSystem";
 import { ForgeSystem } from "./systems/forgeSystem";
 import { SaveSystem } from "./systems/saveSystem";
@@ -98,6 +103,7 @@ export class PixTelOpenWorldGame {
   private autoSaveTimer = 0;
   private hudSyncTimer = 0;
   private weaponGlowTimer = 0;
+  private weaponPixelfxTimer = 0;
   private lastRaf = 0;
   private ui: GameUiCallbacks;
 
@@ -127,6 +133,7 @@ export class PixTelOpenWorldGame {
       vx: 0,
       vy: 0,
       facing: 1,
+      facingDir: "down",
       aimAngle: 0,
       radius: 5.5,
       level: 1,
@@ -139,6 +146,7 @@ export class PixTelOpenWorldGame {
       spd: cdef.baseStats.spd,
       crit: cdef.baseStats.crit,
       critMult: cdef.baseStats.critMult,
+      elementBonus: 0,
       stamina: 100,
       maxStamina: 100,
       staminaRegenDelay: 0,
@@ -165,32 +173,21 @@ export class PixTelOpenWorldGame {
       droneTick: 0,
       elementIdx: 0,
       walkTime: 0,
+      attackAnimTime: 0,
       speedBuffTime: 0,
       atkBuffTime: 0,
       respawnWaypointId: "wp_town",
     };
   }
 
-  /** Recomputes maxHp, atk, def, spd, crit from Class + Level + Equipped Items. */
+  /** Recomputes maxHp, atk, def, spd, crit, elementBonus from Class + Level + Equipped Items. */
   recalcPlayerStats(preserveHpRatio = true) {
-    const prevMax = Math.max(1, this.player.maxHp);
-    const ratio = this.player.hp / prevMax;
-    const cdef = getClassDef(this.player.classId);
-    const eq = this.inv.getTotalEquipBonuses();
-    const lv = this.player.level - 1;
+    recalculatePlayerStats(this.player, this.inv, preserveHpRatio);
+  }
 
-    this.player.maxHp = cdef.baseStats.hp + lv * 16 + eq.maxHp;
-    this.player.atk = cdef.baseStats.atk + lv * 3 + eq.atk;
-    this.player.def = cdef.baseStats.def + Math.floor(lv * 1.2) + eq.def;
-    this.player.spd = cdef.baseStats.spd + eq.spd;
-    this.player.crit = Math.min(90, cdef.baseStats.crit + eq.crit);
-    this.player.critMult = cdef.baseStats.critMult;
-
-    if (preserveHpRatio) {
-      this.player.hp = Math.min(this.player.maxHp, Math.max(1, Math.round(ratio * this.player.maxHp)));
-    } else {
-      this.player.hp = this.player.maxHp;
-    }
+  /** Alias matching RPG stats recalculation API. */
+  recalculatePlayerStats(preserveHpRatio = true) {
+    recalculatePlayerStats(this.player, this.inv, preserveHpRatio);
   }
 
   startNewGame(classId: ClassId) {
@@ -235,7 +232,7 @@ export class PixTelOpenWorldGame {
     this.inv.loadState(data.player.gold, data.equipment, data.bag);
     this.quests.loadState(data.quests);
     this.colorSys.loadUnlocked(data.unlockedWaypoints);
-    this.spawner.reset(data.openedChests);
+    this.spawner.reset(data.openedChests, data.unlockedWaypoints);
     this.stats = { ...data.stats };
 
     this._initBlankPlayer(data.classId);
@@ -479,8 +476,11 @@ export class PixTelOpenWorldGame {
         sfx.playQuestComplete();
         this.ui.onToast(`Hoàn thành mục tiêu nhiệm vụ: ${q.title}!`, "good");
       }
+      const spawnedChest = this.spawner.spawnWaypointChromaChest(wp, this.vfx);
       this.ui.onToast(
-        `ĐÃ KÍCH HOẠT ${wp.name.toUpperCase()}! Khôi phục sắc màu & mở Dịch Chuyển Nhanh [M]!`,
+        spawnedChest
+          ? `ĐÃ KÍCH HOẠT ${wp.name.toUpperCase()}! Rương Sắc Màu đã mở khóa ngay bên cạnh!`
+          : `ĐÃ KÍCH HOẠT ${wp.name.toUpperCase()}! Khôi phục sắc màu & mở Dịch Chuyển Nhanh [M]!`,
         "epic"
       );
       this.saveGame(false);
@@ -525,7 +525,7 @@ export class PixTelOpenWorldGame {
         { color: RARITY_INFO[def.rarity].color, crit: isRare }
       );
       if (def.category === "equipment") {
-        this.ui.onToast(`Đã nhặt [${RARITY_INFO[def.rarity].label}] ${def.name}! Nhấn [I] để xem.`, isRare ? "epic" : "good");
+        this.ui.onToast(`Đã nhặt [${RARITY_INFO[def.rarity].label}] ${def.name}! Nhấn [I / B] để xem.`, isRare ? "epic" : "good");
       }
       this.ui.onHudUpdate();
     }
@@ -664,6 +664,7 @@ export class PixTelOpenWorldGame {
     if (p.dashCd > 0) p.dashCd = Math.max(0, p.dashCd - dt);
     if (p.invuln > 0) p.invuln = Math.max(0, p.invuln - dt);
     if (p.hitFlash > 0) p.hitFlash = Math.max(0, p.hitFlash - dt);
+    if (p.attackAnimTime > 0) p.attackAnimTime = Math.max(0, p.attackAnimTime - dt);
 
     // Passive HP regen inside Origin Town Safe Zone
     if (this.world.isInSafeTown(p.x, p.y) && p.hp < p.maxHp) {
@@ -689,6 +690,13 @@ export class PixTelOpenWorldGame {
       mx /= len;
       my /= len;
       if (Math.abs(mx) > 0.1) p.facing = mx < 0 ? -1 : 1;
+      if (p.attackAnimTime <= 0 && !p.charging) {
+        if (Math.abs(mx) >= Math.abs(my)) {
+          p.facingDir = mx < 0 ? "left" : "right";
+        } else {
+          p.facingDir = my < 0 ? "up" : "down";
+        }
+      }
     }
 
     const wantSprint = (this.keys.has("ShiftLeft") || this.keys.has("ShiftRight")) && moving && !p.exhausted && p.dashing <= 0;
@@ -748,23 +756,63 @@ export class PixTelOpenWorldGame {
       p.chargeTime = 0;
     }
 
-    // Weapon +5+ Visual Glow Particles around player!
-    const wpnLv = this.inv.getWeaponEnhanceLevel();
-    if (wpnLv >= 5) {
+    // High-tier (Epic / Legendary) or +5/+7+ Weapon Glow & pixelfx Particles!
+    const wpnInst = this.inv.equipment.weapon;
+    const wpnDef = wpnInst ? ITEMS[wpnInst.defId] : undefined;
+    const wpnLv = wpnInst?.enhanceLevel ?? 0;
+    const isHighTierWeapon =
+      wpnDef?.rarity === "epic" || wpnDef?.rarity === "legendary" || wpnLv >= 7;
+    if (isHighTierWeapon || wpnLv >= 5) {
+      const bleachedHere = !this.colorSys.isWorldPosRestored(p.x, p.y);
+      const animState: HeroAnimState =
+        p.dashing > 0
+          ? "dash"
+          : p.attackAnimTime > 0
+            ? "attack"
+            : p.charging && p.chargeTime > 0.12
+              ? "charge"
+              : moving
+                ? "run"
+                : "idle";
+      const anchor = getWeaponAnchorOffset(p.facing, p.facingDir, animState);
+      const wx = p.x + anchor.dx;
+      const wy = p.y + anchor.dy;
+
       this.weaponGlowTimer -= dt;
       if (this.weaponGlowTimer <= 0) {
-        this.weaponGlowTimer = wpnLv >= 8 ? 0.08 : 0.14;
+        this.weaponGlowTimer = wpnLv >= 8 || wpnDef?.rarity === "legendary" ? 0.08 : 0.13;
         const a = this.time * 4.5 + Math.random() * 1.4;
-        const col = wpnLv >= 8 ? CHROMA_RAINBOW[Math.floor(this.time * 8) % CHROMA_RAINBOW.length] : "#ffe066";
+        const col = bleachedHere
+          ? "#c2c9d6"
+          : wpnDef?.rarity === "legendary" || wpnLv >= 8
+            ? CHROMA_RAINBOW[Math.floor(this.time * 8) % CHROMA_RAINBOW.length]
+            : wpnDef?.rarity === "epic"
+              ? "#c266ff"
+              : "#ffe066";
         this.vfx.spawnPixelDot(
-          p.x + Math.cos(a) * 9,
-          p.y - 5 + Math.sin(a) * 7,
-          0,
+          wx + Math.cos(a) * 4,
+          wy + Math.sin(a) * 4,
+          (Math.random() - 0.5) * 8,
           -14,
           col,
-          0.3,
+          0.32,
           1
         );
+      }
+
+      if (isHighTierWeapon && !bleachedHere) {
+        this.weaponPixelfxTimer -= dt;
+        if (this.weaponPixelfxTimer <= 0) {
+          this.weaponPixelfxTimer =
+            wpnDef?.rarity === "legendary" || wpnLv >= 9 ? 0.55 : 0.85;
+          const preset =
+            wpnDef?.rarity === "legendary" || wpnLv >= 8
+              ? "crit-gold"
+              : wpnDef?.rarity === "epic"
+                ? "hit-poison"
+                : "hit-cyan";
+          this.vfx.spawnPooled(preset, { x: wx, y: wy, scale: 0.65 });
+        }
       }
     }
 
@@ -773,17 +821,24 @@ export class PixTelOpenWorldGame {
     this.spawner.update(dt, p.x, p.y, this.vfx);
     this.vfx.update(dt);
 
-    // Auto-pickup Gold, Materials & Consumables when walking close
+    // Magnetic Pull + Auto-pickup when walking near Ground Loot
     for (let i = this.spawner.groundLoot.length - 1; i >= 0; i--) {
       const l = this.spawner.groundLoot[i];
-      const d = Math.hypot(l.x - p.x, l.y - p.y);
-      if (l.kind === "gold" && d < 26) {
-        this._pickupGroundLoot(l);
-      } else if (l.kind === "item" && l.item) {
-        const def = ITEMS[l.item.defId];
-        if (def && def.category !== "equipment" && d < 24) {
-          this._pickupGroundLoot(l);
+      if (l.age < 0.28) continue;
+      const dx = p.x - l.x;
+      const dy = p.y - l.y;
+      const d = Math.hypot(dx, dy);
+      const isEquip = l.kind === "item" && l.item && ITEMS[l.item.defId]?.category === "equipment";
+      const magnetRadius = isEquip ? 44 : 58;
+      if (d < magnetRadius && d > 1) {
+        if (!isEquip || this.inv.bag.length < 32) {
+          const pull = (isEquip ? 140 : 185) * dt;
+          l.x += (dx / d) * Math.min(d, pull);
+          l.y += (dy / d) * Math.min(d, pull);
         }
+      }
+      if (d < 17) {
+        this._pickupGroundLoot(l);
       }
     }
 
@@ -854,17 +909,23 @@ export class PixTelOpenWorldGame {
       this.vfx.drawAtlasInstance(ctx, padAtlas, sx, sy, this.time, 0, false, 0.85, 0.9);
     }
 
-    // 4. Ground Loot + pixelfx Rarity Loot Beams!
+    // 4. Ground Loot + Bounce Shadow + pixelfx Rarity Loot Beams!
     const coinAtlas = this.vfx.getAtlas("coin-spin");
     const shardAtlas = this.vfx.getAtlas("crystal-shard");
     for (const l of this.spawner.groundLoot) {
       const sx = Math.round(l.x - camX);
       const sy = Math.round(l.y - camY);
       if (sx < -32 || sy < -32 || sx > VIEW_W + 32 || sy > VIEW_H + 32) continue;
-      const bob = Math.round(Math.sin(this.time * 5 + l.bobPhase) * 2);
+      const bounceY = Math.round(l.z);
+      const bob = l.z <= 0.5 ? Math.round(Math.sin(this.time * 5 + l.bobPhase) * 2) : 0;
+      const vy = sy - bounceY + bob;
+
+      // Crisp ground shadow under bouncing loot
+      ctx.fillStyle = "rgba(0,0,0,0.38)";
+      ctx.fillRect(sx - 3, sy + 1, 6, 2);
 
       if (l.kind === "gold") {
-        this.vfx.drawAtlasInstance(ctx, coinAtlas, sx, sy + bob, this.time + l.bobPhase);
+        this.vfx.drawAtlasInstance(ctx, coinAtlas, sx, vy, this.time + l.bobPhase);
       } else if (l.item) {
         const def = ITEMS[l.item.defId];
         if (def?.category === "equipment") {
@@ -872,13 +933,13 @@ export class PixTelOpenWorldGame {
           this.vfx.drawAtlasInstance(ctx, beam, sx, sy - 6, this.time + l.bobPhase, 0, false, 1, 0.95);
           // Crisp 8x8 pixel equipment crystal/chest icon on floor
           ctx.fillStyle = "#100c18";
-          ctx.fillRect(sx - 4, sy - 4 + bob, 8, 8);
+          ctx.fillRect(sx - 4, vy - 4, 8, 8);
           ctx.fillStyle = RARITY_INFO[l.rarity].color;
-          ctx.fillRect(sx - 3, sy - 3 + bob, 6, 6);
+          ctx.fillRect(sx - 3, vy - 3, 6, 6);
           ctx.fillStyle = "#ffffff";
-          ctx.fillRect(sx - 2, sy - 2 + bob, 2, 2);
+          ctx.fillRect(sx - 2, vy - 2, 2, 2);
         } else {
-          this.vfx.drawAtlasInstance(ctx, shardAtlas, sx, sy + bob, this.time + l.bobPhase);
+          this.vfx.drawAtlasInstance(ctx, shardAtlas, sx, vy, this.time + l.bobPhase);
         }
       }
     }
@@ -1073,16 +1134,37 @@ export class PixTelOpenWorldGame {
       });
     }
 
-    // Player Hero (+ Bit Rogue Phantom Clone & Pixel Tinker Overload Drone!)
+    // Player Hero (Layered Paper-Doll Pixel Rendering + Bit Rogue Phantom Clone + Pixel Tinker Drone)
     {
       const p = this.player;
       const sx = Math.round(p.x - camX);
       const sy = Math.round(p.y - camY);
+      const heroBleached = !this.colorSys.isWorldPosRestored(p.x, p.y);
+      const isMovingNow =
+        this.keys.has("KeyW") ||
+        this.keys.has("KeyS") ||
+        this.keys.has("KeyA") ||
+        this.keys.has("KeyD") ||
+        this.keys.has("ArrowUp") ||
+        this.keys.has("ArrowDown") ||
+        this.keys.has("ArrowLeft") ||
+        this.keys.has("ArrowRight");
+      const heroAnim: HeroAnimState =
+        p.dashing > 0
+          ? "dash"
+          : p.attackAnimTime > 0
+            ? "attack"
+            : p.charging && p.chargeTime > 0.12
+              ? "charge"
+              : isMovingNow
+                ? "run"
+                : "idle";
+      const chargePct = p.charging ? Math.min(1, p.chargeTime / 0.42) : 0;
+
       drawList.push({
         y: p.y,
         draw: () => {
           const frame = Math.floor(p.walkTime) % 4;
-          const sp = sprites.getHero(p.classId, frame);
 
           // Phantom Clone ghost beside Bit Rogue
           if (p.cloneTime > 0) {
@@ -1090,14 +1172,34 @@ export class PixTelOpenWorldGame {
             ctx.globalAlpha = 0.6;
             const cx = sx - p.facing * 12;
             const cy = sy - 2 + Math.round(Math.sin(this.time * 12) * 2);
-            ctx.drawImage(p.facing < 0 ? sp.left : sp.right, cx - 8, cy - 16);
+            drawPaperDollHero(ctx, {
+              classId: p.classId,
+              equipment: this.inv.equipment,
+              x: cx,
+              y: cy,
+              scale: 1,
+              walkFrame: frame,
+              facing: p.facing,
+              facingDir: p.facingDir,
+              animState: heroAnim,
+              bleached: heroBleached,
+              time: this.time,
+            });
             ctx.restore();
           }
 
-          // Weapon +5+ subtle pixel aura ring at feet
-          const wpnLv = this.inv.getWeaponEnhanceLevel();
-          if (wpnLv >= 5) {
-            ctx.fillStyle = wpnLv >= 8 ? "#ff9922" : "#ffe066";
+          // Weapon +5+ / Epic / Legendary subtle pixel aura ring at feet
+          const wpnInst = this.inv.equipment.weapon;
+          const wpnDef = wpnInst ? ITEMS[wpnInst.defId] : undefined;
+          const wpnLv = wpnInst?.enhanceLevel ?? 0;
+          if (wpnLv >= 5 || wpnDef?.rarity === "epic" || wpnDef?.rarity === "legendary") {
+            ctx.fillStyle = heroBleached
+              ? "#adb4c2"
+              : wpnDef?.rarity === "legendary" || wpnLv >= 8
+                ? "#ff9922"
+                : wpnDef?.rarity === "epic"
+                  ? "#c266ff"
+                  : "#ffe066";
             ctx.fillRect(sx - 6, sy, 12, 1);
             ctx.fillRect(sx - 4, sy + 1, 8, 1);
           }
@@ -1107,15 +1209,21 @@ export class PixTelOpenWorldGame {
 
           const blink = p.invuln > 0 && ((Math.floor(this.time * 24) & 1) === 1);
           if (!blink) {
-            const img =
-              p.hitFlash > 0
-                ? p.facing < 0
-                  ? sp.whiteLeft
-                  : sp.whiteRight
-                : p.facing < 0
-                  ? sp.left
-                  : sp.right;
-            ctx.drawImage(img, sx - 8, sy - 16);
+            drawPaperDollHero(ctx, {
+              classId: p.classId,
+              equipment: this.inv.equipment,
+              x: sx,
+              y: sy,
+              scale: 1,
+              walkFrame: frame,
+              facing: p.facing,
+              facingDir: p.facingDir,
+              animState: heroAnim,
+              hitFlash: p.hitFlash > 0,
+              bleached: heroBleached,
+              time: this.time,
+              chargePct,
+            });
           }
 
           // Charge indicator bar underneath hero when holding LMB
@@ -1205,7 +1313,7 @@ export class PixTelOpenWorldGame {
         else this.setModal("pause");
         return;
       }
-      if (e.code === "KeyI") {
+      if (e.code === "KeyI" || e.code === "KeyB") {
         this.toggleModal("inventory");
         return;
       }

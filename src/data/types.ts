@@ -4,9 +4,68 @@ export type BiomeId = "town" | "meadow" | "quartz" | "amber" | "ruins";
 
 export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
 
-export type EquipSlot = "weapon" | "armor" | "ring" | "chip";
+export type EquipSlot = "weapon" | "helmet" | "armor" | "boots" | "accessory";
 
-export type ItemCategory = "equipment" | "material" | "consumable";
+export const EQUIP_SLOTS: readonly EquipSlot[] = [
+  "helmet",
+  "armor",
+  "weapon",
+  "boots",
+  "accessory",
+];
+
+export type ItemType = "equipment" | "material" | "consumable";
+export type ItemCategory = ItemType;
+
+export type ItemIconKind =
+  | "sword"
+  | "staff"
+  | "dagger"
+  | "gun"
+  | "helmet"
+  | "armor"
+  | "boots"
+  | "accessory"
+  | "potion"
+  | "ore"
+  | "shard"
+  | "core";
+
+export type EquipVisualShape =
+  | "hood"
+  | "visor"
+  | "crest"
+  | "crown"
+  | "halo"
+  | "tunic"
+  | "mail"
+  | "plate"
+  | "aegis"
+  | "mantle"
+  | "leather"
+  | "strider"
+  | "greaves"
+  | "treads"
+  | "void_step"
+  | "blade"
+  | "greatsword"
+  | "halberd"
+  | "staff"
+  | "daggers"
+  | "carbine"
+  | "sovereign"
+  | "ring_orb"
+  | "chip_orb"
+  | "halo_orb";
+
+export interface EquipVisualStyle {
+  outline: string;
+  primary: string;
+  accent: string;
+  shape: EquipVisualShape;
+  offsetX?: number;
+  offsetY?: number;
+}
 
 export type ElementType = "fire" | "ice" | "poison";
 
@@ -16,15 +75,26 @@ export interface StatBonus {
   maxHp?: number;
   spd?: number;
   crit?: number; // percentage points, e.g. 5 = +5%
+  critRate?: number; // alias for crit
+  moveSpeed?: number; // alias for spd
+  elementBonus?: number; // % bonus elemental & skill damage
 }
 
 export interface ItemDef {
   id: string;
   name: string;
-  category: ItemCategory;
+  category: ItemType;
   rarity: Rarity;
   slot?: EquipSlot;
   iconColor: string;
+  iconKind?: ItemIconKind;
+  visualColor?: string;
+  accentColor?: string;
+  visualStyle?: EquipVisualStyle;
+  requiredClass?: ClassId | "all";
+  biomeTheme?: BiomeId;
+  setId?: string;
+  dismantleShards?: number;
   desc: string;
   sellPrice: number;
   buyPrice?: number;

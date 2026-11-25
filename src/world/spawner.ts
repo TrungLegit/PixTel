@@ -1,6 +1,7 @@
 import { ENEMIES } from "../data/enemies";
 import { ITEMS, createItemInstance, pickRandomEquipByRarity } from "../data/items";
-import { TILE_SIZE, WORLD_CAMPS, WORLD_RESOURCES } from "../data/worldConfig";
+import { TILE_SIZE, WAYPOINTS, WORLD_CAMPS, WORLD_RESOURCES } from "../data/worldConfig";
+import type { Rarity, WaypointDef } from "../data/types";
 import type {
   CampRuntime,
   ChestEntity,
@@ -16,8 +17,8 @@ export function nextEntityUid(): number {
 }
 
 /**
- * Manages open-world Enemy Camps (patrol/aggro/leash + 30-90s respawn + locked chests)
- * and respawning Ore / Crystal mining nodes.
+ * Manages open-world Enemy Camps (patrol/aggro/leash + 30-90s respawn + locked chests),
+ * Waypoint Chroma Chests, pixel-bounce Ground Loot, and respawning Ore / Crystal mining nodes.
  */
 export class WorldSpawner {
   readonly camps: CampRuntime[] = [];
@@ -26,7 +27,7 @@ export class WorldSpawner {
   readonly enemies: EnemyEntity[] = [];
   readonly groundLoot: GroundLootEntity[] = [];
 
-  reset(openedChestIds: string[] = []) {
+  reset(openedChestIds: string[] = [], unlockedWaypoints: string[] = []) {
     this.camps.length = 0;
     this.chests.length = 0;
     this.resources.length = 0;
@@ -34,6 +35,7 @@ export class WorldSpawner {
     this.groundLoot.length = 0;
 
     const openedSet = new Set(openedChestIds);
+    const unlockedSet = new Set(unlockedWaypoints);
 
     for (const def of WORLD_CAMPS) {
       this.camps.push({
@@ -55,6 +57,19 @@ export class WorldSpawner {
       this._spawnCampEnemies(def.id, null);
     }
 
+    // Restore Waypoint Chroma Chests for previously unlocked non-town waypoints
+    for (const wp of WAYPOINTS) {
+      if (wp.initiallyUnlocked || !unlockedSet.has(wp.id)) continue;
+      const cid = `wp_chest_${wp.id}`;
+      this.chests.push({
+        campId: cid,
+        x: (wp.tx + 2) * TILE_SIZE + 8,
+        y: wp.ty * TILE_SIZE + 8,
+        rarity: this._waypointChestRarity(wp),
+        state: openedSet.has(cid) ? "opened" : "unlocked",
+      });
+    }
+
     for (const rdef of WORLD_RESOURCES) {
       this.resources.push({
         def: rdef,
@@ -67,6 +82,33 @@ export class WorldSpawner {
         hitFlash: 0,
       });
     }
+  }
+
+  private _waypointChestRarity(wp: WaypointDef): Rarity {
+    if (wp.biome === "ruins") return "legendary";
+    if (wp.biome === "amber") return "epic";
+    if (wp.biome === "quartz") return "rare";
+    return "uncommon";
+  }
+
+  /** Spawns an unlocked Chroma Chest right beside a newly awakened Chroma Waypoint. */
+  spawnWaypointChromaChest(wp: WaypointDef, vfx: VfxManager): ChestEntity | null {
+    if (wp.initiallyUnlocked) return null;
+    const cid = `wp_chest_${wp.id}`;
+    const existing = this.chests.find((c) => c.campId === cid);
+    if (existing) return existing;
+
+    const chest: ChestEntity = {
+      campId: cid,
+      x: (wp.tx + 2) * TILE_SIZE + 8,
+      y: wp.ty * TILE_SIZE + 8,
+      rarity: this._waypointChestRarity(wp),
+      state: "unlocked",
+    };
+    this.chests.push(chest);
+    vfx.spawnPooled("collect-burst", { x: chest.x, y: chest.y - 4 });
+    vfx.spawnDamageText(chest.x, chest.y - 12, "CHROMA CHEST!", { color: "#5ef2ff", crit: true });
+    return chest;
   }
 
   getOpenedChestIds(): string[] {
@@ -157,7 +199,7 @@ export class WorldSpawner {
     return { chestUnlocked: false };
   }
 
-  /** Opens an unlocked camp chest and bursts gold + guaranteed rarity equipment + materials. */
+  /** Opens an unlocked camp/waypoint Chroma Chest and bursts gold + equipment + Prism Shards. */
   openChest(chest: ChestEntity, vfx: VfxManager) {
     if (chest.state !== "unlocked") return;
     chest.state = "opened";
@@ -174,11 +216,15 @@ export class WorldSpawner {
             : 45;
     this.spawnGoldLoot(chest.x - 10, chest.y + 8, goldBase + Math.floor(Math.random() * 35));
 
-    // Guaranteed equipment of chest rarity
+    // Guaranteed equipment of chest rarity (with slight chance of +1/+2 pre-enhance)
     const eqId = pickRandomEquipByRarity(chest.rarity);
-    this.spawnItemLoot(chest.x + 10, chest.y + 8, eqId, 1);
+    const enh = chest.rarity === "legendary" ? 2 : chest.rarity === "epic" ? 1 : 0;
+    this.spawnItemLoot(chest.x + 10, chest.y + 8, eqId, 1, enh);
 
-    // Bonus potion or crafting material
+    // Prism Shards + crafting material
+    const shardQty = chest.rarity === "legendary" ? 6 : chest.rarity === "epic" ? 4 : 2;
+    this.spawnItemLoot(chest.x - 4, chest.y + 12, "mat_prism_shard", shardQty);
+
     const bonusId =
       chest.rarity === "legendary"
         ? "mat_void_prism"
@@ -187,14 +233,20 @@ export class WorldSpawner {
           : chest.rarity === "rare"
             ? "mat_quartz_shard"
             : "pot_hp";
-    this.spawnItemLoot(chest.x, chest.y + 13, bonusId, 2);
+    this.spawnItemLoot(chest.x + 4, chest.y + 13, bonusId, 2);
   }
 
   spawnGoldLoot(x: number, y: number, gold: number) {
+    const ang = Math.random() * Math.PI * 2;
+    const spd = 28 + Math.random() * 34;
     this.groundLoot.push({
       uid: nextEntityUid(),
-      x: x + (Math.random() - 0.5) * 14,
-      y: y + (Math.random() - 0.5) * 12,
+      x,
+      y,
+      vx: Math.cos(ang) * spd,
+      vy: Math.sin(ang) * spd,
+      z: 2,
+      vz: 85 + Math.random() * 35,
       kind: "gold",
       gold,
       rarity: "common",
@@ -203,15 +255,21 @@ export class WorldSpawner {
     });
   }
 
-  spawnItemLoot(x: number, y: number, defId: string, qty = 1) {
+  spawnItemLoot(x: number, y: number, defId: string, qty = 1, enhanceLevel = 0) {
     const def = ITEMS[defId];
     if (!def) return;
+    const ang = Math.random() * Math.PI * 2;
+    const spd = 30 + Math.random() * 40;
     this.groundLoot.push({
       uid: nextEntityUid(),
-      x: x + (Math.random() - 0.5) * 18,
-      y: y + (Math.random() - 0.5) * 14,
+      x,
+      y,
+      vx: Math.cos(ang) * spd,
+      vy: Math.sin(ang) * spd,
+      z: 3,
+      vz: 95 + Math.random() * 40,
       kind: "item",
-      item: createItemInstance(defId, qty, 0),
+      item: createItemInstance(defId, qty, enhanceLevel),
       rarity: def.rarity,
       age: 0,
       bobPhase: Math.random() * Math.PI * 2,
@@ -248,10 +306,28 @@ export class WorldSpawner {
       }
     }
 
-    // Age ground loot (expire after 180s to prevent infinite pile-up)
+    // Pixel-bounce physics + age ground loot (expire after 180s)
     for (let i = this.groundLoot.length - 1; i >= 0; i--) {
       const l = this.groundLoot[i];
       l.age += dt;
+      if (l.z > 0 || l.vz !== 0 || Math.abs(l.vx) > 0.5 || Math.abs(l.vy) > 0.5) {
+        l.x += l.vx * dt;
+        l.y += l.vy * dt;
+        l.vz -= 340 * dt;
+        l.z += l.vz * dt;
+        if (l.z <= 0) {
+          l.z = 0;
+          if (Math.abs(l.vz) > 36) {
+            l.vz = -l.vz * 0.42;
+            l.vx *= 0.55;
+            l.vy *= 0.55;
+          } else {
+            l.vz = 0;
+            l.vx = 0;
+            l.vy = 0;
+          }
+        }
+      }
       if (l.age > 180) {
         this.groundLoot.splice(i, 1);
       }
