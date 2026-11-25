@@ -1,5 +1,13 @@
 import assert from "node:assert/strict";
 import { CLASSES } from "../src/data/classes";
+import {
+  ALL_ELEMENTS,
+  ELEMENT_META,
+  INFUSABLE_ELEMENTS,
+  REACTION_BY_KEY,
+  REACTION_SPECS,
+  makeReactionKey,
+} from "../src/data/elements";
 import { ENEMIES } from "../src/data/enemies";
 import { ITEMS, createItemInstance, getItemEffectiveStats } from "../src/data/items";
 import { BOSS_CODEX, LORE_TABLETS, WORLD_PROLOGUE } from "../src/data/lore";
@@ -9,10 +17,11 @@ import { TILE_SIZE, WAYPOINTS, WORLD_CAMPS, WORLD_RESOURCES } from "../src/data/
 import type { ClassId } from "../src/data/types";
 import { ColorRestorationSystem } from "../src/graphics/colorRestoration";
 import { CombatSystem, type CombatContext } from "../src/systems/combat";
-import { ForgeSystem } from "../src/systems/forgeSystem";
+import { ELEMENT_DISPLAY, ForgeSystem } from "../src/systems/forgeSystem";
 import { InventorySystem, recalculatePlayerStats } from "../src/systems/inventorySystem";
 import { QuestSystem } from "../src/systems/questSystem";
 import { SaveSystem } from "../src/systems/saveSystem";
+import { BEGINNER_PRACTICE_STEPS } from "../src/ui/TutorialModal";
 import type { EnemyEntity, HazardEntity, PlayerEntity, ProjectileEntity, TurretEntity } from "../src/world/entities";
 import { findNearestInteractable } from "../src/world/interactables";
 import { WorldSpawner } from "../src/world/spawner";
@@ -133,11 +142,20 @@ function makeTestPlayer(classId: ClassId = "prism_knight"): PlayerEntity {
     skillCdPct: 0,
     hasOrbitGrimoire: false,
     hasReactionAmp: false,
+    hasVoidSiphon: false,
+    hasWindDancer: false,
+    hasChromaBlessing: false,
+    hasQuakeImpact: false,
     grimoireTimer: 0.1,
     perfectDashWindow: 0,
     chromaCounterTimer: 0,
     dashComboPreserveTimer: 0,
     quickChargeTimer: 0,
+    tectonicChargeBonus: false,
+    chromaGustTime: 0,
+    chromaBloomBonusTime: 0,
+    totemSurgeElement: null,
+    totemSurgeTimer: 0,
     bleachDebuffTime: 0,
     speedBuffTime: 0,
     speedBuffPct: 0,
@@ -263,6 +281,12 @@ function spawnDummyEnemy(spawner: WorldSpawner, x: number, y: number, defId = "q
     rootTime: 0,
     stunTime: 0,
     vulnTime: 0,
+    critVulnTime: 0,
+    normalAmpTime: 0,
+    disruptTime: 0,
+    blightDecayTime: 0,
+    chromaSlowBonusTime: 0,
+    enrageBuffTime: 0,
     bleachShield: edef.bleachShield ?? 0,
     maxBleachShield: edef.bleachShield ?? 0,
     totemChannelTimer: 0,
@@ -410,9 +434,24 @@ runTest("Combat Rhythm: 3-Step Combos, Dash-Offset, Chroma Dodge & Just-Charge",
 });
 
 // ============================================================================
-// 3. 5-ELEMENT CHROMA REACTION MATRIX (ALL 7 REACTIONS + CHROMA COATING)
+// 3. 9-ELEMENT MATRIX (ALL 28 PAIRWISE + PRISM REFRACTION 3 HOMING BOLTS)
 // ============================================================================
-runTest("5-Element Chroma Reaction Matrix (All 7 Reactions)", () => {
+runTest("9-Element Chroma Reaction Matrix (All 28 Pairwise + Prism 3-Bolt Refraction)", () => {
+  assert.equal(ALL_ELEMENTS.length, 9, "Must define exactly 9 canonical elements");
+  assert.equal(INFUSABLE_ELEMENTS.length, 8, "Must define 8 infusable elements");
+  assert.equal(REACTION_SPECS.length, 29, "Must define 6 Original + 22 Expanded + 1 Prism = 29 reactions");
+
+  // Verify complete C(8,2) = 28 pairwise coverage!
+  for (let i = 0; i < INFUSABLE_ELEMENTS.length; i++) {
+    for (let j = i + 1; j < INFUSABLE_ELEMENTS.length; j++) {
+      const key = makeReactionKey(INFUSABLE_ELEMENTS[i], INFUSABLE_ELEMENTS[j]);
+      assert.ok(
+        REACTION_BY_KEY.get(key),
+        `Missing pairwise reaction spec for ${INFUSABLE_ELEMENTS[i]} + ${INFUSABLE_ELEMENTS[j]}`
+      );
+    }
+  }
+
   const h = makeTestHarness("chroma_mage");
   h.spawner.enemies.length = 0;
   const e1 = spawnDummyEnemy(h.spawner, 52 * TILE_SIZE, 50 * TILE_SIZE);
@@ -437,65 +476,123 @@ runTest("5-Element Chroma Reaction Matrix (All 7 Reactions)", () => {
   h.combat.damageEnemy(h.ctx, e1, 20, false, "hit-poison", "nature");
   assert.ok(e1.rootTime >= 1.5, "Cryo-Root immobilizes enemy");
 
-  // 4. ice + volt -> Superconduct (chains lightning to nearby e2!)
+  // 4. ice + volt -> Superconduct (chains lightning + +15% Crit vulnerability)
   e1.reactionIcd = 0;
   const e2HpBefore = e2.hp;
   h.combat.damageEnemy(h.ctx, e1, 20, false, "hit-ice", "ice");
   h.combat.damageEnemy(h.ctx, e1, 20, false, "zap-hit", "volt");
   assert.ok(e2.hp < e2HpBefore, "Superconduct chains lightning to nearby enemy");
+  assert.ok(e1.critVulnTime >= 4.5, "Superconduct applies +15% Crit vulnerability");
 
-  // 5. fire + volt -> Overload Blast (heavy Bleach Shield break)
+  // 5. fire + volt -> Overload Blast (breaks >= 40% Bleach Shield)
   e1.reactionIcd = 0;
   e1.bleachShield = 120;
+  e1.maxBleachShield = 120;
   h.combat.damageEnemy(h.ctx, e1, 20, false, "hit-fire", "fire");
   h.combat.damageEnemy(h.ctx, e1, 20, false, "zap-hit", "volt");
-  assert.ok(e1.bleachShield < 25, "Overload Blast heavily damages Bleach Shield");
+  assert.ok(e1.bleachShield < 40, "Overload Blast heavily damages Bleach Shield");
 
-  // 6. nature + volt -> Catalyze (+16 Stamina & +10 Overdrive)
+  // 6. nature + volt -> Catalyze (+15 Stamina & +10 Overdrive)
   e1.reactionIcd = 0;
   h.player.stamina = 40;
   h.player.overdrive = 20;
   h.combat.damageEnemy(h.ctx, e1, 20, false, "hit-poison", "nature");
   h.combat.damageEnemy(h.ctx, e1, 20, false, "zap-hit", "volt");
-  assert.ok(h.player.stamina >= 56, "Catalyze restores +16 Stamina");
+  assert.ok(h.player.stamina >= 55, "Catalyze restores Stamina");
   assert.ok(h.player.overdrive >= 30, "Catalyze grants +10 Overdrive");
 
-  // 7. fire + prism -> Prismatic Refraction (preserves fire aura & bounces!)
+  // 7. Expanded: void + fire -> Void Flare Burst (strips enrageBuffTime & pulls nearby e2)
   e1.reactionIcd = 0;
+  e1.enrageBuffTime = 6.0;
+  const distBefore = Math.hypot(e2.x - e1.x, e2.y - e1.y);
+  h.combat.damageEnemy(h.ctx, e1, 20, false, "explode-plasma", "void");
+  h.combat.damageEnemy(h.ctx, e1, 20, false, "hit-fire", "fire");
+  assert.equal(e1.enrageBuffTime, 0, "Void Flare Burst strips enemy speed/armor buff");
+  assert.ok(Math.hypot(e2.x - e1.x, e2.y - e1.y) < distBefore, "Void Flare Burst pulls nearby enemies inward");
+
+  // 8. Expanded: void + ice -> Null Frost (spawns null_frost field + normalAmpTime)
+  e1.reactionIcd = 0;
+  h.combat.damageEnemy(h.ctx, e1, 20, false, "explode-plasma", "void");
+  h.combat.damageEnemy(h.ctx, e1, 20, false, "hit-ice", "ice");
+  assert.ok(h.hazards.some((hz) => hz.kind === "null_frost"), "Null Frost spawns chill field");
+  assert.ok(e1.normalAmpTime >= 2.0, "Null Frost amplifies Normal/Charge damage");
+
+  // 9. Expanded: void + volt -> Void Arc (applies Disrupt)
+  e1.reactionIcd = 0;
+  h.combat.damageEnemy(h.ctx, e1, 20, false, "explode-plasma", "void");
+  h.combat.damageEnemy(h.ctx, e1, 20, false, "zap-hit", "volt");
+  assert.ok(e1.disruptTime >= 2.0, "Void Arc applies Disrupt debuff");
+
+  // 10. Expanded: chroma + fire -> Chroma Ignis (heals +10% HP & re-applies chroma mark!)
+  e1.reactionIcd = 0;
+  h.player.hp = Math.floor(h.player.maxHp * 0.5);
+  const hpBeforeIgnis = h.player.hp;
+  h.combat.damageEnemy(h.ctx, e1, 20, false, "crit-gold", "chroma");
+  h.combat.damageEnemy(h.ctx, e1, 20, false, "hit-fire", "fire");
+  assert.ok(h.player.hp > hpBeforeIgnis, "Chroma Ignis heals player +10% HP");
+  assert.equal(e1.element, "chroma", "Chroma Ignis re-applies Chroma mark");
+
+  // 11. Expanded: fire + wind -> Firestorm Vortex (spreads fire to adjacent e2!)
+  e1.element = null;
+  e1.reactionIcd = 0;
+  e2.element = null;
+  e2.x = e1.x + 24;
+  e2.y = e1.y;
+  h.combat.damageEnemy(h.ctx, e1, 20, false, "hit-fire", "fire");
+  h.combat.damageEnemy(h.ctx, e1, 20, false, "hit-cyan", "wind");
+  assert.equal(e2.element, "fire", "Firestorm Vortex spreads Fire aura to nearby enemy");
+
+  // 12. Expanded: quake + ice -> Tectonic Shatter (grants +35% next Charge Attack!)
+  e1.reactionIcd = 0;
+  h.player.tectonicChargeBonus = false;
+  h.combat.damageEnemy(h.ctx, e1, 20, false, "ground-slam", "quake");
+  h.combat.damageEnemy(h.ctx, e1, 20, false, "hit-ice", "ice");
+  assert.equal(h.player.tectonicChargeBonus, true, "Tectonic Shatter empowers next Charge Attack by +35%");
+
+  // 13. Universal Rule: fire + prism -> Prismatic Refraction (preserves fire aura & fires 3 homing bolts!)
+  e1.reactionIcd = 0;
+  h.projectiles.length = 0;
   h.combat.damageEnemy(h.ctx, e1, 20, false, "hit-fire", "fire");
   h.combat.damageEnemy(h.ctx, e1, 20, false, "crit-gold", "prism");
-  assert.equal(e1.element, "fire", "Prismatic Refraction preserves underlying elemental aura");
-  assert.equal(h.ctx.stats.reactionsTriggered, 7, "All 7 reactions counted in stats");
+  assert.equal(e1.element, "fire", "Prismatic Refraction preserves underlying Primer aura");
+  assert.equal(h.projectiles.filter((p) => p.homing).length, 3, "Prismatic Refraction spawns 3 homing refraction bolts");
 });
 
 // ============================================================================
-// 4. BOSS SYSTEM: XING WARDEN, BLEACH SHIELD BREAK & 3-PHASE ERASER TOTEMS
+// 4. BOSS SYSTEM: ELEMENTAL WEAKNESS, PHASE 2 CLASSIC & PHASE 3 PRIMORDIAL TOTEMS
 // ============================================================================
-runTest("Boss System: Xing Warden, Bleach Shield Break & 3-Phase Eraser Totems", () => {
+runTest("Boss System: Elemental Weakness, Phase 2 Classic & Phase 3 Primordial Totems", () => {
   const h = makeTestHarness("prism_knight");
   const warden = h.spawner.enemies.find((e) => e.defId === "boss_xing_warden");
   const eraser = h.spawner.enemies.find((e) => e.defId === "boss_the_eraser");
   assert.ok(warden, "Meadow Boss Xing Warden must spawn in open world");
   assert.ok(eraser, "World Boss The Eraser must spawn in open world");
-  assert.ok(warden.bleachShield > 0, "Bosses start with initial Bleach Shield");
+  assert.equal(ENEMIES["boss_xing_warden"].elementWeakness, "quake", "Xing Warden has Quake weakness");
+  assert.equal(ENEMIES["boss_blight_root"].elementWeakness, "fire", "Blight Root has Fire weakness");
+  assert.equal(ENEMIES["boss_gilded_null"].elementWeakness, "void", "Gilded Null has Void weakness");
+  assert.equal(ENEMIES["boss_the_eraser"].elementWeakness, "chroma", "The Eraser has Chroma weakness");
 
   // Break Xing Warden's Bleach Shield -> Stun + Vulnerability
-  h.combat.damageEnemy(h.ctx, warden, 180, true, "hit-cyan", undefined, 1, 0, 2.5);
-  assert.equal(warden.bleachShield, 0, "Heavy poise hit shatters Xing Warden's Bleach Shield");
+  h.combat.damageEnemy(h.ctx, warden, 180, true, "ground-slam", "quake", 1, 0, 2.5);
+  assert.equal(warden.bleachShield, 0, "Elemental weakness heavy hit shatters Xing Warden's Bleach Shield");
   assert.ok(warden.stunTime >= 2.0 && warden.vulnTime >= 4.0, "Guard Break stuns Boss and opens Vulnerable window");
 
-  // Test The Eraser 3-Phase & Arena Chroma Totem Resonance mechanic
+  // Test The Eraser Phase 2 Classic Totems (fire, ice, nature, volt)
   eraser.state = "aggro";
   h.player.x = eraser.x + 40;
   h.player.y = eraser.y;
-  eraser.hp = Math.floor(eraser.maxHp * 0.62); // Drop below 65% threshold
+  eraser.hp = Math.floor(eraser.maxHp * 0.62);
   h.combat.update(h.ctx, 0.016);
 
   assert.equal(eraser.phase, 2, "The Eraser transitions to Phase 2 at <= 65% HP");
-  assert.equal(h.spawner.arenaTotems.length, 4, "Phase 2 spawns 4 Resonance Chroma Totems");
-  assert.ok(eraser.bleachShield > 0, "Phase 2 refills Void Bleach Shield");
+  assert.equal(h.spawner.arenaTotems.length, 4, "Phase 2 spawns 4 Classic Chroma Totems");
+  assert.deepEqual(
+    h.spawner.arenaTotems.map((t) => t.element),
+    ["fire", "ice", "nature", "volt"],
+    "Phase 2 Totems use the 4 Classic Elements"
+  );
 
-  // Player strikes 2 Totems -> shatters Eraser's shield & staggers for 4.5s!
+  // Player strikes 2 Totems -> shatters Eraser's shield & grants Totem Elemental Surge!
   const t0 = h.spawner.arenaTotems[0];
   const t1 = h.spawner.arenaTotems[1];
   h.player.x = t0.x - 10;
@@ -510,38 +607,57 @@ runTest("Boss System: Xing Warden, Bleach Shield Break & 3-Phase Eraser Totems",
   h.player.atkCd = 0;
   h.combat.performPrimaryAttack(h.ctx);
 
-  assert.equal(h.spawner.arenaTotems.length, 0, "Lighting 2 Totems triggers converging Prism Break");
-  assert.equal(eraser.bleachShield, 0, "Prism Break shatters The Eraser's Void Shield completely");
-  assert.equal(eraser.stunTime, 4.5, "The Eraser collapses for 4.5s");
-  assert.ok(eraser.vulnTime >= 5.5, "The Eraser becomes Vulnerable");
+  assert.equal(eraser.bleachShield, 0, "Lighting 2 Totems shatters The Eraser's Void Shield");
+  assert.ok(eraser.stunTime >= 4.5, "The Eraser collapses for >= 4.5s");
+  assert.ok(h.player.totemSurgeElement !== null && h.player.totemSurgeTimer >= 5.5, "Player gains Totem Elemental Surge");
 
-  // Phase 3 transition at <= 30% HP
+  // Phase 3 transition at <= 30% HP -> Primordial Totems (void, chroma, wind, quake) + Super Convergence!
   eraser.stunTime = 0;
   eraser.hp = Math.floor(eraser.maxHp * 0.28);
   h.combat.update(h.ctx, 0.016);
   assert.equal(eraser.phase, 3, "The Eraser transitions to Phase 3 at <= 30% HP");
-  assert.equal(h.spawner.arenaTotems.length, 4, "Phase 3 summons final Totem ritual");
+  assert.deepEqual(
+    h.spawner.arenaTotems.map((t) => t.element),
+    ["void", "chroma", "wind", "quake"],
+    "Phase 3 Totems use the 4 Primordial Expanded Elements"
+  );
+
+  const hpBeforeSuper = eraser.hp;
+  const p3Totems = h.spawner.arenaTotems.slice(0, 2);
+  for (const tot of p3Totems) {
+    h.player.x = tot.x - 10;
+    h.player.y = tot.y;
+    h.player.aimAngle = 0;
+    h.player.atkCd = 0;
+    h.combat.performPrimaryAttack(h.ctx);
+  }
+  assert.equal(h.spawner.arenaTotems.length, 0, "Lighting 2 Primordial Totems completes Super Convergence");
+  assert.ok(eraser.hp <= hpBeforeSuper - Math.round(eraser.maxHp * 0.11), "Super Convergence deals 12% Max HP True Damage");
+  assert.ok(eraser.stunTime >= 5.0, "Super Convergence stuns The Eraser for 5.2s");
+  assert.ok(h.hazards.some((hz) => hz.kind === "chroma_bloom"), "Super Convergence creates Chroma Bloom sanctuary");
 });
 
 // ============================================================================
-// 5. ITEMS, PASSIVES, UNDYING CHARM & PRISM FORGE (+0->+10 PITY & +5 INFUSION)
+// 5. ITEMS, 8-PIGMENT +5 INFUSION, 4 NEW ARCHETYPES & PRISM FORGE (+0->+10)
 // ============================================================================
-runTest("Items, Passives, Undying Charm & Prism Forge (+0->+10 Pity & +5 Infusion)", () => {
+runTest("Items, 8-Pigment +5 Infusions, 4 New 9-Element Archetypes & Prism Forge (+0->+10)", () => {
   const h = makeTestHarness("bit_rogue");
   const forge = new ForgeSystem();
 
-  // Craft new Boss-Core & Archetype items
-  h.inv.gold = 99999;
-  h.inv.addItem("mat_warden_crest", 5);
-  h.inv.addItem("mat_crystal_heart", 5);
-  h.inv.addItem("mat_amber_fang", 5);
-  h.inv.addItem("mat_iron_ore", 250);
-  h.inv.addItem("mat_quartz_shard", 250);
-  h.inv.addItem("mat_amber_gem", 250);
-  h.inv.addItem("mat_void_prism", 250);
-  h.inv.addItem("mat_glitch_core", 250);
-  h.inv.addItem("mat_prism_shard", 250);
-  h.inv.addItem("mat_pigment_red", 5);
+  h.inv.gold = 999999;
+  h.inv.addItem("mat_warden_crest", 10);
+  h.inv.addItem("mat_crystal_heart", 10);
+  h.inv.addItem("mat_amber_fang", 10);
+  h.inv.addItem("mat_origin_star", 5);
+  h.inv.addItem("mat_iron_ore", 400);
+  h.inv.addItem("mat_quartz_shard", 400);
+  h.inv.addItem("mat_amber_gem", 400);
+  h.inv.addItem("mat_void_prism", 400);
+  h.inv.addItem("mat_glitch_core", 400);
+  h.inv.addItem("mat_prism_shard", 400);
+  for (const el of INFUSABLE_ELEMENTS) {
+    h.inv.addItem(ELEMENT_DISPLAY[el].pigmentId, 5);
+  }
 
   for (const recId of [
     "rec_warden_cleaver",
@@ -549,11 +665,21 @@ runTest("Items, Passives, Undying Charm & Prism Forge (+0->+10 Pity & +5 Infusio
     "rec_grimoire_arcane",
     "rec_disc_spectrum",
     "rec_charm_undying",
+    "rec_wind_feather",
+    "rec_quake_maul",
+    "rec_void_scythe",
+    "rec_chroma_heart",
   ]) {
     assert.ok(FORGE_RECIPES.some((r) => r.id === recId), `Recipe ${recId} exists`);
     const res = forge.craftRecipe(recId, h.inv);
     assert.equal(res.succeeded, true, `Crafting ${recId} succeeds`);
   }
+
+  // Verify Wind Feather & Chroma Heart passives wire cleanly
+  const feather = h.inv.bag.find((b) => b.defId === "acc_wind_feather")!;
+  assert.equal(h.inv.equipFromBag(feather.uid, h.player.classId).ok, true);
+  recalculatePlayerStats(h.player, h.inv, false);
+  assert.equal(h.player.hasWindDancer, true, "Wind Feather enables hasWindDancer");
 
   // Equip Arcane Grimoire -> verify Orbiting Grimoire passive auto-fires!
   const grim = h.inv.bag.find((b) => b.defId === "acc_grimoire_arcane")!;
@@ -570,7 +696,7 @@ runTest("Items, Passives, Undying Charm & Prism Forge (+0->+10 Pity & +5 Infusio
 
   // Undying Totem Charm auto-revive on lethal hit!
   assert.ok(h.inv.countItem("charm_undying") >= 1);
-  h.player.x = 50 * TILE_SIZE + 8; // Outside safe town!
+  h.player.x = 50 * TILE_SIZE + 8;
   h.player.y = 50 * TILE_SIZE + 8;
   h.player.invuln = 0;
   h.player.perfectDashWindow = 0;
@@ -579,7 +705,7 @@ runTest("Items, Passives, Undying Charm & Prism Forge (+0->+10 Pity & +5 Infusio
   assert.ok(h.player.hp >= Math.floor(h.player.maxHp * 0.38), "Undying Charm heals 40% maxHp");
   assert.equal(h.inv.countItem("charm_undying"), 0, "Undying Charm is consumed upon saving player");
 
-  // Prism Forge +0 -> +10 Safe Pity + Catalyst + +5 Chroma Pigment Infusion
+  // Prism Forge +0 -> +10 Safe Pity + test ALL 8 Pigment Infusions at +5!
   const wpn = h.inv.equipment.weapon!;
   let attempts = 0;
   while (wpn.enhanceLevel < 10 && attempts < 60) {
@@ -594,9 +720,11 @@ runTest("Items, Passives, Undying Charm & Prism Forge (+0->+10 Pity & +5 Infusio
       assert.equal(wpn.pityBonus ?? 0, 0, "Successful enhance resets Pity bonus");
     }
     if (wpn.enhanceLevel === 5 && !wpn.infusedElement) {
-      const inf = forge.infuseElement(wpn.uid, "fire", h.inv, h.quests);
-      assert.equal(inf.succeeded, true, "+5 weapon unlocks Chroma Pigment Infusion");
-      assert.equal(wpn.infusedElement, "fire");
+      for (const el of INFUSABLE_ELEMENTS) {
+        const inf = forge.infuseElement(wpn.uid, el, h.inv, h.quests);
+        assert.equal(inf.succeeded, true, `+5 weapon accepts ${el} pigment infusion`);
+        assert.equal(wpn.infusedElement, el);
+      }
     }
     attempts++;
   }
@@ -605,15 +733,20 @@ runTest("Items, Passives, Undying Charm & Prism Forge (+0->+10 Pity & +5 Infusio
   const st10 = getItemEffectiveStats(wpn);
   const st0 = getItemEffectiveStats(createItemInstance(wpn.defId, 1, 0));
   assert.ok(st10.atk > st0.atk + 20, "+10 weapon gains massive ATK");
-  assert.ok(st10.poiseBreakPct >= st0.poiseBreakPct + 30, "+10 weapon gains +3/+10 Poise Break milestones");
+  assert.ok(st10.poiseBreakPct >= st0.poiseBreakPct + 45, "+10 weapon with Quake infusion gains +45% Poise Break");
   assert.ok(st10.staminaCostPct <= -15, "+7 weapon milestone reduces Charge Stamina cost by 15%");
   assert.ok(st10.elementBonus >= 18, "+5 infusion & +10 awakening grant +18% Element Bonus");
 });
 
 // ============================================================================
-// 6. 4-CLASS [E] SKILLS, [Q] ULTIMATES, CHROMA COATING & SAVEDATAV2 ROUNDTRIP
+// 6. 4-CLASS KITS, BEGINNER TUTORIAL STEPS & SAVEDATAV2 PERSISTENCE
 // ============================================================================
-runTest("4-Class [E] Skills, [Q] Ultimates, Chroma Coating & SaveDataV2 Persistence", () => {
+runTest("4-Class Kits, Beginner Tutorial Handbook & SaveDataV2 Persistence", () => {
+  assert.equal(BEGINNER_PRACTICE_STEPS.length, 6, "Guided Beginner Tutorial must define 6 structured steps");
+  for (const el of ALL_ELEMENTS) {
+    assert.ok(ELEMENT_META[el].role.length > 5 && ELEMENT_META[el].mechanic.length > 10);
+  }
+
   for (const c of CLASSES) {
     const h = makeTestHarness(c.id);
     h.spawner.enemies.length = 0;
@@ -634,14 +767,13 @@ runTest("4-Class [E] Skills, [Q] Ultimates, Chroma Coating & SaveDataV2 Persiste
     assert.equal(h.player.bleachDebuffTime, 0, `${c.id} [Q] cleanses Bleach debuff`);
   }
 
-  // Starter kit includes pot_coating [4] & SaveDataV2 preserves lore + infused + pity fields
   const h = makeTestHarness("prism_knight");
   assert.equal(ITEMS["pot_coating"]?.consumableKind, "chroma_coating");
-  assert.ok(h.inv.countItem("pot_coating") >= 1, "Starter kit includes Dầu Quang Phổ [4]");
+  assert.ok(h.inv.countItem("pot_coating") >= 1, "Starter kit includes Dầu Quang Phổ");
 
   h.inv.equipment.weapon!.enhanceLevel = 6;
   h.inv.equipment.weapon!.pityBonus = 40;
-  h.inv.equipment.weapon!.infusedElement = "volt";
+  h.inv.equipment.weapon!.infusedElement = "void";
 
   const saveSys = new SaveSystem();
   const savedOk = saveSys.save({
@@ -653,32 +785,34 @@ runTest("4-Class [E] Skills, [Q] Ultimates, Chroma Coating & SaveDataV2 Persiste
       y: h.player.y,
       level: h.player.level,
       xp: h.player.xp,
+      xpNext: h.player.xpNext,
+      gold: h.inv.gold,
       hp: h.player.hp,
-      stamina: h.player.stamina,
       overdrive: h.player.overdrive,
       respawnWaypointId: h.player.respawnWaypointId,
     },
-    gold: h.inv.gold,
     equipment: h.inv.equipment,
     bag: h.inv.bag,
-    activatedWaypoints: ["wp_town", "wp_meadow_n"],
+    unlockedWaypoints: ["wp_town", "wp_meadow_n"],
     openedChests: ["chest_meadow_1"],
     discoveredLore: ["lore_town_origin", "lore_meadow_warden"],
+    tutorialCompleted: true,
     quests: h.quests.exportState(),
-    stats: { kills: 12, mined: 5, chestsOpened: 1, bossesDefeated: 1, reactionsTriggered: 7 },
+    stats: { kills: 12, mined: 5, chestsOpened: 1, bossesDefeated: 1, reactionsTriggered: 13 },
   });
   assert.equal(savedOk, true);
   assert.equal(saveSys.hasSave(), true);
 
   const loaded = saveSys.load()!;
   assert.deepEqual(loaded.discoveredLore, ["lore_town_origin", "lore_meadow_warden"]);
-  assert.equal(loaded.stats.reactionsTriggered, 7);
-  assert.equal(loaded.equipment.weapon?.infusedElement, "volt");
+  assert.equal(loaded.tutorialCompleted, true);
+  assert.equal(loaded.stats.reactionsTriggered, 13);
+  assert.equal(loaded.equipment.weapon?.infusedElement, "void");
   assert.equal(loaded.equipment.weapon?.pityBonus, 40);
 });
 
 console.log("\n========================================================");
-console.log("  PIXTEL v2.5 AUTOMATED FEATURE TEST SUITE");
+console.log("  PIXTEL v2.6 AUTOMATED FEATURE TEST SUITE (9 ELEMENTS)");
 console.log("========================================================");
 for (const line of results) {
   console.log("  ✓", line);

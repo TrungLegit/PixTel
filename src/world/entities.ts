@@ -72,14 +72,23 @@ export interface PlayerEntity {
   skillCdPct: number; // negative = faster [E]
   hasOrbitGrimoire: boolean;
   hasReactionAmp: boolean;
+  hasVoidSiphon: boolean;
+  hasWindDancer: boolean;
+  hasChromaBlessing: boolean;
+  hasQuakeImpact: boolean;
   grimoireTimer: number;
 
-  // Advanced 60FPS Combat Rhythm (Perfect Dash, Dash-Offset, Quick/Just-Charge)
+  // Advanced 60FPS Combat Rhythm & 9-Element Reaction Buffs
   perfectDashWindow: number;
   chromaCounterTimer: number;
   dashComboPreserveTimer: number;
   quickChargeTimer: number;
   bleachDebuffTime: number;
+  tectonicChargeBonus: boolean;
+  chromaGustTime: number;
+  chromaBloomBonusTime: number;
+  totemSurgeElement: InfusableElement | null;
+  totemSurgeTimer: number;
 
   // Consumable temporary buffs
   speedBuffTime: number;
@@ -129,7 +138,7 @@ export interface EnemyEntity {
   hitFlash: number;
   walkTime: number;
 
-  // Elemental reaction & Boss Bleach Shield / Stagger states
+  // 9-Element reaction & Boss Bleach Shield / Stagger states
   element: ElementType | null;
   elementTime: number;
   reactionIcd: number;
@@ -141,6 +150,12 @@ export interface EnemyEntity {
   rootTime: number;
   stunTime: number;
   vulnTime: number; // Def-down / Boss shield-break stagger vulnerability
+  critVulnTime: number; // +15% Crit taken (Superconduct)
+  normalAmpTime: number; // +18% Normal/Charge DMG taken (Null Frost)
+  disruptTime: number; // Disrupt: reduced enemy attack rate & accuracy (Void Arc / Maelstrom)
+  blightDecayTime: number; // Bonus Void decay chip on consecutive hits (Blight Decay)
+  chromaSlowBonusTime: number; // Bonus resource yield if killed while slowed (Chroma Cryo)
+  enrageBuffTime: number; // Enemy speed/def buff stripped by Void!
   bleachShield: number;
   maxBleachShield: number;
   totemChannelTimer: number;
@@ -172,6 +187,7 @@ export interface ProjectileEntity {
   preset: string; // pixelfx atlas preset
   element?: ElementType;
   hitSet: Set<number>;
+  homing?: boolean;
   canOverclockTurret?: boolean;
   hitPreset?: string;
   poiseMult?: number;
@@ -199,6 +215,8 @@ export interface HazardEntity {
     | "meteor"
     | "afterimage"
     | "acid_pool"
+    | "null_frost"
+    | "chroma_bloom"
     | "flame_trail"
     | "bleach_zone"
     | "skyfall_crystal"

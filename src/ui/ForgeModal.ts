@@ -7,6 +7,7 @@ import {
   getTierBadge,
 } from "../data/items";
 import { FORGE_RECIPES } from "../data/recipes";
+import { INFUSABLE_ELEMENTS } from "../data/elements";
 import type { InfusableElement } from "../data/types";
 import { onCodixelReady } from "../graphics/codixelAtlas";
 import {
@@ -21,8 +22,6 @@ import { PIXELFX_MODS } from "../vfx/vfxManager";
 import type { PixelfxFrame, PixelfxInstance } from "../vfx/pixelfxTypes";
 import type { PixTelOpenWorldGame } from "../game";
 import { sfx } from "../audio/chiptuneSynth";
-
-const INFUSE_ELEMENTS: readonly InfusableElement[] = ["fire", "ice", "nature", "volt"];
 
 /**
  * Blacksmith Prism Forge Modal v2.5:
@@ -278,26 +277,29 @@ export class ForgeModalUI {
             `
             : "";
 
-        // +5 Chroma Pigment Infusion Socket UI
+        // +5 Chroma Pigment Infusion Socket UI (8 Elements!)
         let infuseHtml = "";
         if (item.enhanceLevel >= 5) {
           const curInf = item.infusedElement
-            ? `<b style="color:${ELEMENT_DISPLAY[item.infusedElement].color}">${ELEMENT_DISPLAY[item.infusedElement].label}</b>`
+            ? `<b style="color:${ELEMENT_DISPLAY[item.infusedElement].color}">${ELEMENT_DISPLAY[item.infusedElement].label} (${ELEMENT_DISPLAY[item.infusedElement].bonusHint})</b>`
             : `<span style="color:#9ba4bf">Chưa khảm</span>`;
-          const btns = INFUSE_ELEMENTS.map((el) => {
+          const btns = INFUSABLE_ELEMENTS.map((el) => {
             const meta = ELEMENT_DISPLAY[el];
             const havePigment = this.game.inv.countItem(meta.pigmentId);
             const canInf = havePigment >= 1 && this.game.inv.gold >= INFUSE_GOLD_COST;
             return `
-              <button class="px-btn sm ${canInf ? "" : "disabled"}" data-infuse="${el}" style="border-color:${meta.color};color:${meta.color}">
+              <button class="px-btn sm ${canInf ? "" : "disabled"}" data-infuse="${el}" data-review-def="${meta.pigmentId}" title="${meta.bonusHint}" style="border-color:${meta.color};color:${meta.color}">
                 ${meta.label} (${havePigment}/1)
               </button>
             `;
           }).join("");
           infuseHtml = `
             <div style="margin-top:8px;padding:7px;background:#100e1c;border:1px solid #4a5275">
-              <div style="font-size:12px;font-weight:700;color:#5ef2ff;margin-bottom:4px">
-                ★ KHE NHUỘM SẮC TỐ [+5] · Hiện tại: ${curInf} (Phí: ${INFUSE_GOLD_COST}G + 1 Bột Sắc Tố)
+              <div style="font-size:12px;font-weight:700;color:#5ef2ff;margin-bottom:3px">
+                ★ KHE NHUỘM 8 SẮC TỐ [+5] · Hiện tại: ${curInf}
+              </div>
+              <div style="font-size:10px;color:#9ba4bf;margin-bottom:5px">
+                Phí khảm/đổi hệ: ${INFUSE_GOLD_COST}G + 1 Bột Sắc Tố (Rê chuột vào nút để xem chỉ số cộng hưởng · Đạt +10 tự thức tỉnh thêm Hệ Lăng Kính!)
               </div>
               <div style="display:flex;flex-wrap:wrap;gap:5px">${btns}</div>
             </div>
@@ -305,7 +307,7 @@ export class ForgeModalUI {
         } else {
           infuseHtml = `
             <div style="margin-top:8px;padding:6px;background:#100e1c;border:1px dashed #353954;font-size:11px;color:#8b95b5">
-              🔒 Đạt cấp cường hóa <b>+5</b> để mở khóa <b>Khe Nhuộm Bột Sắc Tố Nguyên Tố</b> (Lửa / Băng / Mộc / Điện)!
+              🔒 Đạt cấp cường hóa <b>+5</b> để mở khóa <b>Khe Nhuộm 8 Bột Sắc Tố Nguyên Tố</b> (Hỏa / Băng / Mộc / Lôi / Hư Không / Sắc Độ / Gió / Chấn Động)!
             </div>
           `;
         }
@@ -329,6 +331,8 @@ export class ForgeModalUI {
               ${curSt.spd || nextSt.spd ? `<div>SPD: ${curSt.spd} → <b style="color:#44ee88">${nextSt.spd}</b></div>` : ""}
               ${curSt.elementBonus || nextSt.elementBonus ? `<div>ELEM: ${curSt.elementBonus}% → <b style="color:#44ee88">${nextSt.elementBonus}%</b></div>` : ""}
               ${curSt.maxStamina || nextSt.maxStamina ? `<div>STAM: +${curSt.maxStamina} → <b style="color:#44ee88">+${nextSt.maxStamina}</b></div>` : ""}
+              ${curSt.poiseBreakPct || nextSt.poiseBreakPct ? `<div>PHÁ GIÁP: +${curSt.poiseBreakPct}% → <b style="color:#44ee88">+${nextSt.poiseBreakPct}%</b></div>` : ""}
+              ${curSt.skillCdPct || nextSt.skillCdPct ? `<div>CD [E]: -${curSt.skillCdPct}% → <b style="color:#44ee88">-${nextSt.skillCdPct}%</b></div>` : ""}
             </div>
             <div style="margin:5px 0;padding:5px 7px;background:#100e1c;border:1px solid #2d324d">
               ${milestones}

@@ -6,6 +6,7 @@ import { InventoryModalUI } from "./ui/InventoryModal";
 import { ForgeModalUI } from "./ui/ForgeModal";
 import { WorldMapModalUI } from "./ui/WorldMapModal";
 import { QuestJournalModalUI } from "./ui/QuestJournalModal";
+import { TutorialModalUI, type TutorialTabId } from "./ui/TutorialModal";
 import { ItemReviewTooltip } from "./ui/ItemReviewTooltip";
 import { installRopeFrameAssets } from "./graphics/ropeFrame";
 import { sfx } from "./audio/chiptuneSynth";
@@ -23,6 +24,7 @@ function bootstrap() {
   let forge: ForgeModalUI;
   let worldMap: WorldMapModalUI;
   let journal: QuestJournalModalUI;
+  let tutorial: TutorialModalUI;
   let itemTooltip: ItemReviewTooltip;
 
   const game = new PixTelOpenWorldGame(canvas, {
@@ -36,6 +38,7 @@ function bootstrap() {
       forge?.hide();
       worldMap?.hide();
       journal?.hide();
+      tutorial?.hide();
       pauseModal.classList.add("hidden");
 
       hud?.setVisible(game.running && modal !== "class_select");
@@ -54,6 +57,9 @@ function bootstrap() {
         worldMap.show();
       } else if (modal === "journal") {
         journal.show(payload as { tab?: "quests" | "lore"; loreId?: string } | undefined);
+      } else if (modal === "tutorial") {
+        const initTab = (payload as { tab?: TutorialTabId } | undefined)?.tab;
+        tutorial.show(initTab);
       } else if (modal === "pause") {
         pauseModal.classList.remove("hidden");
       }
@@ -80,12 +86,16 @@ function bootstrap() {
   forge = new ForgeModalUI(game);
   worldMap = new WorldMapModalUI(game);
   journal = new QuestJournalModalUI(game);
+  tutorial = new TutorialModalUI(game);
   itemTooltip = new ItemReviewTooltip(game);
 
   // Pause Modal Controls
   document.getElementById("btn-pause-resume")!.addEventListener("click", () => {
     sfx.playUiClick();
     game.setModal(null);
+  });
+  document.getElementById("btn-pause-help")?.addEventListener("click", () => {
+    game.toggleModal("tutorial");
   });
   document.getElementById("btn-pause-save")!.addEventListener("click", () => {
     game.saveGame(true);

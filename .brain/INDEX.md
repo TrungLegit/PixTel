@@ -1,11 +1,11 @@
 # Project Brain Index
-*Generated: 2026-11-25T09:24:53.389546+00:00*
+*Generated: 2026-11-25T10:17:27.285805+00:00*
 
 ## Description
 > **Thế giới mở 16-Bit Action RPG trên trình duyệt** — Chiến đấu thời gian thực, đánh thức các **Trụ Sắc Màu**, khôi phục bảng màu 16-bit cho vùng đất bị **Nhiễu Trắng** và đánh bại **The Eraser**.
 
 ## Main Modules
-- **src/** (148 files)
+- **src/** (150 files)
 - **(root)/** (12 files)
 - **.agents/** (4 files)
 - **.github/** (1 files)
@@ -13,22 +13,22 @@
 
 ## Central Nodes
 - `file:src/vfx/vfxManager.ts` (file, 71 links): Registered pixtel/rarity-aura, item-aura-rare/epic/legendary, and collect-burst-rare/epic/legendary presets and eager atlas warmup.
-- `file:src/game.ts` (file, 54 links): Main 60FPS game loop wiring [F] Lore Tablet decoding, smart [1]-[4] hotkeys, Ground Fields, Rarity Auras, Overhead Statuses, Orbiting Grimoire, and SaveDataV2.
-- `file:src/data/types.ts` (file, 39 links): Core TypeScript schemas for PIXTEL v2.5: 5-element Chroma types, LoreTabletDef, BleachShield, Pity/Infusion ItemInstance, Archetype passives, ConsumableSpec, and SaveDataV2.
-- `file:src/systems/combat.ts` (file, 28 links): 60FPS Combat Engine: 4-Class 3-step combos, Dash-Offset, Chroma Dodge, Just-Charge/Parry, 7 Chroma Reactions, Bleach Shield break, 4 Boss AIs & Eraser Totems.
-- `file:src/data/items.ts` (file, 26 links): Unified catalog of T1-T5 smart consumables (incl. Chroma Coating & Undying Charm), 4 Chroma Pigments, 4 Boss Cores, materials, and +3/+5/+7/+10 milestone scaling.
+- `file:src/game.ts` (file, 55 links): Wired 6-step live Guided Beginner Practice tracker (+50G & Coating reward), [H]/[F1] Tutorial modal, 9-element enemy pips/totem cores, and Null Frost / Chroma Bloom ground fields.
+- `file:src/data/types.ts` (file, 41 links): Expanded CanonicalElement to 9 elements (8 InfusableElement + prism), added 4 new EquipPassiveId values, Boss elementAffinity/elementWeakness, and tutorialCompleted in SaveDataV2.
+- `file:src/systems/combat.ts` (file, 31 links): Implemented complete 9-Element Reaction Engine (28 pairwise reactions + Prismatic Refraction preserving Primer aura & firing 3 homing bolts), Boss elemental weaknesses, and Phase 2/3 Eraser Totem Super Convergence.
+- `file:src/data/items.ts` (file, 26 links): Added 4 new Chroma Pigments (void, chroma, wind, quake), added all 8 pigments to MERCHANT_STOCK, and added element-specific secondary stat resonances at +5 infusion.
 - `file:src/data/worldConfig.ts` (file, 20 links): 160x160 world layout with Origin Town NPCs/dialogues, 9 Chroma Waypoints, camps (incl. Meadow Boss Arena), mining nodes, and chests.
-- `file:src/systems/inventorySystem.ts` (file, 17 links): 5-slot equipment & 32-slot bag manager with smart 1-4 consumable groups, Set Bonuses, passive extraction, dismantle, and stat recalculation.
+- `file:src/main.ts` (file, 17 links): Mounted TutorialModalUI and wired Pause Menu Help button alongside HUD and Class Select.
+- `file:src/ui/ForgeModal.ts` (file, 17 links): Rendered all 8 Chroma Pigment +5 infusion buttons with Rope Tooltip hooks and added Poise Break / Skill CD stat previews.
+- `file:src/systems/inventorySystem.ts` (file, 17 links): Expanded MAX_BAG_SLOTS to 40 (5x8) and wired hasVoidSiphon, hasWindDancer, hasChromaBlessing, and hasQuakeImpact passives in recalculatePlayerStats.
 - `file:src/graphics/itemIcons.ts` (file, 17 links): Codixel atlas + procedural 16x16 fallback pixel icons (incl. axe, amulet, book, disc, totem, pigment) and 4x Paper-Doll hero preview.
-- `file:src/main.ts` (file, 16 links): Browser entry point mounting integer-scaled 480x270 Canvas, Title Screen lore prologue subtitle, ItemReviewTooltip, Class Select, and OpenWorldGame.
-- `file:src/ui/ForgeModal.ts` (file, 16 links): Prism Forge UI displaying 32x32 codixel rarity icons, +0..+10 Pity bar, Prism Catalyst toggle, +3/+5/+7/+10 milestones, +5 Pigment Infusion, and 29 recipes.
 
 ## Recent Decisions
+- **PIXTEL v2.6: 9-Element Pairwise Matrix, Phase 2/3 Eraser Totems, 8-Pigment Forge & 5-Tab Beginner Handbook** (`decision:20261125101557-pixtel-v26-9element-pairwise`): Implemented all 9 canonical elements (fire, ice, nature, volt, prism, void, chroma, wind, quake) with 28 pairwise Primer+Detonator reactions and non-consuming 3-bolt homing Prismatic Refraction; upgraded Boss elemental weaknesses and The Eraser's Phase 2 Classic / Phase 3 Primord
 - **PIXTEL v2.5 Aethel-16 Lore Codex, 7 Chroma Reactions, 4 Bosses & Prism Forge Pity/Infusion** (`decision:20261125092451-pixtel-v25-aethel16-lore`): Implemented Aethel-16 storyline (8 Lore Tablets, 5-Act 10-Quest campaign), Chroma Dodge/Dash-Offset/Just-Charge, 5-Element 7-Reaction matrix, Xing Warden + Bleach Shield + 3-Phase Eraser Totems, safe +0..+10 Forge Pity/+5 Pigment Infusion, and 6-suite featureTests.
 - **Pixelfx high-rarity auras & braided-rope hover review frame** (`decision:20261125080500-pixelfx-highrarity-auras`): Implemented deterministic two-buffer pixelfx rarity-aura VFX across world loot + UI slots and a procedural 96x96 braided hemp rope parchment tooltip with a 72x72 showcase pedestal.
 - **5-Tier Item Progression & codixel Paper-Doll Atlas** (`decision:20261125071903-5tier-item-progression`): Built 64 24x24 codixel icons and 77 24x24 Paper-Doll overlays via codixel/core/pixel.js (hueRamp, P.band, rimLight, selout, P.Gem). Added full T1..T5 weapons per class, 2/4-pc Set Bonuses, 12 tiered consumables mapped to smart [1]-[4] hotkeys, and live 7-layer Paper-Doll hero vis
 - **Loot Tables, Bounce Pickup, Waypoint Chests & 15 Forge Blueprints** (`decision:20261125060517-loot-tables-bounce-pickup`): Connected 5-slot equipment into gameplay loop via ENEMY_DROP_TABLES, pixel-bounce + magnetic auto-pickup loot, unlocked Chroma Chests at activated Waypoints, and 15 Prism Forge recipes for Helmets/Armors/Weapons/Boots/Accessories.
-- **Layered Paper-Doll Pixel Rendering** (`decision:20261125060051-layered-paperdoll-pixel-rendering`): Implemented Base Body -> Boots -> Armor -> Helmet -> Weapon layered sprite rendering driven by ItemDef.visualStyle, synced with 4 directions, idle/run/attack/charge/dash states, Bleached desaturation, and pixelfx aura on Epic/Legendary/+7+ weapons.
 
 ## Stale Files (Need Re-reading)
 - `file:.agents/skills/project-brain/SKILL.md` (.agents/skills/project-brain/SKILL.md)
@@ -75,5 +75,3 @@
 - `file:src/vfx/pixelfx/fx/impacts/bullet-impact.js` (src/vfx/pixelfx/fx/impacts/bullet-impact.js)
 - `file:src/vfx/pixelfx/fx/impacts/crit-hit.js` (src/vfx/pixelfx/fx/impacts/crit-hit.js)
 - `file:src/vfx/pixelfx/fx/impacts/ground-slam.js` (src/vfx/pixelfx/fx/impacts/ground-slam.js)
-- `file:src/vfx/pixelfx/fx/impacts/hit-spark.js` (src/vfx/pixelfx/fx/impacts/hit-spark.js)
-- `file:src/vfx/pixelfx/fx/impacts/parry.js` (src/vfx/pixelfx/fx/impacts/parry.js)

@@ -92,14 +92,28 @@ export interface EquipVisualStyle {
   offsetY?: number;
 }
 
-export type InfusableElement = "fire" | "ice" | "nature" | "volt";
-export type ElementType = InfusableElement | "poison" | "prism";
+export type InfusableElement =
+  | "fire"
+  | "ice"
+  | "nature"
+  | "volt"
+  | "void"
+  | "chroma"
+  | "wind"
+  | "quake";
+
+export type CanonicalElement = InfusableElement | "prism";
+export type ElementType = CanonicalElement | "poison";
 
 export type EquipPassiveId =
   | "guard_breaker"
   | "reaction_amp"
   | "orbit_grimoire"
-  | "stamina_flow";
+  | "stamina_flow"
+  | "void_siphon"
+  | "wind_dancer"
+  | "chroma_blessing"
+  | "quake_impact";
 
 export interface StatBonus {
   atk?: number;
@@ -295,6 +309,8 @@ export interface EnemyDef {
   isBoss?: boolean;
   isWorldBoss?: boolean;
   bleachShield?: number;
+  elementAffinity?: CanonicalElement;
+  elementWeakness?: CanonicalElement;
   ai:
     | "melee"
     | "ranged"
@@ -329,6 +345,7 @@ export interface SaveDataV2 {
   unlockedWaypoints: string[];
   openedChests: string[];
   discoveredLore?: string[];
+  tutorialCompleted?: boolean;
   quests: Record<string, QuestProgress>;
   stats: {
     kills: number;

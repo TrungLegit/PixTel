@@ -53,19 +53,19 @@ export const CLASSES: ClassDef[] = [
     skills: {
       lmb: {
         name: "Tam Liên Trảm",
-        desc: "Combo 3 đòn vòng cung (Chém đơn → Chém chéo → Bổ Lăng Kính rộng).",
+        desc: "Combo 3 nhịp (Chém đơn → Chém chéo → Bổ Chấn Động [Quake] phá Giáp Trắng rộng).",
       },
       charge: {
-        name: "Đâm Lướt Tụ Lực (Giữ LMB)",
-        desc: "Tụ lực tiêu hao Thể lực rồi lao đâm xuyên thấu địch kèm tia sáng bùng nổ.",
+        name: "Đâm Lướt Lăng Kính (Giữ LMB)",
+        desc: "Tụ lực lao đâm xuyên thấu địch kèm tia Lăng Kính [Prism] kích nổ Khúc Xạ Cầu Vồng.",
       },
       skill: {
-        name: "Khiên Phản Đòn (E)",
-        desc: "Giơ khiên Lăng Kính 1.0s chặn sát thương và bắn ngược tia laser đa sắc.",
+        name: "Khiên Phản Đòn (E / RMB)",
+        desc: "Giơ khiên 1.0s (chặn chuẩn 0.25s đầu giảm 50% CD) và bắn tia Lăng Kính [Prism].",
       },
       ult: {
         name: "Bão Kiếm Ánh Sáng (Q)",
-        desc: "Xoay kiếm giải phóng bão cầu vồng diện rộng, đẩy lùi và gây sát thương cực lớn.",
+        desc: "Xoay kiếm giải phóng bão cầu vồng [Prism + Quake] diện rộng, đẩy lùi & phá giáp cực mạnh.",
       },
     },
     previewFx: "pixtel/prism-beam",
@@ -74,7 +74,7 @@ export const CLASSES: ClassDef[] = [
     id: "chroma_mage",
     name: "CHROMA MAGE",
     vnName: "Pháp Sư Sắc Độ",
-    role: "Pháp Sư / Nguyên Tố",
+    role: "Pháp Sư / 9 Nguyên Tố",
     weaponType: "Trượng Phép",
     accent: "#ff66d8",
     secondary: "#ffee55",
@@ -92,20 +92,20 @@ export const CLASSES: ClassDef[] = [
     uiBars: { hp: 3, atk: 5, spd: 3 },
     skills: {
       lmb: {
-        name: "Tam Sắc Nguyên Tố",
-        desc: "Xoay vòng Đỏ (Lửa), Lam (Băng), Lục (Độc). Trúng hệ cũ kích nổ Phản Ứng Nguyên Tố!",
+        name: "Ngũ Sắc Luân Chuyển",
+        desc: "Xoay vòng Hỏa → Băng → Mộc → Lôi → Sắc Độ [Chroma], liên tục kích nổ chuỗi Phản Ứng!",
       },
       charge: {
         name: "Tam Nguyên Bộc Phát (Giữ LMB)",
-        desc: "Tụ lực bắn cùng lúc 3 cầu phép Lửa-Băng-Độc kích hoạt chuỗi phản ứng ngay lập tức.",
+        desc: "Tụ lực bắn chùm 3 cầu phép Hỏa - Băng - Gió [Wind] kích hoạt phản ứng kép tức thì.",
       },
       skill: {
-        name: "Vòng Xoáy Sắc Màu (E)",
-        desc: "Tạo xoáy năng lượng hút quái vào tâm, gây sát thương liên tục & gắn ấn nguyên tố.",
+        name: "Xoáy Hư Sắc (E / RMB)",
+        desc: "Tạo xoáy Hư Không [Void] gom quái về tâm, xóa buff địch & liên tục nhảy ấn đa nguyên tố.",
       },
       ult: {
-        name: "Mưa Thiên Thạch (Q)",
-        desc: "Triệu hồi mưa thiên thạch cầu vồng giáng xuống tạo chuỗi vụ nổ pixel rực rỡ.",
+        name: "Mưa Thiên Thạch Thất Sắc (Q)",
+        desc: "Giáng mưa thiên thạch Hỏa - Sắc Độ - Lăng Kính tạo chuỗi nổ cầu vồng khôi phục màu.",
       },
     },
     previewFx: "pixtel/chroma-vortex",
@@ -114,7 +114,7 @@ export const CLASSES: ClassDef[] = [
     id: "bit_rogue",
     name: "BIT ROGUE",
     vnName: "Sát Thủ Điểm Ảnh",
-    role: "Cơ Động / Chí Mạng",
+    role: "Cơ Động / Gió & Hư Không",
     weaponType: "Song Đao",
     accent: "#ff2e63",
     secondary: "#2ef2ff",
@@ -132,20 +132,20 @@ export const CLASSES: ClassDef[] = [
     uiBars: { hp: 2, atk: 4, spd: 5 },
     skills: {
       lmb: {
-        name: "Song Đao & Phi Tiêu",
-        desc: "Chém nhanh cận chiến kèm phóng phi tiêu điểm ảnh xuyên mục tiêu, tỷ lệ Crit cao.",
+        name: "Song Đao Phong Ảnh",
+        desc: "Chém cực nhanh + phóng phi tiêu xuyên thấu; đòn kết N3 quét lốc Gió [Wind] khuếch tán Ấn!",
       },
       charge: {
-        name: "Quạt Phi Tiêu (Giữ LMB)",
-        desc: "Tụ lực phóng 5 phi tiêu điểm ảnh tỏa hình quạt có khả năng chí mạng cao.",
+        name: "Quạt Phi Tiêu Gió (Giữ LMB)",
+        desc: "Tụ lực phóng 5 phi tiêu điểm ảnh hệ Gió [Wind] tỏa quạt, chí mạng cao khi đánh sau lưng.",
       },
       skill: {
-        name: "Frame-Skip (E)",
-        desc: "Lướt xuyên quái bất tử ngắn, để lại tàn ảnh nhiễu glitch phát nổ sau 0.8s.",
+        name: "Frame-Skip Hư Không (E / RMB)",
+        desc: "Lướt xuyên quái bất tử, để lại tàn ảnh Hư Không [Void] hút nhẹ và phát nổ xóa buff sau 0.75s.",
       },
       ult: {
         name: "Phân Thân Ảo Ảnh (Q)",
-        desc: "Tạo phân thân điện tử đồng bộ đòn đánh, +100% tốc đánh & +25% Crit trong 6s.",
+        desc: "Triệu hồi phân thân đồng bộ đòn đánh, +100% tốc đánh & +25% Crit trong 6s.",
       },
     },
     previewFx: "pixtel/frame-skip",
@@ -154,7 +154,7 @@ export const CLASSES: ClassDef[] = [
     id: "pixel_tinker",
     name: "PIXEL TINKER",
     vnName: "Kỹ Sư Mạch Sáng",
-    role: "Triệu Hồi / Kiểm Soát",
+    role: "Triệu Hồi / Lôi & Địa Chấn",
     weaponType: "Súng Hạt",
     accent: "#44ee88",
     secondary: "#ffe066",
@@ -173,19 +173,19 @@ export const CLASSES: ClassDef[] = [
     skills: {
       lmb: {
         name: "Súng Mạch Hạt",
-        desc: "Bắn đạn năng lượng tầm xa. Bắn vào Trụ của mình để hồi máu & tăng tốc bắn cho trụ!",
+        desc: "Bắn đạn Lôi [Volt] tầm xa; bắn vào Trụ của mình để hồi máu & kích Quá Tải tốc bắn cho trụ!",
       },
       charge: {
-        name: "Pháo Điện Từ (Giữ LMB)",
-        desc: "Tụ lực bắn tia xuyên giáp tầm xa gây sát thương cao và đẩy lùi quái.",
+        name: "Pháo Địa Chấn Từ Trường (Giữ LMB)",
+        desc: "Tụ lực bắn tia xuyên giáp hệ Chấn Động [Quake], phá mạnh Bleach Shield & Overclock mọi trụ.",
       },
       skill: {
-        name: "Compile — Trụ Pixel (E)",
-        desc: "Biên dịch Trụ Bắn tự động ngắm quái (tối đa 2 trụ) bằng lưới hologram.",
+        name: "Compile — Trụ Lôi Quang (E / RMB)",
+        desc: "Biên dịch tối đa 2 Trụ Bắn tự động gắn Ấn Lôi [Volt] để phối hợp phản ứng nguyên tố.",
       },
       ult: {
-        name: "Drone Quá Tải (Q)",
-        desc: "Triệu hồi Drone bay quanh xả laser liên thanh và hồi HP liên tục cho bản thân & trụ.",
+        name: "Drone Sắc Độ Quá Tải (Q)",
+        desc: "Triệu hồi Drone xả tia Sắc Độ [Chroma] & Lôi, hồi HP/Stamina liên tục cho bản thân và trụ.",
       },
     },
     previewFx: "pixtel/compile-turret",

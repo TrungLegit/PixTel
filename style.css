@@ -1864,3 +1864,395 @@ html, body {
 .review-foot b {
   color: #7d3607;
 }
+
+/* =========================================================================
+   GUIDED BEGINNER BANNER & 5-TAB TUTORIAL / 9-ELEMENT HANDBOOK [H / F1]
+   ========================================================================= */
+
+.tutorial-opt-row {
+  display: flex;
+  justify-content: center;
+}
+
+.tutorial-opt-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #e6eeff;
+  background: #12152b;
+  border: 2px solid #44ee88;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+
+.tutorial-opt-toggle b {
+  color: #44ee88;
+}
+
+.tutorial-banner {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(460px, 52vw);
+  padding: 7px 10px;
+  border: 2px solid #44ee88;
+  background: rgba(13, 16, 32, 0.94);
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  z-index: 18;
+}
+
+.tut-banner-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+
+.tut-banner-step {
+  font-size: 11px;
+  font-weight: 700;
+  color: #44ee88;
+}
+
+.tut-banner-btns {
+  display: flex;
+  gap: 4px;
+}
+
+.tut-banner-main {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: #ffffff;
+}
+
+.tut-banner-desc {
+  font-size: 11px;
+  color: #c9d4f2;
+  line-height: 1.3;
+}
+
+.tutorial-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  border-bottom: 1px solid #333959;
+  padding-bottom: 6px;
+}
+
+.tut-hero-callout {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background: #12152b;
+  border: 2px solid #4a5687;
+  padding: 9px 12px;
+}
+
+.tut-callout-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  margin-bottom: 2px;
+}
+
+.tut-callout-sub {
+  font-size: 12px;
+  color: #dce4ff;
+  line-height: 1.35;
+}
+
+.tut-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.tut-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.tut-step-card {
+  background: #111326;
+  border: 2px solid #353b5c;
+  padding: 7px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tut-step-card.done {
+  border-color: #2f8f5b;
+  background: #10211d;
+}
+
+.tut-step-card.current {
+  border-color: #ffe066;
+  box-shadow: inset 0 0 0 1px #ffe066;
+}
+
+.tut-step-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.tut-step-num {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  background: #232846;
+  color: #5ef2ff;
+}
+
+.tut-step-card.done .tut-step-num {
+  background: #1c5938;
+  color: #6effa8;
+}
+
+.tut-key-pill {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  background: #292212;
+  border: 1px solid var(--accent-gold);
+  color: var(--accent-gold);
+}
+
+.tut-step-desc {
+  font-size: 11px;
+  color: #b8c3e0;
+  line-height: 1.3;
+}
+
+.tut-info-box {
+  background: #111326;
+  border: 2px solid #353b5c;
+  padding: 7px 9px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.tut-info-box p {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: #c2cce8;
+}
+
+.tut-controls-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  background: #100f1e;
+  border: 2px solid #363c5e;
+  padding: 7px 9px;
+  font-size: 11px;
+  color: #d4def7;
+}
+
+.tut-controls-strip kbd {
+  background: #242947;
+  border: 1px solid #6e7bb0;
+  color: #ffe066;
+  padding: 1px 5px;
+  font-family: inherit;
+  font-weight: 700;
+}
+
+.tut-combo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.tut-combo-card,
+.tut-class-card {
+  background: #111326;
+  border: 2px solid #3c4369;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.tut-combo-head,
+.tut-class-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.tut-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border: 1px solid currentColor;
+  background: rgba(16, 14, 28, 0.85);
+}
+
+.tut-key-chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+
+.tut-key-cap {
+  background: #1f2442;
+  border: 1px solid #7583bd;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+}
+
+.tut-arrow {
+  color: var(--accent-gold);
+  font-size: 12px;
+}
+
+.tut-combo-desc {
+  font-size: 11px;
+  color: #c5d0ed;
+  line-height: 1.35;
+}
+
+.tut-class-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 11px;
+  color: #b5c0de;
+  background: #0c0e1c;
+  padding: 4px 8px;
+  border: 1px solid #2a304d;
+}
+
+.tut-skill-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.tut-skill-item {
+  background: #0e1020;
+  border: 1px solid #2e3554;
+  padding: 5px 7px;
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+  font-size: 11px;
+}
+
+.tut-skill-key {
+  background: #272214;
+  border: 1px solid var(--accent-gold);
+  color: var(--accent-gold);
+  font-weight: 700;
+  font-size: 10px;
+  padding: 1px 5px;
+  white-space: nowrap;
+}
+
+.tut-skill-item p {
+  margin: 2px 0 0;
+  color: #adb8d6;
+  line-height: 1.3;
+}
+
+.tut-class-tip {
+  background: #0d1324;
+  border-left: 3px solid #5ef2ff;
+  padding: 5px 8px;
+  font-size: 11px;
+  color: #d6e0fa;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tut-note-strip {
+  background: #141933;
+  border: 1px solid #4c5a8f;
+  padding: 6px 9px;
+  font-size: 12px;
+  color: #dce6ff;
+}
+
+.tut-elem-card {
+  background: #101224;
+  border: 2px solid #3b4266;
+  padding: 6px 8px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tut-elem-card:hover,
+.tut-elem-card.selected {
+  background: #1d2242;
+  box-shadow: inset 0 0 0 1px #ffffff;
+}
+
+.elem-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.reaction-card {
+  background: #101224;
+  border: 1px solid #323859;
+  padding: 6px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.reaction-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.reaction-grp {
+  font-size: 9px;
+  padding: 1px 5px;
+  background: #1e2340;
+  color: #9fb0db;
+}
+
+.reaction-name {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.reaction-desc {
+  font-size: 11px;
+  color: #c2cce8;
+  line-height: 1.3;
+}
+
+@media (max-width: 780px) {
+  .tut-grid-3,
+  .tut-grid-2,
+  .tut-skill-grid {
+    grid-template-columns: 1fr;
+  }
+}

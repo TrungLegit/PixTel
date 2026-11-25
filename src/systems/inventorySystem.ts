@@ -18,7 +18,7 @@ import {
 } from "../data/types";
 import type { PlayerEntity } from "../world/entities";
 
-export const MAX_BAG_SLOTS = 32;
+export const MAX_BAG_SLOTS = 40;
 
 export const HOTKEY_CONSUMABLES: readonly string[] = [
   "pot_hp",
@@ -69,6 +69,10 @@ export function recalculatePlayerStats(
   const passives = inv.getActivePassives();
   player.hasOrbitGrimoire = passives.has("orbit_grimoire");
   player.hasReactionAmp = passives.has("reaction_amp");
+  player.hasVoidSiphon = passives.has("void_siphon");
+  player.hasWindDancer = passives.has("wind_dancer");
+  player.hasChromaBlessing = passives.has("chroma_blessing");
+  player.hasQuakeImpact = passives.has("quake_impact");
 
   if (preserveHpRatio) {
     player.hp = Math.min(player.maxHp, Math.max(1, Math.round(ratio * player.maxHp)));

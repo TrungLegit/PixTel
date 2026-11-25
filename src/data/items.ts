@@ -480,14 +480,75 @@ export const ITEMS: Record<string, ItemDef> = {
     name: "Bột Hoàng Quang Điện",
     category: "material",
     rarity: "rare",
+    tier: 3,
     iconColor: "#ffee44",
     iconKind: "pigment",
     visualColor: "#e6b81c",
     accentColor: "#ffffff",
     pigmentElement: "volt",
-    desc: "Sắc tố Vàng tinh luyện. Dùng tại Lò Rèn để nhuộm hệ ĐIỆN/QUANG cho trang bị từ +5 trở lên.",
+    desc: "Sắc tố Lôi tinh luyện. Dùng tại Lò Rèn để nhuộm hệ LÔI cho trang bị +5 (+8% ELEM, -5% CD [E]).",
     sellPrice: 22,
     buyPrice: 65,
+  },
+  mat_pigment_void: {
+    id: "mat_pigment_void",
+    name: "Bột Hắc Tinh Hư Không",
+    category: "material",
+    rarity: "epic",
+    tier: 4,
+    iconColor: "#b266ff",
+    iconKind: "pigment",
+    visualColor: "#7a2ce0",
+    accentColor: "#f0ccff",
+    pigmentElement: "void",
+    desc: "Sắc tố Hư Không cô đặc. Dùng tại Lò Rèn để nhuộm hệ HƯ KHÔNG cho trang bị +5 (+8% ELEM, -6% CD [E], hút/xóa buff).",
+    sellPrice: 28,
+    buyPrice: 80,
+  },
+  mat_pigment_chroma: {
+    id: "mat_pigment_chroma",
+    name: "Bột Tinh Quang Sắc Độ",
+    category: "material",
+    rarity: "epic",
+    tier: 4,
+    iconColor: "#ff66c4",
+    iconKind: "pigment",
+    visualColor: "#e0389e",
+    accentColor: "#ffe066",
+    pigmentElement: "chroma",
+    desc: "Sắc tố Thất Sắc tinh khiết. Nhuộm hệ SẮC ĐỘ cho trang bị +5 (+12% ELEM & đánh trúng hồi Stamina/HP).",
+    sellPrice: 30,
+    buyPrice: 85,
+  },
+  mat_pigment_wind: {
+    id: "mat_pigment_wind",
+    name: "Bột Phong Linh Ngọc",
+    category: "material",
+    rarity: "rare",
+    tier: 3,
+    iconColor: "#5ef2d6",
+    iconKind: "pigment",
+    visualColor: "#24b89e",
+    accentColor: "#e0fff9",
+    pigmentElement: "wind",
+    desc: "Sắc tố Phong Linh. Nhuộm hệ GIÓ cho trang bị +5 (+8% ELEM, +6 SPD, +8 Thể lực & khuếch tán nguyên tố).",
+    sellPrice: 24,
+    buyPrice: 70,
+  },
+  mat_pigment_quake: {
+    id: "mat_pigment_quake",
+    name: "Bột Địa Chấn Nham",
+    category: "material",
+    rarity: "rare",
+    tier: 3,
+    iconColor: "#ff9933",
+    iconKind: "pigment",
+    visualColor: "#cc6614",
+    accentColor: "#ffe28a",
+    pigmentElement: "quake",
+    desc: "Sắc tố Địa Mạch. Nhuộm hệ CHẤN ĐỘNG cho trang bị +5 (+8% ELEM, +15% lực phá Bleach Shield Boss).",
+    sellPrice: 25,
+    buyPrice: 72,
   },
 
   // --- 4 Boss Cores ---
@@ -544,7 +605,7 @@ export const ITEMS: Record<string, ItemDef> = {
   ...EQUIPMENT_ITEMS,
 };
 
-/** Kho hàng của Thương Nhân Mira (gồm tiêu thụ T1-T4, vũ khí T1-T2 các class & nguyên liệu) */
+/** Kho hàng của Thương Nhân Mira (gồm tiêu thụ T1-T4, vũ khí T1-T2 các class & 8 loại Bột Sắc Tố) */
 export const MERCHANT_STOCK = [
   "pot_hp_small",
   "pot_hp",
@@ -566,6 +627,10 @@ export const MERCHANT_STOCK = [
   "mat_pigment_cyan",
   "mat_pigment_green",
   "mat_pigment_gold",
+  "mat_pigment_wind",
+  "mat_pigment_quake",
+  "mat_pigment_void",
+  "mat_pigment_chroma",
   "mat_iron_ore",
   "mat_glitch_core",
   "mat_quartz_shard",
@@ -597,7 +662,7 @@ export interface NormalizedEquipStats {
 
 /**
  * Computes effective stats of an equipment instance including rarity-weighted +0..+10 scaling
- * AND breakthrough milestones (+3 Tempered, +5 Chroma Socket, +7 Enchanted Aura, +10 Prismatic Awakening).
+ * AND breakthrough milestones (+3 Tempered, +5 8-Element Socket Resonance, +7 Enchanted Aura, +10 Prismatic Awakening).
  */
 export function getItemEffectiveStats(inst: ItemInstance): NormalizedEquipStats {
   const def = ITEMS[inst.defId];
@@ -620,8 +685,28 @@ export function getItemEffectiveStats(inst: ItemInstance): NormalizedEquipStats 
     if (def?.slot === "weapon") poiseBreakPct += 10;
     if (def?.slot === "boots") maxStamina += 6;
   }
-  // +5 Breakthrough: Chroma Socket Resonance
-  const infusedBonusElem = lv >= 5 && inst.infusedElement ? 8 : 0;
+
+  // +5 Breakthrough: 8-Element Chroma Socket Resonance!
+  let infusedBonusElem = 0;
+  let infAtk = 0;
+  let infHp = 0;
+  let infSpd = 0;
+  let infCrit = 0;
+  if (lv >= 5 && inst.infusedElement) {
+    infusedBonusElem = inst.infusedElement === "chroma" ? 12 : 8;
+    if (inst.infusedElement === "fire") infAtk += 4;
+    else if (inst.infusedElement === "ice") infCrit += 4;
+    else if (inst.infusedElement === "nature") infHp += 20;
+    else if (inst.infusedElement === "volt") skillCdPct -= 5;
+    else if (inst.infusedElement === "void") skillCdPct -= 6;
+    else if (inst.infusedElement === "wind") {
+      infSpd += 6;
+      maxStamina += 8;
+    } else if (inst.infusedElement === "quake") {
+      poiseBreakPct += 15;
+    }
+  }
+
   // +7 Breakthrough: Enchanted Aura
   if (lv >= 7) {
     if (def?.slot === "weapon") staminaCostPct -= 15;
@@ -637,16 +722,18 @@ export function getItemEffectiveStats(inst: ItemInstance): NormalizedEquipStats 
   return {
     atk:
       Math.round((b.atk ?? 0) * mult) +
+      infAtk +
       (def?.slot === "weapon" ? lv * 2 + (lv >= 10 ? 8 : 0) : 0),
     def:
       Math.round((b.def ?? 0) * mult) +
       (def?.slot === "armor" || def?.slot === "helmet" ? lv * 1 + (lv >= 3 ? 2 : 0) : 0),
     maxHp:
       Math.round((b.maxHp ?? 0) * mult) +
+      infHp +
       (def?.slot === "armor" ? lv * 8 : def?.slot === "helmet" ? lv * 5 : 0) +
       (lv >= 3 && (def?.slot === "armor" || def?.slot === "helmet") ? 15 : 0),
-    spd: Math.round(baseSpd * (1 + lv * 0.06)) + (def?.slot === "boots" && lv >= 5 ? 3 : 0),
-    crit: Math.round(baseCrit + (lv >= 5 ? 3 : 0) + (lv >= 8 ? 4 : 0) + (lv >= 10 ? 3 : 0)),
+    spd: Math.round(baseSpd * (1 + lv * 0.06)) + infSpd + (def?.slot === "boots" && lv >= 5 ? 3 : 0),
+    crit: Math.round(baseCrit + infCrit + (lv >= 5 ? 3 : 0) + (lv >= 8 ? 4 : 0) + (lv >= 10 ? 3 : 0)),
     elementBonus:
       Math.round(baseElem * (1 + lv * 0.08)) +
       (lv >= 5 && baseElem > 0 ? 3 : 0) +
@@ -675,7 +762,7 @@ export function getItemMilestoneSummary(inst: ItemInstance): string[] {
     }`
   );
   notes.push(
-    `${lv >= 5 ? "★" : "○"} [+5 Khe Sắc Tố]: Mở khóa Nhuộm Nguyên Tố (+8% ELEM & gắn Ấn)`
+    `${lv >= 5 ? "★" : "○"} [+5 Khe 8 Sắc Tố]: Nhuộm 1 trong 8 Hệ (Hỏa/Băng/Mộc/Lôi/Hư Không/Sắc Độ/Gió/Chấn Động)`
   );
   notes.push(
     `${lv >= 7 ? "★" : "○"} [+7 Hào Quang]: ${
@@ -689,9 +776,9 @@ export function getItemMilestoneSummary(inst: ItemInstance): string[] {
     }`
   );
   notes.push(
-    `${lv >= 10 ? "★" : "○"} [+10 Thức Tỉnh]: Cộng hưởng Lăng Kính (+10% ELEM, +3% Crit${
-      def.slot === "weapon" ? ", đòn N3/Tụ Lực kích Khúc Xạ Cầu Vồng" : ""
-    })`
+    `${lv >= 10 ? "★" : "○"} [+10 Thức Tỉnh Lăng Kính]: +10% ELEM, +3% Crit${
+      def.slot === "weapon" ? ", N3/Tụ Lực kích Khúc Xạ Cầu Vồng (Prism)" : ""
+    }`
   );
   return notes;
 }

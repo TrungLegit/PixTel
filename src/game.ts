@@ -1,4 +1,5 @@
 import { getClassDef } from "./data/classes";
+import { ELEMENT_META, normalizeElement } from "./data/elements";
 import { ENEMIES } from "./data/enemies";
 import { STARTER_WEAPON_BY_CLASS } from "./data/equipments";
 import { CONSUMABLE_GROUP_LABELS, ITEMS, RARITY_INFO, createItemInstance } from "./data/items";
@@ -40,6 +41,7 @@ import { QuestSystem } from "./systems/questSystem";
 import { ForgeSystem } from "./systems/forgeSystem";
 import { SaveSystem } from "./systems/saveSystem";
 import { CombatSystem, type CombatContext } from "./systems/combat";
+import { BEGINNER_PRACTICE_STEPS } from "./ui/TutorialModal";
 import { sfx } from "./audio/chiptuneSynth";
 
 export type ModalId =
@@ -50,6 +52,7 @@ export type ModalId =
   | "forge"
   | "world_map"
   | "journal"
+  | "tutorial"
   | "pause";
 
 export interface GameUiCallbacks {
@@ -96,6 +99,13 @@ export class PixTelOpenWorldGame {
   activeModal: ModalId = "class_select";
   currentBiome: BiomeId = "town";
   nearestInteractable: InteractableTarget | null = null;
+  tutorialActive = false;
+  tutorialStep = 0;
+  tutorialComboHits = 0;
+  tutorialCompleted = false;
+  private tutorialMoveDist = 0;
+  private tutorialReturnModal: ModalId = null;
+
   stats: {
     kills: number;
     mined: number;
@@ -189,11 +199,20 @@ export class PixTelOpenWorldGame {
       skillCdPct: 0,
       hasOrbitGrimoire: false,
       hasReactionAmp: false,
+      hasVoidSiphon: false,
+      hasWindDancer: false,
+      hasChromaBlessing: false,
+      hasQuakeImpact: false,
       grimoireTimer: 1.5,
       perfectDashWindow: 0,
       chromaCounterTimer: 0,
       dashComboPreserveTimer: 0,
       quickChargeTimer: 0,
+      tectonicChargeBonus: false,
+      chromaGustTime: 0,
+      chromaBloomBonusTime: 0,
+      totemSurgeElement: null,
+      totemSurgeTimer: 0,
       bleachDebuffTime: 0,
       speedBuffTime: 0,
       speedBuffPct: 0,
@@ -219,7 +238,7 @@ export class PixTelOpenWorldGame {
     recalculatePlayerStats(this.player, this.inv, preserveHpRatio);
   }
 
-  startNewGame(classId: ClassId) {
+  startNewGame(classId: ClassId, enableTutorial = true) {
     sfx.unlock();
     this.projectiles.length = 0;
     this.turrets.length = 0;
@@ -239,12 +258,21 @@ export class PixTelOpenWorldGame {
     this._snapCamera();
     this.tileRenderer.syncOverviewMap(this.world, this.colorSys);
 
+    this.tutorialCompleted = false;
+    this.tutorialStep = 0;
+    this.tutorialComboHits = 0;
+    this.tutorialMoveDist = 0;
+    this.tutorialActive = enableTutorial;
+    this.tutorialReturnModal = null;
+
     this.running = true;
     this.setModal(null);
     this.saveGame(false);
     this.vfx.spawnPooled("waypoint-pillar", { x: this.player.x, y: this.player.y });
     this.ui.onToast(
-      `HỒI I: NGỌN ĐÈN CUỐI CÙNG — Gặp Trưởng Làng Elian [F] hoặc giải mã Bia Ký tại Quảng Trường!`,
+      enableTutorial
+        ? `HỒI I: NGỌN ĐÈN CUỐI CÙNG — Làm theo Hướng Dẫn Tân Thủ ở giữa màn hình hoặc bấm [H] mở Cẩm Nang!`
+        : `HỒI I: NGỌN ĐÈN CUỐI CÙNG — Gặp Trưởng Làng Elian [F] hoặc giải mã Bia Ký tại Quảng Trường!`,
       "epic"
     );
     this.ui.onHudUpdate();
@@ -265,6 +293,11 @@ export class PixTelOpenWorldGame {
     this.discoveredLore = new Set(data.discoveredLore ?? []);
     this.spawner.reset(data.openedChests, data.unlockedWaypoints);
     this.stats = { reactionsTriggered: 0, ...data.stats };
+    this.tutorialCompleted = Boolean(data.tutorialCompleted);
+    this.tutorialActive = false;
+    this.tutorialStep = 0;
+    this.tutorialComboHits = 0;
+    this.tutorialReturnModal = null;
 
     this._initBlankPlayer(data.classId);
     this.player.x = data.player.x;
@@ -284,7 +317,7 @@ export class PixTelOpenWorldGame {
     this.running = true;
     this.setModal(null);
     this.vfx.spawnPooled("waypoint-pillar", { x: this.player.x, y: this.player.y });
-    this.ui.onToast("Đã tải tiến trình Biên Niên Sử thành công!", "good");
+    this.ui.onToast("Đã tải tiến trình Biên Niên Sử thành công! (Bấm [H] để xem Cẩm Nang)", "good");
     this.ui.onHudUpdate();
     return true;
   }
@@ -335,6 +368,7 @@ export class PixTelOpenWorldGame {
       unlockedWaypoints: Array.from(this.colorSys.unlockedWaypoints),
       openedChests: this.spawner.getOpenedChestIds(),
       discoveredLore: Array.from(this.discoveredLore),
+      tutorialCompleted: this.tutorialCompleted,
       quests: this.quests.exportState(),
       stats: { ...this.stats },
     };
@@ -346,7 +380,81 @@ export class PixTelOpenWorldGame {
     return ok;
   }
 
+  openTutorialFromTitle() {
+    this.tutorialReturnModal = "class_select";
+    this.setModal("tutorial");
+  }
+
+  closeTutorialModal() {
+    if (!this.running || this.tutorialReturnModal === "class_select") {
+      this.tutorialReturnModal = null;
+      this.setModal("class_select", { switching: false });
+      return;
+    }
+    const ret = this.tutorialReturnModal;
+    this.tutorialReturnModal = null;
+    this.setModal(ret);
+  }
+
+  startGuidedTutorial() {
+    this.tutorialActive = true;
+    this.tutorialStep = 0;
+    this.tutorialComboHits = 0;
+    this.tutorialMoveDist = 0;
+    this.ui.onToast("Đã bật Hướng Dẫn Thực Hành Tân Thủ (6 bước)!", "good");
+    this.ui.onHudUpdate();
+  }
+
+  skipGuidedTutorial() {
+    this.tutorialActive = false;
+    this.ui.onToast("Đã ẩn hướng dẫn thực hành. Bạn có thể bấm [H] bất kỳ lúc nào để mở Cẩm Nang!", "info");
+    this.ui.onHudUpdate();
+  }
+
+  private _advanceTutorial(stepId: string) {
+    if (!this.tutorialActive) return;
+    const cur = BEGINNER_PRACTICE_STEPS[this.tutorialStep];
+    if (!cur || cur.id !== stepId) return;
+
+    this.tutorialStep += 1;
+    if (this.tutorialStep >= BEGINNER_PRACTICE_STEPS.length) {
+      this.tutorialActive = false;
+      const firstReward = !this.tutorialCompleted;
+      this.tutorialCompleted = true;
+      sfx.playQuestComplete();
+      this.vfx.spawnPooled("collect-burst-legendary", { x: this.player.x, y: this.player.y - 6 });
+      if (firstReward) {
+        this.inv.gold += 50;
+        this.inv.addItem("pot_coating", 1, 0);
+        this.vfx.spawnDamageText(this.player.x, this.player.y - 16, `HOÀN TẤT TÂN THỦ! +50G`, {
+          color: "#ffe066",
+          crit: true,
+        });
+        this.ui.onToast(
+          "★ HOÀN TẤT HƯỚNG DẪN TÂN THỦ! Nhận thưởng +50 Vàng & +1 Dầu Phủ Quang Phổ! (Mở Cẩm Nang bằng [H])",
+          "epic"
+        );
+      } else {
+        this.ui.onToast("★ Đã hoàn thành lại chuỗi thực hành 6 bước!", "good");
+      }
+      this.saveGame(false);
+    } else {
+      sfx.playLootPickup(false);
+      const next = BEGINNER_PRACTICE_STEPS[this.tutorialStep];
+      this.vfx.spawnDamageText(this.player.x, this.player.y - 14, `✓ BƯỚC ${this.tutorialStep}/6`, {
+        color: "#44ee88",
+      });
+      if (next) {
+        this.ui.onToast(`Tiếp theo (${this.tutorialStep + 1}/6): ${next.title} [${next.keyBadge}]`, "info");
+      }
+    }
+    this.ui.onHudUpdate();
+  }
+
   setModal(modal: ModalId, payload?: unknown) {
+    if (modal === "inventory") {
+      this._advanceTutorial("world_ui");
+    }
     this.activeModal = modal;
     if (modal !== null) {
       this.keys.clear();
@@ -363,6 +471,20 @@ export class PixTelOpenWorldGame {
   }
 
   toggleModal(modal: Exclude<ModalId, null>) {
+    if (modal === "tutorial") {
+      if (this.activeModal === "tutorial") {
+        sfx.playUiClick();
+        this.closeTutorialModal();
+      } else {
+        sfx.playUiClick();
+        this.tutorialReturnModal =
+          this.activeModal === "pause" || this.activeModal === "class_select"
+            ? this.activeModal
+            : null;
+        this.setModal("tutorial");
+      }
+      return;
+    }
     if (!this.running) return;
     if (this.activeModal === modal) {
       this.setModal(null);
@@ -514,6 +636,7 @@ export class PixTelOpenWorldGame {
     if (!this.running || this.activeModal !== null) return;
     const t = this.nearestInteractable;
     if (!t) return;
+    this._advanceTutorial("world_ui");
 
     if (t.kind === "npc") {
       sfx.playUiClick();
@@ -886,11 +1009,18 @@ export class PixTelOpenWorldGame {
     } else if (moving) {
       const sprintMult = p.sprinting ? 1.48 : 1.0;
       const buffMult = p.speedBuffTime > 0 ? 1 + (p.speedBuffPct || 0.28) : 1.0;
+      const gustMult = p.chromaGustTime > 0 ? 1.18 : 1.0;
       const exhaustSlow = p.exhausted ? 0.84 : 1.0;
       const chargeSlow = p.charging && p.chargeTime > 0.18 ? 0.65 : 1.0;
-      const spd = p.spd * sprintMult * buffMult * exhaustSlow * chargeSlow;
+      const spd = p.spd * sprintMult * buffMult * gustMult * exhaustSlow * chargeSlow;
       this.world.moveWithCollision(p, mx * spd * dt, my * spd * dt, p.radius);
       p.walkTime += dt * (p.sprinting ? 11 : 7.5);
+      if (this.tutorialActive && BEGINNER_PRACTICE_STEPS[this.tutorialStep]?.id === "move") {
+        this.tutorialMoveDist += spd * dt;
+        if (this.tutorialMoveDist >= 26) {
+          this._advanceTutorial("move");
+        }
+      }
     }
 
     // Hold LMB Charge Attack logic (supports Quick-Charge after N3/[E] & Golden Just-Charge Lv2 window!)
@@ -915,6 +1045,7 @@ export class PixTelOpenWorldGame {
     } else if (p.charging) {
       if (p.chargeTime >= reqCharge) {
         this.combat.performChargedAttack(combatCtx, isJustWindow);
+        this._advanceTutorial("charge");
       }
       p.charging = false;
       p.chargeTime = 0;
@@ -942,16 +1073,9 @@ export class PixTelOpenWorldGame {
       const wx = p.x + anchor.dx;
       const wy = p.y + anchor.dy;
 
-      const infCol =
-        wpnInst?.infusedElement === "fire"
-          ? "#ff5533"
-          : wpnInst?.infusedElement === "ice"
-            ? "#38e8ff"
-            : wpnInst?.infusedElement === "nature"
-              ? "#44ee88"
-              : wpnInst?.infusedElement === "volt"
-                ? "#ffee44"
-                : null;
+      const infCol = wpnInst?.infusedElement
+        ? ELEMENT_META[wpnInst.infusedElement].color
+        : null;
 
       this.weaponGlowTimer -= dt;
       if (this.weaponGlowTimer <= 0) {
@@ -1004,7 +1128,7 @@ export class PixTelOpenWorldGame {
       const isEquip = l.kind === "item" && l.item && ITEMS[l.item.defId]?.category === "equipment";
       const magnetRadius = isEquip ? 44 : 58;
       if (d < magnetRadius && d > 1) {
-        if (!isEquip || this.inv.bag.length < 32) {
+        if (!isEquip || this.inv.bag.length < 40) {
           const pull = (isEquip ? 140 : 185) * dt;
           l.x += (dx / d) * Math.min(d, pull);
           l.y += (dy / d) * Math.min(d, pull);
@@ -1070,22 +1194,42 @@ export class PixTelOpenWorldGame {
     // 1. Viewport-culled 16-bit Tilemap Ground
     this.tileRenderer.drawVisibleGround(ctx, this.world, this.colorSys, camX, camY, VIEW_W, VIEW_H, this.time);
 
-    // 1b. Persistent Ground Fields (Acid Pool, Molten Flame Trail, Bleach Zone — matching image_5.png!)
+    // 1b. Persistent Ground Fields (Acid Pool, Flame Trail, Bleach Zone, Null Frost, Chroma Bloom!)
     for (const h of this.hazards) {
-      if (h.kind !== "acid_pool" && h.kind !== "flame_trail" && h.kind !== "bleach_zone") continue;
+      if (
+        h.kind !== "acid_pool" &&
+        h.kind !== "flame_trail" &&
+        h.kind !== "bleach_zone" &&
+        h.kind !== "null_frost" &&
+        h.kind !== "chroma_bloom"
+      ) {
+        continue;
+      }
       const sx = Math.round(h.x - camX);
       const sy = Math.round(h.y - camY);
-      if (sx < -40 || sy < -40 || sx > VIEW_W + 40 || sy > VIEW_H + 40) continue;
+      if (sx < -48 || sy < -48 || sx > VIEW_W + 48 || sy > VIEW_H + 48) continue;
       const r = Math.round(h.radius * 0.65);
       ctx.fillStyle =
         h.kind === "acid_pool"
           ? "rgba(46, 204, 102, 0.35)"
           : h.kind === "flame_trail"
             ? "rgba(255, 110, 34, 0.38)"
-            : "rgba(220, 228, 242, 0.36)";
+            : h.kind === "null_frost"
+              ? "rgba(110, 175, 255, 0.34)"
+              : h.kind === "chroma_bloom"
+                ? "rgba(255, 102, 196, 0.30)"
+                : "rgba(220, 228, 242, 0.36)";
       ctx.fillRect(sx - r, sy - Math.round(r * 0.55), r * 2, Math.round(r * 1.1));
       ctx.fillStyle =
-        h.kind === "acid_pool" ? "#66ff88" : h.kind === "flame_trail" ? "#ffee55" : "#ffffff";
+        h.kind === "acid_pool"
+          ? "#66ff88"
+          : h.kind === "flame_trail"
+            ? "#ffee55"
+            : h.kind === "null_frost"
+              ? "#b266ff"
+              : h.kind === "chroma_bloom"
+                ? "#44ee88"
+                : "#ffffff";
       const bub = Math.floor(this.time * 6 + h.uid) % 5;
       ctx.fillRect(sx - r + bub * 5, sy - 2, 2, 2);
       ctx.fillRect(sx + r - bub * 4 - 2, sy + 2, 2, 2);
@@ -1244,7 +1388,7 @@ export class PixTelOpenWorldGame {
       });
     }
 
-    // Arena Chroma Totems (spawned during World Boss The Eraser Phase 2 & 3!)
+    // Arena Chroma Totems (spawned during World Boss The Eraser Phase 2 Classic & Phase 3 Primordial!)
     for (const totem of this.spawner.arenaTotems) {
       const sx = Math.round(totem.x - camX);
       const sy = Math.round(totem.y - camY);
@@ -1256,14 +1400,17 @@ export class PixTelOpenWorldGame {
             ? sprites.interactables[`totem_${totem.element}`]
             : sprites.interactables.totemOff;
           ctx.drawImage(img, sx - 8, sy - 20);
+          const tCol = ELEMENT_META[totem.element].color;
           if (!totem.lit) {
             const tw = textWidth("HIT!", "mini");
             const lx = Math.round(sx - tw / 2);
             const ly = sy - 28 + Math.round(Math.sin(this.time * 8) * 1);
             ctx.fillStyle = "#100c18";
             ctx.fillRect(lx - 1, ly - 1, tw + 2, 7);
-            ctx.fillStyle = "#ffe066";
+            ctx.fillStyle = tCol;
             rasterText("HIT!", "mini", (gx: number, gy: number) => ctx.fillRect(lx + gx, ly + gy, 1, 1));
+            // Colored crystal core preview so player knows which of the 8 elements this Totem grants!
+            ctx.fillRect(sx - 2, sy - 14, 4, 4);
           }
         },
       });
@@ -1391,18 +1538,23 @@ export class PixTelOpenWorldGame {
             ctx.fillRect(sx + 2, sy - 5, 2, 3);
           }
 
-          // Elemental status pip above enemy
+          // Elemental status pip above enemy (supports all 9 elements!)
           const topY = sy - sp.h;
           if (e.element) {
-            ctx.fillStyle =
-              e.element === "fire"
-                ? "#ff5533"
-                : e.element === "ice"
-                  ? "#38e8ff"
-                  : e.element === "volt"
-                    ? "#ffee44"
-                    : "#44ee88";
+            ctx.fillStyle = "#100c18";
+            ctx.fillRect(sx - 3, topY - 11, 6, 5);
+            ctx.fillStyle = ELEMENT_META[normalizeElement(e.element)].color;
             ctx.fillRect(sx - 2, topY - 10, 4, 3);
+          }
+          if (e.disruptTime > 0) {
+            const dx = Math.round(Math.sin(this.time * 18 + e.uid) * 4);
+            ctx.fillStyle = "#b266ff";
+            ctx.fillRect(sx + dx, topY - 8, 2, 2);
+          }
+          if (e.enrageBuffTime > 0) {
+            ctx.fillStyle = "#ff5533";
+            ctx.fillRect(sx - 6, sy - 2, 2, 2);
+            ctx.fillRect(sx + 4, sy - 2, 2, 2);
           }
 
           // Stun orbiting yellow stars (image_3 row 1 col 5)
@@ -1636,11 +1788,20 @@ export class PixTelOpenWorldGame {
 
   private _bindInputs() {
     window.addEventListener("keydown", (e) => {
-      if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) {
-        if (this.activeModal === null) e.preventDefault();
+      if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "F1"].includes(e.code)) {
+        if (this.activeModal === null || e.code === "F1") e.preventDefault();
+      }
+
+      if (e.code === "KeyH" || e.code === "F1") {
+        this.toggleModal("tutorial");
+        return;
       }
 
       if (e.code === "Escape") {
+        if (this.activeModal === "tutorial") {
+          this.closeTutorialModal();
+          return;
+        }
         if (!this.running) return;
         if (this.activeModal !== null) this.setModal(null);
         else this.setModal("pause");
@@ -1666,7 +1827,11 @@ export class PixTelOpenWorldGame {
       if (e.code === "KeyF") {
         this.interactNearest();
       } else if (e.code === "KeyE") {
+        const prevCd = this.player.skillCd;
         this.combat.performSkillE(this._makeCombatContext());
+        if (this.player.skillCd > prevCd) {
+          this._advanceTutorial("skill_e");
+        }
       } else if (e.code === "KeyQ") {
         this.combat.performUltimateQ(this._makeCombatContext());
       } else if (e.code === "Space") {
@@ -1675,7 +1840,11 @@ export class PixTelOpenWorldGame {
         if (this.keys.has("KeyS") || this.keys.has("ArrowDown")) my += 1;
         if (this.keys.has("KeyA") || this.keys.has("ArrowLeft")) mx -= 1;
         if (this.keys.has("KeyD") || this.keys.has("ArrowRight")) mx += 1;
+        const prevDash = this.player.dashing;
         this.combat.performDash(this._makeCombatContext(), mx, my);
+        if (this.player.dashing > prevDash) {
+          this._advanceTutorial("dash");
+        }
       } else if (e.code === "Digit1") {
         this.useConsumableSlot(1);
       } else if (e.code === "Digit2") {
@@ -1712,10 +1881,27 @@ export class PixTelOpenWorldGame {
         this.mouseDown = true;
         this.player.chargeTime = 0;
         this.player.charging = true;
-        // Immediate crisp primary attack on click (and holding >= 0.4s releases Charged Attack!)
+        const prevAtkCd = this.player.atkCd;
+        // Immediate crisp primary attack on click (and holding >= 0.38s releases Charged Attack!)
         this.combat.performPrimaryAttack(this._makeCombatContext());
+        if (
+          this.tutorialActive &&
+          BEGINNER_PRACTICE_STEPS[this.tutorialStep]?.id === "combo3" &&
+          this.player.atkCd > prevAtkCd
+        ) {
+          this.tutorialComboHits += 1;
+          if (this.tutorialComboHits >= 3 || this.player.quickChargeTimer > 0) {
+            this._advanceTutorial("combo3");
+          } else {
+            this.ui.onHudUpdate();
+          }
+        }
       } else if (ev.button === 2) {
+        const prevCd = this.player.skillCd;
         this.combat.performSkillE(this._makeCombatContext());
+        if (this.player.skillCd > prevCd) {
+          this._advanceTutorial("skill_e");
+        }
       }
     });
 

@@ -87,10 +87,17 @@ export class WorldSpawner {
     }
   }
 
-  /** Spawns 4 Resonance Chroma Totems around The Eraser's arena during Phase 2 & 3 shield ritual. */
-  spawnEraserTotems(centerX: number, centerY: number, vfx: VfxManager | null) {
+  /**
+   * Spawns 4 Resonance Chroma Totems around The Eraser's arena:
+   * - Phase 2: 4 Classic Elemental Totems (fire, ice, nature, volt)
+   * - Phase 3: 4 Primordial Expanded Totems (void, chroma, wind, quake)
+   */
+  spawnEraserTotems(centerX: number, centerY: number, vfx: VfxManager | null, phase = 2) {
     this.arenaTotems.length = 0;
-    const elems: InfusableElement[] = ["fire", "ice", "nature", "volt"];
+    const elems: InfusableElement[] =
+      phase >= 3
+        ? ["void", "chroma", "wind", "quake"]
+        : ["fire", "ice", "nature", "volt"];
     const offsets: [number, number][] = [
       [-68, -56],
       [68, -56],
@@ -162,7 +169,7 @@ export class WorldSpawner {
         const ey = cy + Math.sin(ang) * dist;
         slot++;
 
-        // Non-boss bruisers get their bleachShield right away; Bosses activate bleachShield on Phase transitions (and start with 45% initial armor)
+        // Non-boss bruisers get their bleachShield right away; Bosses activate bleachShield on Phase transitions (and start with 40% initial armor)
         const maxShield = edef.bleachShield ?? 0;
         const initShield = edef.isBoss ? Math.round(maxShield * 0.4) : maxShield;
 
@@ -207,6 +214,12 @@ export class WorldSpawner {
           rootTime: 0,
           stunTime: 0,
           vulnTime: 0,
+          critVulnTime: 0,
+          normalAmpTime: 0,
+          disruptTime: 0,
+          blightDecayTime: 0,
+          chromaSlowBonusTime: 0,
+          enrageBuffTime: 0,
           bleachShield: initShield,
           maxBleachShield: maxShield,
           totemChannelTimer: 0,

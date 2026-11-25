@@ -12,22 +12,25 @@ import {
   WORLD_ROWS,
 } from "../data/worldConfig";
 import { onCodixelReady } from "../graphics/codixelAtlas";
+import { ELEMENT_META } from "../data/elements";
 import { ELEMENT_DISPLAY } from "../systems/forgeSystem";
+import { BEGINNER_PRACTICE_STEPS } from "./TutorialModal";
 import { uiRarityFx } from "../vfx/uiRarityFx";
 import type { PixTelOpenWorldGame } from "../game";
 import { sfx } from "../audio/chiptuneSynth";
 
 const ELEMENT_LABELS = [
-  { name: "LỬA", color: "#ff5533" },
+  { name: "HỎA", color: "#ff5533" },
   { name: "BĂNG", color: "#38e8ff" },
   { name: "MỘC", color: "#44ee88" },
-  { name: "ĐIỆN", color: "#ffee44" },
+  { name: "LÔI", color: "#ffee44" },
+  { name: "SẮC ĐỘ", color: "#ff66c4" },
 ];
 
 /**
- * In-game HUD v2.5:
+ * In-game HUD v2.6:
  * - Top-left Hero stats, HP/XP bars, Gold, Biome + Color Restoration & Lore Codex progress
- * - Top-center Boss HP + Phase + Bleach Shield / Totem Ritual / Vulnerable indicator
+ * - Top-center Boss HP + Phase + Bleach Shield / Totem Ritual / Vulnerable indicator + Guided Beginner Banner
  * - Top-right Live Pixel Minimap (with Waypoints, Bosses, Chests & Lore Tablets) + Quest Tracker
  * - Bottom Skill Hotbar (Combo step, E, Q, Chroma Dodge, 1-4 Smart Codixel Consumables) + [F] Interact Prompt
  */
@@ -37,6 +40,8 @@ export class HudUI {
   private miniCanvas: HTMLCanvasElement;
   private miniCtx: CanvasRenderingContext2D;
   private toastContainer: HTMLElement;
+  private tutorialBannerEl: HTMLElement | null;
+  private lastTutorialStepKey = "";
   private cachedHotbarIcons = ["", "", "", ""];
 
   constructor(game: PixTelOpenWorldGame) {
@@ -46,6 +51,7 @@ export class HudUI {
     this.miniCtx = this.miniCanvas.getContext("2d")!;
     this.miniCtx.imageSmoothingEnabled = false;
     this.toastContainer = document.getElementById("toast-stack")!;
+    this.tutorialBannerEl = document.getElementById("hud-tutorial-banner");
 
     onCodixelReady(() => {
       this.cachedHotbarIcons.fill("");
@@ -53,6 +59,7 @@ export class HudUI {
     });
 
     // Quick toolbar buttons
+    document.getElementById("hud-btn-help")?.addEventListener("click", () => this.game.toggleModal("tutorial"));
     document.getElementById("hud-btn-map")!.addEventListener("click", () => this.game.toggleModal("world_map"));
     document.getElementById("hud-btn-bag")!.addEventListener("click", () => this.game.toggleModal("inventory"));
     document.getElementById("hud-btn-quest")!.addEventListener("click", () => this.game.toggleModal("journal"));
@@ -131,8 +138,22 @@ export class HudUI {
     if (p.chromaCounterTimer > 0) {
       extraBits.push(`<span style="color:#ffe066">★ PHẢN KÍCH!</span>`);
     }
+    if (p.totemSurgeElement && p.totemSurgeTimer > 0) {
+      const tm = ELEMENT_META[p.totemSurgeElement];
+      extraBits.push(`<span style="color:${tm.color}">⚡ TRỤ ${tm.shortLabel} (${Math.ceil(p.totemSurgeTimer)}s)</span>`);
+    }
+    if (p.tectonicChargeBonus) {
+      extraBits.push(`<span style="color:#ff9933">★ ĐỊA CHẤN TỤ +35%</span>`);
+    }
+    if (p.chromaBloomBonusTime > 0) {
+      extraBits.push(`<span style="color:#ff66c4">NỞ RỘ +15% ELEM</span>`);
+    }
+    if (p.chromaGustTime > 0) {
+      extraBits.push(`<span style="color:#5ef2d6">GIÓ +18% (${Math.ceil(p.chromaGustTime)}s)</span>`);
+    }
     if (p.coatingTime > 0) {
-      extraBits.push(`<span style="color:#ff66d8">DẦU PHỦ (${Math.ceil(p.coatingTime)}s)</span>`);
+      const coatLbl = p.coatingElement ? ELEMENT_META[p.coatingElement].shortLabel : "QUANG PHỔ";
+      extraBits.push(`<span style="color:#ff66d8">PHỦ ${coatLbl} (${Math.ceil(p.coatingTime)}s)</span>`);
     }
     if (p.atkBuffTime > 0) {
       extraBits.push(`<span style="color:#ffee44">ATK+${Math.round((p.atkBuffPct || 0.3) * 100)}% (${Math.ceil(p.atkBuffTime)}s)</span>`);
@@ -147,6 +168,45 @@ export class HudUI {
       extraBits.push(`<span style="color:#b8c2d6">PHAI SẮC (${Math.ceil(p.bleachDebuffTime)}s)</span>`);
     }
     document.getElementById("hud-status-line")!.innerHTML = extraBits.join(" · ");
+
+    // Live 6-Step Beginner Practice Banner (hidden automatically when inactive or when Boss bar is up)
+    if (this.tutorialBannerEl) {
+      const bossActive = Boolean(this.game.getActiveBoss());
+      const stepDef = BEGINNER_PRACTICE_STEPS[this.game.tutorialStep];
+      if (this.game.tutorialActive && stepDef && !bossActive) {
+        this.tutorialBannerEl.classList.remove("hidden");
+        const stepKey = `${this.game.tutorialStep}:${this.game.tutorialComboHits}`;
+        if (this.lastTutorialStepKey !== stepKey) {
+          this.lastTutorialStepKey = stepKey;
+          const extraCombo =
+            stepDef.id === "combo3" ? ` (${Math.min(3, this.game.tutorialComboHits)}/3 nhịp)` : "";
+          this.tutorialBannerEl.innerHTML = `
+            <div class="tut-banner-head">
+              <span class="tut-banner-step">🌱 HƯỚNG DẪN TÂN THỦ · BƯỚC ${this.game.tutorialStep + 1}/${BEGINNER_PRACTICE_STEPS.length}</span>
+              <div class="tut-banner-btns">
+                <button id="hud-tut-open-book" class="hud-mini-btn" title="Mở Cẩm Nang [H]">CẨM NANG [H]</button>
+                <button id="hud-tut-skip" class="hud-mini-btn" title="Bỏ qua hướng dẫn">BỎ QUA ✕</button>
+              </div>
+            </div>
+            <div class="tut-banner-main">
+              <span class="tut-key-pill">${stepDef.keyBadge}</span>
+              <b>${stepDef.title}${extraCombo}</b>
+            </div>
+            <div class="tut-banner-desc">${stepDef.desc}</div>
+          `;
+          this.tutorialBannerEl.querySelector("#hud-tut-open-book")?.addEventListener("click", () => {
+            this.game.toggleModal("tutorial");
+          });
+          this.tutorialBannerEl.querySelector("#hud-tut-skip")?.addEventListener("click", () => {
+            sfx.playUiClick();
+            this.game.skipGuidedTutorial();
+          });
+        }
+      } else {
+        this.tutorialBannerEl.classList.add("hidden");
+        this.lastTutorialStepKey = "";
+      }
+    }
 
     // Boss HP Bar + Phase + Bleach Shield / Stagger Vulnerability
     const boss = this.game.getActiveBoss();
@@ -169,7 +229,7 @@ export class HudUI {
           shieldWrap.classList.remove("hidden");
           shieldFill.style.width = `${Math.min(100, (boss.totemChannelTimer / 12) * 100)}%`;
           shieldFill.style.background = "#c266ff";
-          shieldLbl.textContent = `⚡ THẮP TRỤ SẮC MÀU: ${lit}/2 (${boss.totemChannelTimer.toFixed(1)}s)`;
+          shieldLbl.textContent = `⚡ THẮP 2 TRỤ CỘNG HƯỞNG NGUYÊN TỐ: ${lit}/2 (${boss.totemChannelTimer.toFixed(1)}s)`;
         } else if (boss.bleachShield > 0 && boss.maxBleachShield > 0) {
           shieldWrap.classList.remove("hidden");
           const spct = Math.max(0, Math.min(100, (boss.bleachShield / boss.maxBleachShield) * 100));

@@ -325,5 +325,53 @@ export const FORGE_RECIPES: RecipeDef[] = [
     ],
     desc: "Chế tác Bùa Hộ Mệnh Bất Diệt (Tự động chặn 1 đòn chí tử & hồi 40% HP).",
   },
+  // === CỔ VẬT MỞ RỘNG 9 NGUYÊN TỐ (GIÓ / CHẤN ĐỘNG / HƯ KHÔNG / SẮC ĐỘ) ===
+  {
+    id: "rec_wind_feather",
+    resultDefId: "acc_wind_feather",
+    goldCost: 120,
+    materials: [
+      { defId: "mat_warden_crest", qty: 1 },
+      { defId: "mat_pigment_wind", qty: 1 },
+      { defId: "mat_prism_shard", qty: 3 },
+    ],
+    desc: "Chế tác Lông Vũ Phong Lưu (+14 SPD, +20 Thể lực & lướt Dash tỏa xung Gió khuếch tán).",
+  },
+  {
+    id: "rec_quake_maul",
+    resultDefId: "wpn_quake_maul",
+    goldCost: 275,
+    materials: [
+      { defId: "mat_amber_fang", qty: 1 },
+      { defId: "mat_pigment_quake", qty: 1 },
+      { defId: "mat_amber_gem", qty: 4 },
+      { defId: "mat_prism_shard", qty: 4 },
+    ],
+    desc: "Rèn Cự Chùy Địa Chấn (+40% Phá Giáp Trắng & đòn N3/Tụ Lực gắn Ấn Chấn Động).",
+  },
+  {
+    id: "rec_void_scythe",
+    resultDefId: "wpn_void_scythe",
+    goldCost: 290,
+    materials: [
+      { defId: "mat_void_prism", qty: 2 },
+      { defId: "mat_pigment_void", qty: 1 },
+      { defId: "mat_glitch_core", qty: 8 },
+      { defId: "mat_prism_shard", qty: 5 },
+    ],
+    desc: "Rèn Lưỡi Hái Hư Không (Đòn N3/Tụ Lực tự gắn Ấn Hư Không kéo quái & xóa buff địch).",
+  },
+  {
+    id: "rec_chroma_heart",
+    resultDefId: "acc_chroma_heart",
+    goldCost: 540,
+    materials: [
+      { defId: "mat_origin_star", qty: 1 },
+      { defId: "mat_pigment_chroma", qty: 2 },
+      { defId: "mat_void_prism", qty: 3 },
+      { defId: "mat_prism_shard", qty: 8 },
+    ],
+    desc: "Kết tinh Trái Tim Thất Sắc Iris (Mọi Phản Ứng hồi +4% HP, +10 Stamina & N3 gắn Ấn Sắc Độ)!",
+  },
 ];
 

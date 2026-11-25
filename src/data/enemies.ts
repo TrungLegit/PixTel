@@ -214,6 +214,8 @@ export const ENEMIES: Record<string, EnemyDef> = {
     gold: [120, 175],
     isBoss: true,
     bleachShield: 160,
+    elementAffinity: "wind",
+    elementWeakness: "quake",
     ai: "boss_warden",
     lootMaterials: [
       { defId: "mat_warden_crest", chance: 1.0 },
@@ -238,6 +240,8 @@ export const ENEMIES: Record<string, EnemyDef> = {
     gold: [190, 270],
     isBoss: true,
     bleachShield: 260,
+    elementAffinity: "ice",
+    elementWeakness: "fire",
     ai: "boss_root",
     lootMaterials: [
       { defId: "mat_crystal_heart", chance: 1.0 },
@@ -262,6 +266,8 @@ export const ENEMIES: Record<string, EnemyDef> = {
     gold: [290, 400],
     isBoss: true,
     bleachShield: 380,
+    elementAffinity: "fire",
+    elementWeakness: "void",
     ai: "boss_amber",
     lootMaterials: [
       { defId: "mat_amber_fang", chance: 1.0 },
@@ -287,6 +293,8 @@ export const ENEMIES: Record<string, EnemyDef> = {
     isBoss: true,
     isWorldBoss: true,
     bleachShield: 620,
+    elementAffinity: "void",
+    elementWeakness: "chroma",
     ai: "boss_eraser",
     lootMaterials: [
       { defId: "mat_origin_star", chance: 1.0 },

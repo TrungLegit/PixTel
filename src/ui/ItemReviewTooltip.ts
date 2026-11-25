@@ -1,4 +1,5 @@
 import { getClassDef } from "../data/classes";
+import { ELEMENT_META } from "../data/elements";
 import { SET_BONUSES } from "../data/equipments";
 import {
   CONSUMABLE_GROUP_LABELS,
@@ -240,6 +241,9 @@ export class ItemReviewTooltip {
         ["CHÍ MẠNG", st.crit, diff?.crit, "%"],
         ["TỐC CHẠY", st.spd, diff?.spd, ""],
         ["NGUYÊN TỐ", st.elementBonus, diff?.elementBonus, "%"],
+        ["THỂ LỰC", st.maxStamina, diff?.maxStamina, ""],
+        ["PHÁ GIÁP", st.poiseBreakPct, diff?.poiseBreakPct, "%"],
+        ["GIẢM CD [E]", st.skillCdPct, diff?.skillCdPct, "%"],
       ];
 
       const statLines = rows
@@ -271,6 +275,19 @@ export class ItemReviewTooltip {
         dollFeatures.push("Vật thể quỹ đạo bay quanh");
       }
 
+      let infuseNote = "";
+      if (inst.enhanceLevel >= 5 && inst.infusedElement) {
+        const em = ELEMENT_META[inst.infusedElement];
+        infuseNote = `<div class="review-doll-note" style="border-left-color:${em.color}">★ Khảm Sắc Tố [+5]: <b>Hệ ${em.name}</b> (${em.infuseBonusDesc ?? "+8% ELEM"})</div>`;
+      }
+      if (inst.enhanceLevel >= 10 && def.slot === "weapon") {
+        infuseNote += `<div class="review-doll-note" style="border-left-color:#ff88f2">★ Thức Tỉnh [+10]: <b>Khúc Xạ Lăng Kính (Prism)</b></div>`;
+      }
+
+      const passiveHtml = def.passiveDesc
+        ? `<div class="review-doll-note" style="border-left-color:#b85a14;color:#4a2308">✦ ${def.passiveDesc}</div>`
+        : "";
+
       // Set bonus block
       let setHtml = "";
       if (def.setId && SET_BONUSES[def.setId]) {
@@ -294,6 +311,8 @@ export class ItemReviewTooltip {
 
       bodyHtml = `
         <div class="review-stats-grid">${statLines}</div>
+        ${infuseNote}
+        ${passiveHtml}
         ${dollFeatures.length ? `<div class="review-doll-note">✦ Paper-Doll: ${dollFeatures.join(" · ")}</div>` : ""}
         ${setHtml}
       `;

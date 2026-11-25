@@ -194,7 +194,7 @@ export const BOSS_CODEX: BossCodexEntry[] = [
     title: "Chiến Thần Không Đầu Giữ Cửa Thảo Nguyên",
     biomeLabel: "Đồng Cỏ Xám (Tây Bắc · LV.5)",
     lore: "Vị đại tướng năm xưa tự phong ấn giác quan để chống lại lời ru ngủ của sương trắng. Dù hóa đá xám, chiếc khiên sư tử và lưỡi rìu của ông vẫn theo bản năng chém gục mọi kẻ bước tới gần Đồi Gió.",
-    weaknessHint: "Kích hoạt Trụ Đồi Gió Xám trước khi đánh; dùng Tụ Lực (Giữ LMB) hoặc Phản Ứng Quá Tải để phá lớp Giáp Nhiễu Trắng của ông.",
+    weaknessHint: "Mang căn nguyên Gió (Wind) — khắc hệ Chấn Động (Quake). Kích hoạt Trụ Đồi Gió Xám trước trận; dùng Tụ Lực, Địa Nhiệt hoặc Sét Chấn Động để đập tan Giáp Nhiễu Trắng, dùng Hư Không (Void) xóa cuồng nộ ở Phase 2.",
   },
   {
     enemyId: "boss_blight_root",
@@ -203,7 +203,7 @@ export const BOSS_CODEX: BossCodexEntry[] = [
     title: "Cây Mẹ Tự Đóng Băng Giữa Rừng Thạch Anh",
     biomeLabel: "Rừng Thạch Anh (Đông Bắc · LV.10)",
     lore: "Cây đại thụ linh thiêng đã đóng băng chính dòng nhựa sống của mình để cầm tù bào tử hư vô, dần biến dạng thành thực thể gai băng và rễ độc khổng lồ.",
-    weaknessHint: "Né các bóng tròn Mưa Thạch Anh rơi từ trên cao và dùng Lửa + Băng (Sốc Nhiệt) để xuyên giáp cực nhanh.",
+    weaknessHint: "Mang căn nguyên Băng/Mộc — khắc hệ Hỏa (Fire). Né mưa tinh thể băng từ trên cao; dùng Sốc Nhiệt (Hỏa+Băng) hoặc Bão Lửa Cuốn (Hỏa+Gió) để xuyên giáp cực nhanh.",
   },
   {
     enemyId: "boss_gilded_null",
@@ -212,7 +212,7 @@ export const BOSS_CODEX: BossCodexEntry[] = [
     title: "Dực Hổ Nuốt Lò Phản Ứng Nham Thạch",
     biomeLabel: "Hầm Mỏ Hổ Phách (Tây Nam · LV.15)",
     lore: "Thần thú có cánh canh giữ đáy mỏ đã nuốt trọn viên Hổ Phách Nguyên Sinh để ngăn lòng đất nguội thành tro trắng, biến thành cơn bão dung nham và sấm sét điên cuồng.",
-    weaknessHint: "Tránh đứng trên vệt nham thạch cháy; tận dụng Chroma Dodge (lướt đúng khoảnh khắc sấm/đập đất) để phản kích phá Giáp Trắng.",
+    weaknessHint: "Mang căn nguyên Hỏa/Chấn Động — khắc hệ Hư Không (Void) & Băng. Dùng Phản Vật Chất Hỏa (Void+Fire) xóa giáp nộ dung nham và tận dụng Chroma Dodge phản kích!",
   },
   {
     enemyId: "boss_the_eraser",
@@ -221,7 +221,7 @@ export const BOSS_CODEX: BossCodexEntry[] = [
     title: "Thiên Thần Sáu Cánh Của Kiến Trúc Sư Vaelor",
     biomeLabel: "Phế Tích Vô Sắc (Đông Nam · LV.20)",
     lore: "Cỗ máy phán quyết tối thượng được tạo ra từ nỗi đau mất con của Vaelor, mang sứ mệnh xóa sạch mọi màu sắc và ký ức để đưa thế giới về tờ giấy trắng vĩnh hằng.",
-    weaknessHint: "Ở Phase 2 (65% HP) và Phase 3 (30% HP), lập tức đánh thắp sáng >= 2/4 Trụ Sắc Màu Cộng Hưởng quanh đấu trường trong vòng 12s để bắn vỡ Khiên Vô Sắc và làm Boss sụp đổ!",
+    weaknessHint: "Mang căn nguyên Hư Không — khắc hệ Sắc Độ (Chroma) & Lăng Kính (Prism). Phase 2 triệu hồi 4 Trụ Cơ Bản (Hỏa/Băng/Mộc/Lôi), Phase 3 triệu hồi 4 Trụ Nguyên Sinh (Hư Không/Sắc Độ/Gió/Chấn Động): đánh thắp >= 2 Trụ trong 12s để kích Cộng Hưởng Phá Khiên (thắp bằng hệ phản ứng gây nổ siêu cấp 12% Máu Chuẩn + Vùng Nở Rộ Sắc Màu)!",
   },
 ];
 

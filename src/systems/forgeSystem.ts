@@ -14,13 +14,24 @@ export const PIGMENT_IDS: readonly string[] = [
   "mat_pigment_cyan",
   "mat_pigment_green",
   "mat_pigment_gold",
+  "mat_pigment_void",
+  "mat_pigment_chroma",
+  "mat_pigment_wind",
+  "mat_pigment_quake",
 ];
 
-export const ELEMENT_DISPLAY: Record<InfusableElement, { label: string; color: string; pigmentId: string }> = {
-  fire: { label: "LỬA ĐỎ", color: "#ff5533", pigmentId: "mat_pigment_red" },
-  ice: { label: "BĂNG LAM", color: "#38e8ff", pigmentId: "mat_pigment_cyan" },
-  nature: { label: "MỘC ĐỘC", color: "#44ee88", pigmentId: "mat_pigment_green" },
-  volt: { label: "ĐIỆN QUANG", color: "#ffee44", pigmentId: "mat_pigment_gold" },
+export const ELEMENT_DISPLAY: Record<
+  InfusableElement,
+  { label: string; color: string; pigmentId: string; bonusHint: string }
+> = {
+  fire: { label: "HỎA", color: "#ff5533", pigmentId: "mat_pigment_red", bonusHint: "+8% ELEM, +4 ATK" },
+  ice: { label: "BĂNG", color: "#38e8ff", pigmentId: "mat_pigment_cyan", bonusHint: "+8% ELEM, +4% CRIT" },
+  nature: { label: "MỘC", color: "#44ee88", pigmentId: "mat_pigment_green", bonusHint: "+8% ELEM, +20 HP" },
+  volt: { label: "LÔI", color: "#ffee44", pigmentId: "mat_pigment_gold", bonusHint: "+8% ELEM, -5% CD [E]" },
+  void: { label: "HƯ KHÔNG", color: "#b266ff", pigmentId: "mat_pigment_void", bonusHint: "+8% ELEM, -6% CD [E]" },
+  chroma: { label: "SẮC ĐỘ", color: "#ff66c4", pigmentId: "mat_pigment_chroma", bonusHint: "+12% ELEM, Hồi lực" },
+  wind: { label: "GIÓ", color: "#5ef2d6", pigmentId: "mat_pigment_wind", bonusHint: "+8% ELEM, +6 SPD, +8 STAM" },
+  quake: { label: "CHẤN ĐỘNG", color: "#ff9933", pigmentId: "mat_pigment_quake", bonusHint: "+8% ELEM, +15% Phá Giáp" },
 };
 
 export interface EnhanceCostInfo {
@@ -256,7 +267,7 @@ export class ForgeSystem {
   }
 
   canCraft(recipe: RecipeDef, inv: InventorySystem): { ok: boolean; reason?: string } {
-    if (inv.bag.length >= 32) return { ok: false, reason: "Túi đồ đã đầy (32/32)." };
+    if (inv.bag.length >= 40) return { ok: false, reason: "Túi đồ đã đầy (40/40)." };
     if (inv.gold < recipe.goldCost) return { ok: false, reason: "Không đủ Vàng." };
     for (const m of recipe.materials) {
       if (inv.countItem(m.defId) < m.qty) {
