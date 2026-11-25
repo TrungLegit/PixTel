@@ -1,5 +1,5 @@
 # Project Brain Index
-*Generated: 2026-11-25T15:40:31.415066+00:00*
+*Generated: 2026-11-25T15:42:55.048014+00:00*
 
 ## Description
 > **Thế giới mở 16-Bit Action RPG trên trình duyệt** — Chiến đấu thời gian thực, đánh thức các **Trụ Sắc Màu**, khôi phục bảng màu 16-bit cho vùng đất bị **Nhiễu Trắng** và đánh bại **The Eraser**.
