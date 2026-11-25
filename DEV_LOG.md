@@ -138,6 +138,28 @@
 - **Lưu ý / Handoff (Breaking changes / Đang dở):** Không có breaking change; toàn bộ save cũ giữ tương thích 100%, đồng thời vũ khí mới đều khóa chặt theo Class.
 - **Gợi ý bước tiếp theo (Next Steps):** Chơi thử nghiệm thực tế tại `http://127.0.0.1:5173/` và commit/push lên `main` khi hài lòng (nhớ làm mới ảnh `README.md` nếu muốn trưng bày thanh hotbar icon pixel mới).
 
+### [2026-11-25 23:41] — TrungLegit (AI) — Tạo Báo Cáo Hình Ảnh Item & Model Sprite (`docs/ITEM_VISUAL_REPORT.md`)
+- **Commit / Branch:** `main`
+- **Giai đoạn / Version:** `PIXTEL v2.7` — Item Visual Reference & Model Handoff
+- **Đã làm (Done):**
+  - Xuất 3 bảng ảnh đối chiếu sprite `24×24 → 4× Nearest` trong `docs/media/items/`: [sheet-icons-atlas.png](docs/media/items/sheet-icons-atlas.png) (64 icon), [sheet-paperdoll-atlas.png](docs/media/items/sheet-paperdoll-atlas.png) (77 frame Paper-Doll), và [sheet-items-todo-models.png](docs/media/items/sheet-items-todo-models.png) (30 item ưu tiên vẽ/sửa model gồm 8 Cổ vật ẩn, 8 trang bị Archetype & 14 tiêu thụ/nguyên liệu).
+  - Tạo báo cáo [docs/ITEM_VISUAL_REPORT.md](docs/ITEM_VISUAL_REPORT.md) kèm bảng tổng hợp 94 item, danh sách file code/atlas và prompt mẫu để gửi cho Artist/AI chỉnh model.
+- **File chính đã sửa / thêm:** `docs/ITEM_VISUAL_REPORT.md`, `docs/media/items/sheet-icons-atlas.png`, `docs/media/items/sheet-paperdoll-atlas.png`, `docs/media/items/sheet-items-todo-models.png`, `DEV_LOG.md`
+- **Kiểm tra (Verified):** Kiểm tra trực quan cả 3 file PNG đã xuất (`read_file`) đảm bảo sắc nét, không đè chữ, khớp 100% metadata atlas.
+- **Lưu ý / Handoff (Breaking changes / Đang dở):** Không thay đổi code runtime.
+- **Gợi ý bước tiếp theo (Next Steps):** Gửi `docs/ITEM_VISUAL_REPORT.md` cho bạn/AI để vẽ model riêng cho 8 Cổ vật ẩn & các item chưa có frame atlas.
+
+### [2026-11-25 23:31] — TrungLegit (AI) — Sửa lỗi deploy GitHub Pages (`Found 0 artifact(s)`)
+- **Commit / Branch:** `main`
+- **Giai đoạn / Version:** `PIXTEL v2.7` — CI/CD GitHub Pages Fix
+- **Đã làm (Done):**
+  - Tách workflow [.github/workflows/deploy-pages.yml](.github/workflows/deploy-pages.yml) thành 2 job riêng (`build` và `deploy` với `needs: build`) và đặt `cancel-in-progress: false` để tránh race condition khi tra cứu artifact ngay sau khi upload trong cùng 1 job.
+  - Nâng cấp bộ Pages Actions lên bản mới tương thích Node 24 (`actions/configure-pages@v6`, `actions/upload-pages-artifact@v5`, `actions/deploy-pages@v5`) để khắc phục lỗi `No artifacts named "github-pages" were found`.
+- **File chính đã sửa / thêm:** `.github/workflows/deploy-pages.yml`, `DEV_LOG.md`
+- **Kiểm tra (Verified):** Chuẩn bị chạy CI `npm test` + `npm run build` + `deploy-pages@v5` và kiểm tra trực tiếp `https://trunglegit.github.io/PixTel/`.
+- **Lưu ý / Handoff (Breaking changes / Đang dở):** Không có.
+- **Gợi ý bước tiếp theo (Next Steps):** Xác nhận job `Deploy PIXTEL to GitHub Pages` xanh hoàn toàn và mở `https://trunglegit.github.io/PixTel/`.
+
 ### [2026-11-25 23:10] — Antigravity — Quay lại Video/GIF demo `PIXTEL v2.7` & làm mới ảnh bìa README
 - **Commit / Branch:** `main` (tiếp nối `bc4923c`)
 - **Giai đoạn / Version:** `PIXTEL v2.7` — Video/GIF Demo & Media Refresh

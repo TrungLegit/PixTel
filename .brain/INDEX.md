@@ -1,5 +1,5 @@
 # Project Brain Index
-*Generated: 2026-11-25T19:06:03.587308+00:00*
+*Generated: 2026-11-25T19:13:49.437061+00:00*
 
 ## Description
 > **Thế giới mở 16-Bit Action RPG trên trình duyệt (PC · Mobile PWA · Co-op 2–4 Người)** — Khởi đầu tay không tại **Thị Trấn Khởi Nguyên**, săn trang bị **khóa chặt theo Class**, luyện **Ma Trận Luyện
