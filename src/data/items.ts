@@ -47,11 +47,29 @@ export function resolveClassReward(classId: ClassId, key: ClassRewardKey): strin
           : classId === "pixel_tinker"
             ? "wpn_thermal_repeater"
             : "wpn_amber_fury";
+    case "ruins_weapon":
+      return classId === "chroma_mage"
+        ? "wpn_astral_scepter"
+        : classId === "bit_rogue"
+          ? "wpn_quantum_blades"
+          : classId === "pixel_tinker"
+            ? "wpn_singularity_cannon"
+            : "wpn_chroma_sovereign";
   }
 }
 
 export function canClassEquip(def: ItemDef, classId: ClassId): boolean {
   if (def.category !== "equipment") return false;
+  if (def.slot === "weapon") {
+    if (def.requiredClass && def.requiredClass !== "all") {
+      return def.requiredClass === classId;
+    }
+    // Defense-in-depth: weapons NEVER bypass class lock even if requiredClass is omitted or "all"
+    if (def.iconKind === "staff") return classId === "chroma_mage";
+    if (def.iconKind === "dagger") return classId === "bit_rogue";
+    if (def.iconKind === "gun") return classId === "pixel_tinker";
+    return classId === "prism_knight";
+  }
   if (!def.requiredClass || def.requiredClass === "all") return true;
   return def.requiredClass === classId;
 }
@@ -857,7 +875,7 @@ export function pickRandomEquipByRarity(rarity: Rarity, preferredClassId?: Class
   const pool = Object.values(ITEMS).filter(
     (it) => it.category === "equipment" && it.rarity === rarity && !it.isHidden
   );
-  if (pool.length === 0) return "wpn_meadow_edge";
+  if (pool.length === 0) return resolveClassReward(preferredClassId ?? "prism_knight", "meadow_weapon");
   if (preferredClassId && Math.random() < 0.6) {
     const matching = pool.filter((it) => canClassEquip(it, preferredClassId));
     if (matching.length > 0) {

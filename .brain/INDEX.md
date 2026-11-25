@@ -1,8 +1,8 @@
 # Project Brain Index
-*Generated: 2026-11-25T15:42:55.048014+00:00*
+*Generated: 2026-11-25T16:01:24.406944+00:00*
 
 ## Description
-> **Thế giới mở 16-Bit Action RPG trên trình duyệt** — Chiến đấu thời gian thực, đánh thức các **Trụ Sắc Màu**, khôi phục bảng màu 16-bit cho vùng đất bị **Nhiễu Trắng** và đánh bại **The Eraser**.
+> **Thế giới mở 16-Bit Action RPG trên trình duyệt (PC · Mobile PWA · Co-op 2–4 Người)** — Khởi đầu tay không tại **Thị Trấn Khởi Nguyên**, săn trang bị **khóa chặt theo Class**, luyện **Ma Trận Luyện
 
 ## Main Modules
 - **src/** (165 files)
@@ -12,16 +12,16 @@
 - **.brain/** (3 files)
 
 ## Central Nodes
-- `file:src/game.ts` (file, 72 links): Merged Hidden Relics support with Phase 1 Mobile Smart Auto-Aim & touch actions plus Phase 2 2-4P Co-op state/world/reaction/waypoint/loot sync.
-- `file:src/systems/combat.ts` (file, 44 links): Merged Hidden Boss Relics drops with Co-op Guest hit/totem forwarding, Multi-Player Enemy/Boss Aggro, and reaction/kill broadcasts.
-- `file:tests/featureTests.ts` (file, 30 links): Expanded automated test runner to 13 suites covering Hidden Relics, Phase 1 Mobile Twin-Stick + Smart Auto-Aim, and Phase 2 Dedicated WebSocket Co-op Server.
-- `file:src/ui/ItemReviewTooltip.ts` (file, 25 links): Merged masked Hidden Relic tooltip state with touchscreen Tap-to-Inspect support on mobile devices.
-- `file:src/main.ts` (file, 23 links): Wired local Pixelify Sans font, MobileTouchUI, CoopModalUI, ?room=CODE / ?ws=... URL invite parameters, and PWA Service Worker registration.
-- `file:src/ui/HUD.ts` (file, 20 links): Added P·COOP / Mobile Touch / Fullscreen toolbar buttons, live Co-op Party Box with 1-tap Teleport, and green teammate dots on Minimap.
-- `file:src/ui/ClassSelect.ts` (file, 18 links): Merged epic 16-bit pixel-grid title screen with Title Co-op button and 1-tap ?room=CODE Co-op Invite Banner.
-- `file:style.css` (file, 14 links): Added 16-bit styling for Mobile Twin-Stick Joystick & Action Cluster, Portrait Rotate Banner, HUD Party Box, Co-op Lobby Modal, and responsive phone landscape layouts.
-- `file:DEV_LOG.md` (file, 13 links): Updated current project snapshot to PIXTEL v2.7 and prepended Phase 1 Mobile PWA + Phase 2 Co-op + GitHub Pages development log entry.
-- `file:index.html` (file, 13 links): Added PWA manifest/icon tags, safe-area landscape viewport meta, Mobile Twin-Stick touch overlay, HUD Party Box, and Co-op Lobby modal (#modal-coop).
+- `file:src/game.ts` (file, 74 links): Merged v2.7 Mobile Auto-Aim + Co-op sync with loadSavedGame auto-unequip, getValidEquippedWeapon aura checks, and _buildLocalCoopSnapshot weapon validation.
+- `file:src/data/types.ts` (file, 53 links): Added ruins_weapon variant to ClassRewardKey union.
+- `file:src/systems/combat.ts` (file, 45 links): Gated weapon element resolution, LMB primary/charged attacks, and [E] skills with hasValidEquippedWeapon while preserving v2.7 Co-op hooks.
+- `file:src/data/items.ts` (file, 37 links): Hardened canClassEquip for weapon slot, added ruins_weapon ClassRewardKey, and locked fallback starter weapon to prism_knight.
+- `file:tests/featureTests.ts` (file, 30 links): Merged 13/13 v2.7 test suites (Hidden Relics, Mobile Twin-Stick, Co-op WS Server) with strict class-locked weapon and ruins_weapon tests.
+- `file:src/systems/inventorySystem.ts` (file, 24 links): Added getValidEquippedWeapon/hasValidEquippedWeapon guards across bonuses, passives, set effects, stats, and auto-unequip.
+- `file:src/ui/HUD.ts` (file, 21 links): Merged v2.7 Co-op party roster & toolbar with getValidEquippedWeapon bare-handed/skill-lock display.
+- `file:src/graphics/pixelfxHeroModels.ts` (file, 17 links): Prioritized wpn_void_scythe renderer branch ahead of halberd check for Bit Rogue scythe visuals.
+- `file:src/data/equipments.ts` (file, 17 links): Locked all 8 former universal weapons strictly to prism_knight (7 swords/axes/mauls) or bit_rogue (wpn_void_scythe).
+- `file:DEV_LOG.md` (file, 14 links): Merged PIXTEL v2.7 log entries and appended strict class-locked weapons plus README v2.7 screenshot documentation logs newest-first.
 
 ## Recent Decisions
 - **Phase 1 Mobile PWA + Twin-Stick & Phase 2 Dual-Transport 2-4P Co-op + GitHub Pages** (`decision:20261125154018-phase-1-mobile-pwa`): Shipped public GitHub Pages CI/CD + fullscreen landscape PWA, Phase 1 Mobile Twin-Stick controls with Smart Auto-Aim and Tap-to-Inspect tooltips, and Phase 2 2-4 Player Co-op (PeerJS WebRTC P2P + Dedicated Node.js WebSocket Room Server) with cross-player 9-element reactions, shar
@@ -34,9 +34,7 @@
 - `file:.agents/skills/codixel/LICENSE` (.agents/skills/codixel/LICENSE)
 - `file:.agents/skills/codixel/SKILL.md` (.agents/skills/codixel/SKILL.md)
 - `file:.agents/skills/codixel/core/pixel.js` (.agents/skills/codixel/core/pixel.js)
-- `file:.agents/skills/codixel/package.json` (.agents/skills/codixel/package.json)
 - `file:.agents/skills/pixelfx/LICENSE` (.agents/skills/pixelfx/LICENSE)
-- `file:.agents/skills/pixelfx/SKILL.md` (.agents/skills/pixelfx/SKILL.md)
 - `file:.agents/skills/pixelfx/references/AUTHORING.md` (.agents/skills/pixelfx/references/AUTHORING.md)
 - `file:.agents/skills/pixelfx/references/CATALOG.md` (.agents/skills/pixelfx/references/CATALOG.md)
 - `file:.agents/skills/pixelfx/scripts/act.mjs` (.agents/skills/pixelfx/scripts/act.mjs)
@@ -68,3 +66,9 @@
 - `file:.agents/skills/spritecook-use-dual-grid-tilesets/SKILL.md` (.agents/skills/spritecook-use-dual-grid-tilesets/SKILL.md)
 - `file:.agents/skills/spritecook-use-presets/SKILL.md` (.agents/skills/spritecook-use-presets/SKILL.md)
 - `file:.agents/skills/spritecook-workflow-essentials/LICENSE` (.agents/skills/spritecook-workflow-essentials/LICENSE)
+- `file:.agents/skills/spritecook-workflow-essentials/SKILL.md` (.agents/skills/spritecook-workflow-essentials/SKILL.md)
+- `file:.brain/INDEX.md` (.brain/INDEX.md)
+- `file:.brain/edges.jsonl` (.brain/edges.jsonl)
+- `file:.brain/nodes.jsonl` (.brain/nodes.jsonl)
+- `file:.github/copilot-instructions.md` (.github/copilot-instructions.md)
+- `file:.github/workflows/deploy-pages.yml` (.github/workflows/deploy-pages.yml)

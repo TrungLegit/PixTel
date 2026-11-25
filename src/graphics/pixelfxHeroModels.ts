@@ -218,7 +218,9 @@ function mapWeaponToRig(
   let weapon = "sword";
   let offWeapon: string | undefined;
 
-  if (kind === "dagger" || shape === "daggers") {
+  if (def.id === "wpn_void_scythe") {
+    weapon = "scythe";
+  } else if (kind === "dagger" || shape === "daggers") {
     weapon = "dagger";
     offWeapon = "dagger";
   } else if (kind === "staff" || shape === "staff") {
@@ -229,8 +231,6 @@ function mapWeaponToRig(
     weapon = "spear";
   } else if (kind === "axe") {
     weapon = def.id === "wpn_quake_maul" ? "hammer" : "greatsword";
-  } else if (def.id === "wpn_void_scythe") {
-    weapon = "scythe";
   } else if (shape === "greatsword" || shape === "sovereign" || tier >= 3) {
     weapon = "greatsword";
   }

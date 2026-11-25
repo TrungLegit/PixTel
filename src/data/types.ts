@@ -20,7 +20,12 @@ export interface HeroVisualLoadout {
   weaponEnhance: number;
 }
 
-export type ClassRewardKey = "starter_weapon" | "meadow_weapon" | "quartz_weapon" | "amber_weapon";
+export type ClassRewardKey =
+  | "starter_weapon"
+  | "meadow_weapon"
+  | "quartz_weapon"
+  | "amber_weapon"
+  | "ruins_weapon";
 
 export interface ActiveBossLock {
   bossUid: number;

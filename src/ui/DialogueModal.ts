@@ -1,4 +1,12 @@
-import { ITEMS, MERCHANT_STOCK, RARITY_INFO, getTierBadge, resolveClassReward } from "../data/items";
+import {
+  CLASS_DISPLAY_NAMES,
+  ITEMS,
+  MERCHANT_STOCK,
+  RARITY_INFO,
+  canClassEquip,
+  getTierBadge,
+  resolveClassReward,
+} from "../data/items";
 import { TOWN_NPCS } from "../data/worldConfig";
 import { onCodixelReady } from "../graphics/codixelAtlas";
 import { uiRarityFx } from "../vfx/uiRarityFx";
@@ -88,6 +96,11 @@ export class DialogueModalUI {
           const owned = this.game.inv.countItem(id);
           const canAfford = this.game.inv.gold >= def.buyPrice;
           const tInfo = getTierBadge(def);
+          const usable = def.category !== "equipment" || canClassEquip(def, this.game.player.classId);
+          const classBadge =
+            def.category === "equipment" && def.requiredClass && def.requiredClass !== "all"
+              ? `<span class="${usable ? "class-req-ok" : "class-req-bad"}">Hệ: ${CLASS_DISPLAY_NAMES[def.requiredClass]}</span>`
+              : "";
           html += `
             <div class="shop-item rarity-${def.rarity}" data-review-def="${def.id}" style="border-color:${RARITY_INFO[def.rarity].color}">
               <div class="shop-item-top">
@@ -97,6 +110,7 @@ export class DialogueModalUI {
                     <span class="tier-pill" style="color:${tInfo.color};background:${tInfo.bg}">${tInfo.badge}</span>
                     ${def.name}
                   </div>
+                  ${classBadge ? `<div class="forge-meta">${classBadge}</div>` : ""}
                   <div class="shop-desc">${def.desc}</div>
                 </div>
               </div>

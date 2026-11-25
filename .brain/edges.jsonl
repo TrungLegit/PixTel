@@ -64,6 +64,7 @@
 {"created": "2026-11-25T15:40:26.711784+00:00", "dst": "file:README.md", "note": "", "schema_version": 1, "src": "file:DEV_LOG.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:30:28.472899+00:00", "dst": "file:src/data/hiddenItems.ts", "note": "", "schema_version": 1, "src": "file:DEV_LOG.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:07:11.036763+00:00", "dst": "file:DEV_LOG.md", "note": "", "schema_version": 1, "src": "file:GEMINI.md", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-25T16:01:21.431301+00:00", "dst": "file:DEV_LOG.md", "note": "", "schema_version": 1, "src": "file:README.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T15:40:26.154711+00:00", "dst": "file:index.html", "note": "", "schema_version": 1, "src": "file:README.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T05:02:37.739271+00:00", "dst": "file:src/game.ts", "note": "", "schema_version": 1, "src": "file:README.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:38:08.471041+00:00", "dst": "decision:20261125143734-blockpixel-logo-lettering", "note": "", "schema_version": 1, "src": "file:index.html", "type": "relates_to", "weight": 1.0}
@@ -102,11 +103,12 @@
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/types.ts", "note": "", "schema_version": 1, "src": "file:src/data/enemies.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T09:24:42.801581+00:00", "dst": "file:src/data/types.ts", "note": "", "schema_version": 1, "src": "file:src/data/enemies.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T12:15:51.758011+00:00", "dst": "file:src/data/worldConfig.ts", "note": "", "schema_version": 1, "src": "file:src/data/enemies.ts", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-25T16:01:21.816482+00:00", "dst": "file:src/data/items.ts", "note": "", "schema_version": 1, "src": "file:src/data/equipments.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T07:18:49.591451+00:00", "dst": "file:src/data/types.ts", "note": "", "schema_version": 1, "src": "file:src/data/equipments.ts", "type": "depends_on", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/types.ts", "note": "", "schema_version": 1, "src": "file:src/data/equipments.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T09:24:41.508788+00:00", "dst": "file:src/data/types.ts", "note": "", "schema_version": 1, "src": "file:src/data/equipments.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T06:00:50.397737+00:00", "dst": "file:src/graphics/paperDoll.ts", "note": "", "schema_version": 1, "src": "file:src/data/equipments.ts", "type": "relates_to", "weight": 1.0}
-{"created": "2026-11-25T14:30:26.371163+00:00", "dst": "file:src/data/items.ts", "note": "", "schema_version": 1, "src": "file:src/data/hiddenItems.ts", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-25T16:01:21.979642+00:00", "dst": "file:src/data/items.ts", "note": "", "schema_version": 1, "src": "file:src/data/hiddenItems.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T07:18:50.089939+00:00", "dst": "file:src/data/equipments.ts", "note": "", "schema_version": 1, "src": "file:src/data/items.ts", "type": "depends_on", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/equipments.ts", "note": "", "schema_version": 1, "src": "file:src/data/items.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T09:24:41.938228+00:00", "dst": "file:src/data/equipments.ts", "note": "", "schema_version": 1, "src": "file:src/data/items.ts", "type": "relates_to", "weight": 1.0}
@@ -114,6 +116,7 @@
 {"created": "2026-11-25T04:21:14.172870+00:00", "dst": "file:src/data/types.ts", "note": "", "schema_version": 1, "src": "file:src/data/items.ts", "type": "depends_on", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/types.ts", "note": "", "schema_version": 1, "src": "file:src/data/items.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T09:24:41.938228+00:00", "dst": "file:src/data/types.ts", "note": "", "schema_version": 1, "src": "file:src/data/items.ts", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-25T16:01:22.149042+00:00", "dst": "file:src/systems/inventorySystem.ts", "note": "", "schema_version": 1, "src": "file:src/data/items.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T12:15:52.528036+00:00", "dst": "file:src/data/enemies.ts", "note": "", "schema_version": 1, "src": "file:src/data/lootTables.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T07:18:50.570921+00:00", "dst": "file:src/data/items.ts", "note": "", "schema_version": 1, "src": "file:src/data/lootTables.ts", "type": "depends_on", "weight": 1.0}
 {"created": "2026-11-25T09:24:43.266289+00:00", "dst": "file:src/data/items.ts", "note": "", "schema_version": 1, "src": "file:src/data/lootTables.ts", "type": "relates_to", "weight": 1.0}
@@ -122,6 +125,7 @@
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/types.ts", "note": "", "schema_version": 1, "src": "file:src/data/lore.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T09:24:40.641028+00:00", "dst": "file:src/data/types.ts", "note": "", "schema_version": 1, "src": "file:src/data/lore.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T12:15:52.863637+00:00", "dst": "file:src/data/enemies.ts", "note": "", "schema_version": 1, "src": "file:src/data/quests.ts", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-25T16:01:22.327996+00:00", "dst": "file:src/data/items.ts", "note": "", "schema_version": 1, "src": "file:src/data/quests.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T09:24:41.083911+00:00", "dst": "file:src/data/lore.ts", "note": "", "schema_version": 1, "src": "file:src/data/quests.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T04:21:15.105730+00:00", "dst": "file:src/data/types.ts", "note": "", "schema_version": 1, "src": "file:src/data/quests.ts", "type": "depends_on", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/types.ts", "note": "", "schema_version": 1, "src": "file:src/data/quests.ts", "type": "imports", "weight": 1.0}
@@ -136,7 +140,7 @@
 {"created": "2026-11-25T12:15:51.404483+00:00", "dst": "file:src/data/enemies.ts", "note": "", "schema_version": 1, "src": "file:src/data/types.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T06:00:50.555782+00:00", "dst": "file:src/data/equipments.ts", "note": "", "schema_version": 1, "src": "file:src/data/types.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:30:26.518698+00:00", "dst": "file:src/data/hiddenItems.ts", "note": "", "schema_version": 1, "src": "file:src/data/types.ts", "type": "relates_to", "weight": 1.0}
-{"created": "2026-11-25T07:18:49.041054+00:00", "dst": "file:src/data/items.ts", "note": "", "schema_version": 1, "src": "file:src/data/types.ts", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-25T16:01:22.535869+00:00", "dst": "file:src/data/items.ts", "note": "", "schema_version": 1, "src": "file:src/data/types.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T12:15:52.156613+00:00", "dst": "file:src/data/enemies.ts", "note": "", "schema_version": 1, "src": "file:src/data/worldConfig.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T04:21:13.387885+00:00", "dst": "file:src/data/types.ts", "note": "", "schema_version": 1, "src": "file:src/data/worldConfig.ts", "type": "depends_on", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/types.ts", "note": "", "schema_version": 1, "src": "file:src/data/worldConfig.ts", "type": "imports", "weight": 1.0}
@@ -176,6 +180,7 @@
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/systems/forgeSystem.ts", "note": "", "schema_version": 1, "src": "file:src/game.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T07:18:56.245173+00:00", "dst": "file:src/systems/inventorySystem.ts", "note": "", "schema_version": 1, "src": "file:src/game.ts", "type": "depends_on", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/systems/inventorySystem.ts", "note": "", "schema_version": 1, "src": "file:src/game.ts", "type": "imports", "weight": 1.0}
+{"created": "2026-11-25T16:01:23.057383+00:00", "dst": "file:src/systems/inventorySystem.ts", "note": "", "schema_version": 1, "src": "file:src/game.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/systems/questSystem.ts", "note": "", "schema_version": 1, "src": "file:src/game.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T14:30:27.842809+00:00", "dst": "file:src/systems/saveSystem.ts", "note": "", "schema_version": 1, "src": "file:src/game.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T09:24:49.356649+00:00", "dst": "file:src/ui/QuestJournalModal.ts", "note": "", "schema_version": 1, "src": "file:src/game.ts", "type": "relates_to", "weight": 1.0}
@@ -225,6 +230,7 @@
 {"created": "2026-11-25T11:56:55.417143+00:00", "dst": "decision:20261125113206-pixelfx-hero-models-selective", "note": "", "schema_version": 1, "src": "file:src/graphics/pixelfxHeroModels.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/classes.ts", "note": "", "schema_version": 1, "src": "file:src/graphics/pixelfxHeroModels.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/elements.ts", "note": "", "schema_version": 1, "src": "file:src/graphics/pixelfxHeroModels.ts", "type": "imports", "weight": 1.0}
+{"created": "2026-11-25T16:01:23.696449+00:00", "dst": "file:src/data/equipments.ts", "note": "", "schema_version": 1, "src": "file:src/graphics/pixelfxHeroModels.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/items.ts", "note": "", "schema_version": 1, "src": "file:src/graphics/pixelfxHeroModels.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/types.ts", "note": "", "schema_version": 1, "src": "file:src/graphics/pixelfxHeroModels.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/vfx/pixelfx/core/index.js", "note": "", "schema_version": 1, "src": "file:src/graphics/pixelfxHeroModels.ts", "type": "imports", "weight": 1.0}
@@ -276,7 +282,7 @@
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/lootTables.ts", "note": "", "schema_version": 1, "src": "file:src/systems/combat.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/types.ts", "note": "", "schema_version": 1, "src": "file:src/systems/combat.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/worldConfig.ts", "note": "", "schema_version": 1, "src": "file:src/systems/combat.ts", "type": "imports", "weight": 1.0}
-{"created": "2026-11-25T15:40:28.146448+00:00", "dst": "file:src/game.ts", "note": "", "schema_version": 1, "src": "file:src/systems/combat.ts", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-25T16:01:22.868833+00:00", "dst": "file:src/game.ts", "note": "", "schema_version": 1, "src": "file:src/systems/combat.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/graphics/colorRestoration.ts", "note": "", "schema_version": 1, "src": "file:src/systems/combat.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T12:15:54.123718+00:00", "dst": "file:src/graphics/enemyAtlas.ts", "note": "", "schema_version": 1, "src": "file:src/systems/combat.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/graphics/pixelSprites.ts", "note": "", "schema_version": 1, "src": "file:src/systems/combat.ts", "type": "imports", "weight": 1.0}
@@ -311,6 +317,7 @@
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/items.ts", "note": "", "schema_version": 1, "src": "file:src/systems/inventorySystem.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T09:24:46.306712+00:00", "dst": "file:src/data/items.ts", "note": "", "schema_version": 1, "src": "file:src/systems/inventorySystem.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/types.ts", "note": "", "schema_version": 1, "src": "file:src/systems/inventorySystem.ts", "type": "imports", "weight": 1.0}
+{"created": "2026-11-25T16:01:22.708268+00:00", "dst": "file:src/systems/combat.ts", "note": "", "schema_version": 1, "src": "file:src/systems/inventorySystem.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/world/entities.ts", "note": "", "schema_version": 1, "src": "file:src/systems/inventorySystem.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/items.ts", "note": "", "schema_version": 1, "src": "file:src/systems/questSystem.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T04:21:23.657887+00:00", "dst": "file:src/data/quests.ts", "note": "", "schema_version": 1, "src": "file:src/systems/questSystem.ts", "type": "depends_on", "weight": 1.0}
@@ -335,6 +342,7 @@
 {"created": "2026-11-25T15:40:23.075180+00:00", "dst": "file:src/game.ts", "note": "", "schema_version": 1, "src": "file:src/ui/CoopModal.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/audio/chiptuneSynth.ts", "note": "", "schema_version": 1, "src": "file:src/ui/DialogueModal.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/items.ts", "note": "", "schema_version": 1, "src": "file:src/ui/DialogueModal.ts", "type": "imports", "weight": 1.0}
+{"created": "2026-11-25T16:01:23.526352+00:00", "dst": "file:src/data/items.ts", "note": "", "schema_version": 1, "src": "file:src/ui/DialogueModal.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/worldConfig.ts", "note": "", "schema_version": 1, "src": "file:src/ui/DialogueModal.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T04:21:27.027473+00:00", "dst": "file:src/game.ts", "note": "", "schema_version": 1, "src": "file:src/ui/DialogueModal.ts", "type": "depends_on", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/game.ts", "note": "", "schema_version": 1, "src": "file:src/ui/DialogueModal.ts", "type": "imports", "weight": 1.0}
@@ -372,6 +380,7 @@
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/worldConfig.ts", "note": "", "schema_version": 1, "src": "file:src/ui/HUD.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T04:21:26.677620+00:00", "dst": "file:src/game.ts", "note": "", "schema_version": 1, "src": "file:src/ui/HUD.ts", "type": "depends_on", "weight": 1.0}
 {"created": "2026-11-25T15:40:28.618470+00:00", "dst": "file:src/game.ts", "note": "", "schema_version": 1, "src": "file:src/ui/HUD.ts", "type": "imports", "weight": 1.0}
+{"created": "2026-11-25T16:01:23.356996+00:00", "dst": "file:src/game.ts", "note": "", "schema_version": 1, "src": "file:src/ui/HUD.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/graphics/codixelAtlas.ts", "note": "", "schema_version": 1, "src": "file:src/ui/HUD.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T07:18:56.877105+00:00", "dst": "file:src/graphics/itemIcons.ts", "note": "", "schema_version": 1, "src": "file:src/ui/HUD.ts", "type": "depends_on", "weight": 1.0}
 {"created": "2026-11-25T07:18:46.633344+00:00", "dst": "file:src/graphics/itemIcons.ts", "note": "", "schema_version": 1, "src": "file:src/ui/HUD.ts", "type": "imports", "weight": 1.0}
@@ -788,7 +797,7 @@
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/graphics/pixelfxHeroModels.ts", "note": "", "schema_version": 1, "src": "file:tests/featureTests.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:56:57.672682+00:00", "dst": "file:src/graphics/pixelfxHeroModels.ts", "note": "", "schema_version": 1, "src": "file:tests/featureTests.ts", "type": "tests", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/systems/combat.ts", "note": "", "schema_version": 1, "src": "file:tests/featureTests.ts", "type": "imports", "weight": 1.0}
-{"created": "2026-11-25T09:24:51.517771+00:00", "dst": "file:src/systems/combat.ts", "note": "", "schema_version": 1, "src": "file:tests/featureTests.ts", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-25T16:01:23.864482+00:00", "dst": "file:src/systems/combat.ts", "note": "", "schema_version": 1, "src": "file:tests/featureTests.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T12:41:26.620605+00:00", "dst": "file:src/systems/combat.ts", "note": "", "schema_version": 1, "src": "file:tests/featureTests.ts", "type": "tests", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/systems/forgeSystem.ts", "note": "", "schema_version": 1, "src": "file:tests/featureTests.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T09:24:51.517771+00:00", "dst": "file:src/systems/forgeSystem.ts", "note": "", "schema_version": 1, "src": "file:tests/featureTests.ts", "type": "relates_to", "weight": 1.0}

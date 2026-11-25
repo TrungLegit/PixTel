@@ -422,6 +422,7 @@ export class PixTelOpenWorldGame {
     this.vfx.clearAll();
 
     this.inv.loadState(data.player.gold, data.equipment, data.bag);
+    const unequipped = this.inv.unequipIncompatibleForClass(data.classId);
     this.quests.loadState(data.quests);
     this.colorSys.loadUnlocked(data.unlockedWaypoints);
     this.discoveredLore = new Set(data.discoveredLore ?? []);
@@ -469,7 +470,14 @@ export class PixTelOpenWorldGame {
     this.running = true;
     this.setModal(null);
     this.vfx.spawnPooled("waypoint-pillar", { x: this.player.x, y: this.player.y });
-    this.ui.onToast("Đã tải tiến trình Biên Niên Sử thành công! (Bấm [H] để xem Cẩm Nang)", "good");
+    if (unequipped.length > 0) {
+      this.ui.onToast(
+        `Đã tự động tháo ${unequipped.join(", ")} (không đúng Class) về túi đồ!`,
+        "warn"
+      );
+    } else {
+      this.ui.onToast("Đã tải tiến trình Biên Niên Sử thành công! (Bấm [H] để xem Cẩm Nang)", "good");
+    }
     this.ui.onHudUpdate();
     return true;
   }
@@ -934,7 +942,10 @@ export class PixTelOpenWorldGame {
     const reqCharge = p.quickChargeTimer > 0 ? 0.26 : 0.38;
     const equip = {} as Record<EquipSlot, CompactEquipSlot | null>;
     for (const slot of EQUIP_SLOTS) {
-      const it = this.inv.equipment[slot];
+      const it =
+        slot === "weapon"
+          ? this.inv.getValidEquippedWeapon(p.classId)
+          : this.inv.equipment[slot];
       equip[slot] = it
         ? { defId: it.defId, enh: it.enhanceLevel, inf: it.infusedElement }
         : null;
@@ -2204,7 +2215,7 @@ export class PixTelOpenWorldGame {
     }
 
     // High-tier (Epic / Legendary) or +5/+7+ Weapon Glow & Infused Element Particles!
-    const wpnInst = this.inv.equipment.weapon;
+    const wpnInst = this.inv.getValidEquippedWeapon(p.classId);
     const wpnDef = wpnInst ? ITEMS[wpnInst.defId] : undefined;
     const wpnLv = wpnInst?.enhanceLevel ?? 0;
     const isHighTierWeapon =
@@ -3031,7 +3042,7 @@ export class PixTelOpenWorldGame {
             ctx.restore();
           }
 
-          const wpnInst = this.inv.equipment.weapon;
+          const wpnInst = this.inv.getValidEquippedWeapon(p.classId);
           const wpnDef = wpnInst ? ITEMS[wpnInst.defId] : undefined;
           const wpnLv = wpnInst?.enhanceLevel ?? 0;
           if (wpnLv >= 5 || wpnDef?.rarity === "epic" || wpnDef?.rarity === "legendary") {

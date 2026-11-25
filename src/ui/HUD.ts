@@ -144,8 +144,9 @@ export class HudUI {
       }
     }
 
+    const wpn = this.game.inv.getValidEquippedWeapon(p.classId);
     const extraBits: string[] = [];
-    if (!this.game.inv.equipment.weapon) {
+    if (!wpn) {
       extraBits.push(`<span style="color:#ff99aa">✊ Tay Không</span>`);
     }
     if (p.classId === "chroma_mage") {
@@ -155,7 +156,6 @@ export class HudUI {
       extraBits.push(`<span style="color:#44ee88">Trụ: ${this.game.turrets.length}/2</span>`);
     }
 
-    const wpn = this.game.inv.equipment.weapon;
     if (wpn && wpn.enhanceLevel > 0) {
       const inf = wpn.enhanceLevel >= 5 && wpn.infusedElement ? ` [${ELEMENT_DISPLAY[wpn.infusedElement].label}]` : "";
       extraBits.push(`<span style="color:#ffe066">VK +${wpn.enhanceLevel}${inf}</span>`);
@@ -311,7 +311,7 @@ export class HudUI {
     }
 
     // Equipment-gated LMB / [E] / [Q] Skill Bar
-    const eqWeapon = this.game.inv.equipment.weapon;
+    const eqWeapon = this.game.inv.getValidEquippedWeapon(p.classId);
     const eqAccessory = this.game.inv.equipment.accessory;
     const lmbNameEl = document.getElementById("skill-lmb-name");
     const lmbSub = document.getElementById("skill-lmb-sub");

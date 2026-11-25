@@ -48,8 +48,8 @@ export function recalculatePlayerStats(
   const prevMax = Math.max(1, player.maxHp);
   const ratio = player.hp / prevMax;
   const cdef = getClassDef(player.classId);
-  const eq = inv.getTotalEquipBonuses();
-  const sets = inv.getActiveSetBonusStats();
+  const eq = inv.getTotalEquipBonuses(player.classId);
+  const sets = inv.getActiveSetBonusStats(player.classId);
   const lv = player.level - 1;
   const alloc = player.allocatedStats ?? { str: 0, vit: 0, agi: 0, crt: 0 };
 
@@ -69,7 +69,7 @@ export function recalculatePlayerStats(
   player.poiseBreakPct = eq.poiseBreakPct + sets.poiseBreakPct;
   player.skillCdPct = Math.max(-40, eq.skillCdPct + sets.skillCdPct);
 
-  const passives = inv.getActivePassives();
+  const passives = inv.getActivePassives(player.classId);
   player.hasOrbitGrimoire = passives.has("orbit_grimoire");
   player.hasReactionAmp = passives.has("reaction_amp");
   player.hasVoidSiphon = passives.has("void_siphon");
@@ -218,13 +218,11 @@ export class InventorySystem {
       return { ok: false, reason: "Vật phẩm này không thể trang bị." };
     }
 
-    if (
-      playerClassId &&
-      def.requiredClass &&
-      def.requiredClass !== "all" &&
-      def.requiredClass !== playerClassId
-    ) {
-      const reqName = getClassDef(def.requiredClass).vnName;
+    if (playerClassId && !canClassEquip(def, playerClassId)) {
+      const reqName =
+        def.requiredClass && def.requiredClass !== "all"
+          ? getClassDef(def.requiredClass).vnName
+          : "khác";
       return { ok: false, reason: `Chỉ dành cho Class ${reqName}!` };
     }
 
@@ -252,7 +250,19 @@ export class InventorySystem {
     return eq ? ITEMS[eq.defId] : undefined;
   }
 
-  /** Moves any equipped gear incompatible with `classId` safely back into the bag on Class Altar switch. */
+  getValidEquippedWeapon(classId: ClassId): ItemInstance | undefined {
+    const wpn = this.equipment.weapon;
+    if (!wpn) return undefined;
+    const def = ITEMS[wpn.defId];
+    if (!def || !canClassEquip(def, classId)) return undefined;
+    return wpn;
+  }
+
+  hasValidEquippedWeapon(classId: ClassId): boolean {
+    return Boolean(this.getValidEquippedWeapon(classId));
+  }
+
+  /** Moves any equipped gear incompatible with `classId` safely back into the bag on Class Altar switch or save migration. */
   unequipIncompatibleForClass(classId: ClassId): string[] {
     const removed: string[] = [];
     for (const slot of EQUIP_SLOTS) {
@@ -260,7 +270,7 @@ export class InventorySystem {
       if (!eq) continue;
       const def = ITEMS[eq.defId];
       if (!def) continue;
-      if (def.requiredClass && def.requiredClass !== "all" && def.requiredClass !== classId) {
+      if (!canClassEquip(def, classId)) {
         this.bag.push(eq);
         delete this.equipment[slot];
         removed.push(def.name);
@@ -389,18 +399,19 @@ export class InventorySystem {
     return out;
   }
 
-  getActivePassives(): Set<string> {
+  getActivePassives(classId?: ClassId): Set<string> {
     const set = new Set<string>();
     for (const slot of EQUIP_SLOTS) {
       const eq = this.equipment[slot];
       if (!eq) continue;
       const def = ITEMS[eq.defId];
-      if (def?.passiveId) set.add(def.passiveId);
+      if (!def || (classId && !canClassEquip(def, classId))) continue;
+      if (def.passiveId) set.add(def.passiveId);
     }
     return set;
   }
 
-  getTotalEquipBonuses(): NormalizedEquipStats {
+  getTotalEquipBonuses(classId?: ClassId): NormalizedEquipStats {
     const sum: NormalizedEquipStats = {
       atk: 0,
       def: 0,
@@ -416,6 +427,8 @@ export class InventorySystem {
     for (const slot of EQUIP_SLOTS) {
       const eq = this.equipment[slot];
       if (!eq) continue;
+      const def = ITEMS[eq.defId];
+      if (!def || (classId && !canClassEquip(def, classId))) continue;
       const st = getItemEffectiveStats(eq);
       sum.atk += st.atk;
       sum.def += st.def;
@@ -472,11 +485,12 @@ export class InventorySystem {
   }
 
   /** Returns active Set Bonuses for any equipped setId >= 2 pieces. */
-  getActiveSetBonuses(): ActiveSetStatus[] {
+  getActiveSetBonuses(classId?: ClassId): ActiveSetStatus[] {
     const counts: Record<string, number> = {};
     for (const slot of EQUIP_SLOTS) {
       const eq = this.equipment[slot];
       const def = eq ? ITEMS[eq.defId] : undefined;
+      if (def && classId && !canClassEquip(def, classId)) continue;
       if (def?.setId && SET_BONUSES[def.setId]) {
         counts[def.setId] = (counts[def.setId] ?? 0) + 1;
       }
@@ -495,7 +509,7 @@ export class InventorySystem {
     return out;
   }
 
-  getActiveSetBonusStats(): NormalizedEquipStats {
+  getActiveSetBonusStats(classId?: ClassId): NormalizedEquipStats {
     const sum: NormalizedEquipStats = {
       atk: 0,
       def: 0,
@@ -508,7 +522,7 @@ export class InventorySystem {
       poiseBreakPct: 0,
       skillCdPct: 0,
     };
-    for (const st of this.getActiveSetBonuses()) {
+    for (const st of this.getActiveSetBonuses(classId)) {
       const apply = (b: { atk?: number; def?: number; maxHp?: number; spd?: number; crit?: number; elementBonus?: number }) => {
         sum.atk += b.atk ?? 0;
         sum.def += b.def ?? 0;

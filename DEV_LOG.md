@@ -9,14 +9,14 @@
 
 ## Trạng Thái Hiện Tại (Current Project Stage Snapshot)
 
-- **Giai đoạn / Phiên bản hiện tại:** `PIXTEL v2.7` — Public Web / Mobile PWA Deployment, Phase 1 Mobile Twin-Stick + Smart Auto-Aim, Phase 2 Online Co-op (2–4P WebRTC P2P & Dedicated WS Server), Hidden Relics & 9-Element Matrix
-- **Commit mới nhất trên `main`:** `ebca8f8` (`2026-11-25`, tác giả: `chu0n6-iot` / `TrungLegit`)
+- **Giai đoạn / Phiên bản hiện tại:** `PIXTEL v2.7` — Public Web / Mobile PWA Deployment, Phase 1 Mobile Twin-Stick + Smart Auto-Aim, Phase 2 Online Co-op (2–4P WebRTC P2P & Dedicated WS Server), Strict Class-Locked Weapons, Hidden Relics & 9-Element Matrix
+- **Commit mới nhất trên `main`:** `946eddb` (`2026-11-25`, tác giả: `chu0n6-iot` / `TrungLegit`)
 - **Thành viên / AI đóng góp gần đây:** `chu0n6-iot`, `TrungLegit`, `Antigravity`, `Yaros`, `GitHub Copilot`
 - **Các hệ thống chính đã hoàn thiện:**
-  - **Web / Mobile PWA & Triển khai GitHub Pages:** Tự động build & deploy qua GitHub Actions lên `https://trunglegit.github.io/PixTel/`, kèm `manifest.webmanifest`, `sw.js`, `icon.svg`, chế độ màn hình ngang fullscreen, font Pixelify Sans tiếng Việt tự lưu trữ cục bộ (không phụ thuộc CDN).
+  - **Web / Mobile PWA & Triển khai GitHub Pages:** Tự động test (`npm test`), build & deploy qua GitHub Actions lên `https://trunglegit.github.io/PixTel/`, kèm `manifest.webmanifest`, `sw.js`, `icon.svg`, chế độ màn hình ngang fullscreen, font Pixelify Sans tiếng Việt tự lưu trữ cục bộ (không phụ thuộc CDN).
   - **Giai đoạn 1 — Mobile Twin-Stick & Smart Auto-Aim:** Cần xoay Analog đa điểm (đẩy sát viền tự động Chạy Nhanh + nút khóa Sprint), cụm phím chiến đấu bên phải (`⚔ ĐÁNH / GIỮ TỤ LỰC` phát sáng vàng ở khung Just-Charge, `💨 LƯỚT`, `✦ [E]`, `🔥 [Q]`, `🖐 [F]`), Tự Ngắm Mục Tiêu Thông Minh (ưu tiên Trụ Đấu Trường -> Boss/Quái -> Mỏ quặng) hoặc kéo 360°, chạm xem chi tiết trang bị (Tap-to-Inspect).
-  - **Giai đoạn 2 — Multiplayer Co-op 2–4 Người (`[P]` / Mã Phòng 6 Ký Tự):** Kiến trúc mạng kép hỗ trợ cả **Online WebRTC P2P (`PeerJS`)** chạy trực tiếp trên GitHub Pages / 4G điện thoại và **Dedicated WebSocket Room Server (`server/coopServer.ts`, `npm run server`)**; đồng bộ Paper-Doll 5 ô thời gian thực, kích nổ **Phản Ứng Nguyên Tố Kép 9 Hệ** chéo giữa các người chơi, chia sẻ mở khóa Trụ Sắc Màu / Trụ Đấu Trường Eraser, ưu tiên Aggro cho Khiên `Prism Knight`, và **100% XP + Instanced Loot** riêng cho từng thành viên.
-  - **Thế giới mở, Chiến đấu & Trang bị:** Bản đồ `160×160` tile (`480×270` Canvas 2D), 4 Class, ma trận 29 phản ứng **9 nguyên tố**, 122-frame monster atlas, Rune Matrix Forge `+0 → +10` (8 sắc tố `+5`), **8 Vật phẩm ẩn (`craft_only` & `boss_only`)**, 25 nhiệm vụ + 8 Bia Ký Aethel-16 + Cẩm nang 5 tab `[H]`.
+  - **Giai đoạn 2 — Multiplayer Co-op 2–4 Người (`[P]` / Mã Phòng 6 Ký Tự):** Kiến trúc mạng kép hỗ trợ cả **Online WebRTC P2P (`PeerJS`)** chạy trực tiếp trên GitHub Pages / 4G điện thoại và **Dedicated WebSocket Room Server (`server/coopServer.ts`, `npm run server`)**; đồng bộ Paper-Doll 5 ô thời gian thực (kiểm tra đúng Class), kích nổ **Phản Ứng Nguyên Tố Kép 9 Hệ** chéo giữa các người chơi, chia sẻ mở khóa Trụ Sắc Màu / Trụ Đấu Trường Eraser, ưu tiên Aggro cho Khiên `Prism Knight`, và **100% XP + Instanced Loot** riêng cho từng thành viên.
+  - **Thế giới mở, Chiến đấu & Trang bị:** Bản đồ `160×160` tile (`480×270` Canvas 2D), 4 Class với **vũ khí khóa chặt từng Class** (`0` vũ khí `"all"`, save cũ tự tháo đồ lệch Class), `Bit Rogue` đánh thường cận chiến thuần túy, ma trận 29 phản ứng **9 nguyên tố**, 122-frame monster atlas, Rune Matrix Forge `+0 → +10` (8 sắc tố `+5`), **8 Vật phẩm ẩn (`craft_only` & `boss_only`)**, 25 nhiệm vụ + 8 Bia Ký Aethel-16 + Cẩm nang 5 tab `[H]`.
 - **Trọng tâm tiếp theo (Active / Next Focus Areas):**
   - Giai đoạn 3 (nếu mở rộng tiếp): Authoritative Cloud Server (Colyseus / Fly.io / Railway) chống cheat tuyệt đối, Bảng xếp hạng Time-Attack Boss, hoặc đóng gói Capacitor lên Google Play / App Store.
 
@@ -39,6 +39,31 @@
 ---
 
 ## Nhật Ký Cập Nhật (Newest First)
+
+### [2026-11-25 23:00] — Antigravity — Cập nhật `README.md` theo giao diện `PIXTEL v2.7`, 6 ảnh mới & link chơi GitHub Pages
+- **Commit / Branch:** `main` (hợp nhất sạch trên `946eddb`)
+- **Giai đoạn / Version:** `PIXTEL v2.7` — Documentation & Live Web Polish
+- **Đã làm (Done):**
+  - Chụp mới 6 ảnh giao diện `1280×720` trực tiếp từ bản chạy hiện tại (`docs/media/class-select.png`, `combat-color-wave.png`, `inventory.png`, `prism-forge.png`, `world-map.png`, `quest-journal.png`) phản ánh đúng Pixelify Sans offline, Logo `PIXTEL 16-BIT`, Ma Trận Luyện Khí, Túi đồ 40 ô / 5 ô trang bị & khóa Class (`✕`).
+  - Viết lại [README.md](README.md) đồng bộ đầy đủ tính năng `PIXTEL v2.7`: **Mobile Twin-Stick + Smart Auto-Aim + PWA Fullscreen**, **Co-op Online 2–4 Người (`[P]` / WebRTC P2P / `npm run server`)**, **khóa vũ khí chặt theo Class**, `Bit Rogue` cận chiến LMB, 9 Nguyên Tố (29 phản ứng), 8 Cổ Vật Ẩn, 25 Nhiệm Vụ, 122-frame quái, bảng điều khiển PC + Mobile, cây thư mục đầy đủ và gắn link chơi trực tuyến **`https://trunglegit.github.io/PixTel/`**.
+  - Hợp nhất sạch với workflow GitHub Pages CI/CD của `origin/main` ([.github/workflows/deploy-pages.yml](.github/workflows/deploy-pages.yml)) và lọc `getValidEquippedWeapon` trong `_buildLocalCoopSnapshot()` (`src/game.ts`) để đồng bộ Co-op cũng tuân thủ khóa Class.
+- **File chính đã sửa / thêm:** `README.md`, `src/game.ts`, `docs/media/class-select.png`, `docs/media/combat-color-wave.png`, `docs/media/inventory.png`, `docs/media/prism-forge.png`, `docs/media/world-map.png`, `docs/media/quest-journal.png`, `DEV_LOG.md`
+- **Kiểm tra (Verified):** Kiểm tra trực quan cả 6 file PNG, chạy `npm run build` (`tsc --noEmit && vite build`), **13/13** feature suites (`tests/featureTests.ts`), `git diff --check` và Project Brain `lint`/`digest`.
+- **Lưu ý / Handoff (Breaking changes / Đang dở):** Trong repo Settings trên GitHub, cần đảm bảo `Pages -> Source` đang chọn `GitHub Actions` để workflow `deploy-pages.yml` tự xuất bản `https://trunglegit.github.io/PixTel/`.
+- **Gợi ý bước tiếp theo (Next Steps):** Kiểm tra GitHub Actions & truy cập trực tiếp `https://trunglegit.github.io/PixTel/` trên cả PC lẫn điện thoại sau khi push.
+
+### [2026-11-25 22:30] — Antigravity — Khóa chặt vũ khí theo từng Class & chặn Pháp Sư cầm kiếm thi triển kỹ năng
+- **Commit / Branch:** `main` (local → hợp nhất cùng `PIXTEL v2.7`)
+- **Giai đoạn / Version:** `PIXTEL v2.6+` — Class Equipment Locks & Combat Defense-in-Depth
+- **Đã làm (Done):**
+  - Chuyển toàn bộ 10 vũ khí từng đặt `requiredClass: "all"` sang đúng Class: `wpn_starter`, `wpn_meadow_edge`, `wpn_quartz_reaver`, `wpn_amber_fury`, `wpn_chroma_sovereign`, `wpn_warden_cleaver`, `wpn_quake_maul`, `hid_craft_prism_blade`, `hid_boss_eraser_edge` → `prism_knight`; `wpn_void_scythe` → `bit_rogue` (bảo đảm 0 vũ khí nào còn dùng chung `"all"`).
+  - Bổ sung fallback khóa cứng theo `slot === "weapon"` trong `canClassEquip()` và thêm phần thưởng `ruins_weapon` cho các nhiệm vụ boss (`q_amber_boss`, `q_final_eraser`) trong `quests.ts` & `items.ts`.
+  - Bổ sung kiểm tra `getValidEquippedWeapon()` / `hasValidEquippedWeapon()` trong `InventorySystem`, `recalculatePlayerStats()`, `CombatSystem`, `HUD.ts`, `game.ts` (`loadSavedGame()` tự tháo đồ sai Class về túi an toàn), cùng nhãn hệ Class trong shop Mira (`DialogueModal.ts`).
+  - Mở rộng Suite 7 & 8 trong `tests/featureTests.ts` kiểm tra khóa kiếm với `chroma_mage`, chặn cast `[E]`/đòn đánh khi ép vũ khí sai Class trong save cũ và thưởng `ruins_weapon` đủ 4 Class.
+- **File chính đã sửa / thêm:** `src/data/equipments.ts`, `src/data/hiddenItems.ts`, `src/data/items.ts`, `src/data/types.ts`, `src/data/quests.ts`, `src/systems/inventorySystem.ts`, `src/systems/combat.ts`, `src/game.ts`, `src/ui/HUD.ts`, `src/ui/DialogueModal.ts`, `src/graphics/pixelfxHeroModels.ts`, `tests/featureTests.ts`, `DEV_LOG.md`
+- **Kiểm tra (Verified):** `npm run build` (`tsc --noEmit && vite build`) exit 0; toàn bộ feature test suites trong `tests/featureTests.ts` PASS.
+- **Lưu ý / Handoff (Breaking changes / Đang dở):** Các bản lưu cũ mà Pháp Sư/Sát Thủ/Kỹ Sư từng mang kiếm sẽ tự động được tháo về túi đồ khi tải game (`loadSavedGame`) kèm thông báo toast; cần trang bị Trượng/Song Đao/Súng đúng Class để thi triển kỹ năng `[E]`.
+- **Gợi ý bước tiếp theo (Next Steps):** Kiểm thử đa người chơi kết hợp kiểm tra đồng bộ hiển thị Paper-Doll theo Class khi đổi Class tại thị trấn.
 
 ### [2026-11-25 22:35] — chu0n6-iot (Antigravity) — Triển khai Web/Mobile PWA (GitHub Pages), Giai đoạn 1 Mobile Twin-Stick & Giai đoạn 2 Co-op 2–4 Người
 - **Commit / Branch:** `main` (merge `origin/main` `ebca8f8` + Phase 1 & 2)

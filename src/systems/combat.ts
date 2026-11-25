@@ -191,7 +191,7 @@ export class CombatSystem {
     isHeavyOrFinisher: boolean
   ): ElementType | undefined {
     const { player, inv } = ctx;
-    const wpn = inv.equipment.weapon;
+    const wpn = inv.getValidEquippedWeapon(player.classId);
     if (player.totemSurgeTimer > 0 && player.totemSurgeElement) {
       return player.totemSurgeElement;
     }
@@ -284,8 +284,8 @@ export class CombatSystem {
     const bonusElem = this._resolveWeaponElement(ctx, isFinisher);
     const ang = player.aimAngle;
 
-    // Unarmed Bare-Handed Punch Combo when no Weapon is equipped
-    if (!ctx.inv.equipment.weapon) {
+    // Unarmed Bare-Handed Punch Combo when no valid class Weapon is equipped
+    if (!ctx.inv.hasValidEquippedWeapon(player.classId)) {
       const punchMults = [0.72, 0.85, 1.1];
       const punchKinds: HeroAttackKind[] = ["punch_1", "punch_2", "punch_3"];
       this._startAttackAnim(player, punchKinds[step], isFinisher ? 0.28 : 0.22, ang);
@@ -561,8 +561,8 @@ export class CombatSystem {
       });
     }
 
-    // Unarmed Bare-Handed Charged Uppercut when no Weapon is equipped
-    if (!ctx.inv.equipment.weapon) {
+    // Unarmed Bare-Handed Charged Uppercut when no valid class Weapon is equipped
+    if (!ctx.inv.hasValidEquippedWeapon(player.classId)) {
       this._startAttackAnim(player, "uppercut", 0.34, ang);
       const wpPos = this._weaponOrigin(player, ang, 14);
       sfx.playPunch();
@@ -772,12 +772,12 @@ export class CombatSystem {
     }
   }
 
-  /** Class active skill [E] (Unlocked by equipping a Weapon) */
+  /** Class active skill [E] (Unlocked by equipping a class-compatible Weapon) */
   performSkillE(ctx: CombatContext) {
     const { player, vfx } = ctx;
-    if (!ctx.inv.equipment.weapon) {
+    if (!ctx.inv.hasValidEquippedWeapon(player.classId)) {
       sfx.playForgeFail();
-      ctx.notify("🔒 Cần trang bị Vũ Khí để mở khóa kỹ năng [E]!", "warn");
+      ctx.notify("🔒 Cần trang bị Vũ Khí đúng Class để mở khóa kỹ năng [E]!", "warn");
       return;
     }
     if (player.skillCd > 0) return;

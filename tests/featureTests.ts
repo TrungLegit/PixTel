@@ -954,7 +954,51 @@ runTest("Hardcore RPG: Bare-Handed Start, Skill Gating, Class Locks, Matrix Forg
   bare.combat.performUltimateQ(bare.ctx);
   assert.equal(bare.player.overdrive, 100, "[Q] Ultimate stays locked while no accessory is equipped");
 
-  // 3. Strict Class Equipment Locks & Safe Class Switch
+  // 3. Strict Class Equipment Locks (zero universal weapons!) & Safe Class Switch + Combat Bypass Prevention
+  for (const itemDef of Object.values(ITEMS)) {
+    if (itemDef.category === "equipment" && itemDef.slot === "weapon") {
+      assert.ok(
+        itemDef.requiredClass && itemDef.requiredClass !== "all",
+        `Weapon ${itemDef.id} must be locked to a specific Class (found ${itemDef.requiredClass})`
+      );
+    }
+  }
+  const swordIds = [
+    "wpn_starter",
+    "wpn_meadow_edge",
+    "wpn_quartz_reaver",
+    "wpn_amber_fury",
+    "wpn_chroma_sovereign",
+    "hid_craft_prism_blade",
+    "hid_boss_eraser_edge",
+  ] as const;
+  for (const swordId of swordIds) {
+    assert.equal(canClassEquip(ITEMS[swordId], "chroma_mage"), false, `Mage cannot equip sword ${swordId}`);
+    const mageInv = new InventorySystem();
+    mageInv.resetStarterKit("chroma_mage");
+    mageInv.addItem(swordId, 1, 5);
+    const swordUid = mageInv.bag.find((b) => b.defId === swordId)!.uid;
+    assert.equal(mageInv.equipFromBag(swordUid, "chroma_mage").ok, false, `equipFromBag rejects ${swordId} for Mage`);
+    const best = mageInv.equipBestForClass("chroma_mage");
+    assert.equal(best.equipped.some((e) => e.slot === "weapon"), false, `equipBestForClass skips sword ${swordId} for Mage`);
+  }
+
+  // Defense-in-depth: even if legacy save stuffed a sword into Mage's weapon slot, combat & skills refuse to fire with it
+  {
+    const legacyMage = makeTestHarness("chroma_mage");
+    legacyMage.inv.equipment.weapon = createItemInstance("wpn_chroma_sovereign", 1, 5);
+    assert.equal(legacyMage.inv.hasValidEquippedWeapon("chroma_mage"), false, "Sword is invalid weapon for Mage");
+    legacyMage.player.skillCd = 0;
+    legacyMage.combat.performSkillE(legacyMage.ctx);
+    assert.equal(legacyMage.player.skillCd, 0, "Mage cannot cast [E] skill while holding Knight sword");
+    legacyMage.player.atkCd = 0;
+    legacyMage.combat.performPrimaryAttack(legacyMage.ctx);
+    assert.equal(legacyMage.player.attackAnimKind, "punch_1", "Mage falls back to bare-handed punch instead of casting with sword");
+    const migrated = legacyMage.inv.unequipIncompatibleForClass("chroma_mage");
+    assert.equal(migrated.length, 1, "unequipIncompatibleForClass safely moves off-class sword to bag");
+    assert.equal(legacyMage.inv.equipment.weapon, undefined);
+  }
+
   bare.inv.addItem("wpn_apprentice_staff", 1);
   const staffUid = bare.inv.bag.find((b) => b.defId === "wpn_apprentice_staff")!.uid;
   assert.equal(bare.inv.equipFromBag(staffUid, "prism_knight").ok, false, "Knight cannot equip Mage staff");
@@ -1107,7 +1151,7 @@ runTest("Pixelfx Hero Models, Equip Best, Selective Quick Sell, 25 Main+Side Que
     }
   }
   for (const c of CLASSES) {
-    for (const key of ["starter_weapon", "meadow_weapon", "quartz_weapon", "amber_weapon"] as const) {
+    for (const key of ["starter_weapon", "meadow_weapon", "quartz_weapon", "amber_weapon", "ruins_weapon"] as const) {
       const rw = resolveClassReward(c.id, key);
       assert.ok(ITEMS[rw] && canClassEquip(ITEMS[rw], c.id), `${c.id} reward ${key} -> ${rw} is valid & equippable`);
     }

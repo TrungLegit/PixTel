@@ -226,10 +226,8 @@ export const QUESTS: QuestDef[] = [
     rewards: {
       gold: 500,
       xp: 560,
-      items: [
-        { defId: "wpn_amber_fury", qty: 1 },
-        { defId: "charm_undying", qty: 1 },
-      ],
+      items: [{ defId: "charm_undying", qty: 1 }],
+      classRewards: ["amber_weapon"],
     },
   },
   {
@@ -253,10 +251,8 @@ export const QUESTS: QuestDef[] = [
     rewards: {
       gold: 1500,
       xp: 1200,
-      items: [
-        { defId: "wpn_chroma_sovereign", qty: 1 },
-        { defId: "mat_origin_star", qty: 1 },
-      ],
+      items: [{ defId: "mat_origin_star", qty: 1 }],
+      classRewards: ["ruins_weapon"],
     },
   },
 
