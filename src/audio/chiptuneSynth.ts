@@ -271,6 +271,20 @@ class ChiptuneSynth {
     this.tone(740, 1046, 0.1, "triangle", 0.16, 0.07);
     this.tone(988, 1480, 0.14, "triangle", 0.18, 0.13);
   }
+
+  playHiddenDrop() {
+    // Shimmering prismatic discovery arpeggio + resonant chime
+    const notes = [523, 659, 784, 1046, 1318, 1568];
+    notes.forEach((n, i) => this.tone(n, n * 1.03, 0.2, "triangle", 0.22, i * 0.055));
+    this.noise(0.14, 0.12, 4200, 0.04);
+  }
+
+  playHiddenUnlock() {
+    // Triumphant golden-crystal chord for permanently unlocking a Hidden Relic
+    this.tone(392, 523, 0.12, "square", 0.18, 0);
+    this.tone(523, 784, 0.16, "triangle", 0.22, 0.06);
+    this.tone(784, 1568, 0.28, "triangle", 0.24, 0.12);
+  }
 }
 
 export const sfx = new ChiptuneSynth();

@@ -1,0 +1,345 @@
+import type { ItemDef, RecipeDef } from "./types";
+
+/**
+ * Danh mục Vật Phẩm Ẩn (isHidden: true) của PIXTEL v2.6+:
+ * - Tuyệt đối KHÔNG xuất hiện trong Shop thường, Rương thường hay Loot Table quái thường.
+ * - Chỉ nhận từ 2 nguồn duy nhất:
+ *   1) craft_only: Bản vẽ bí mật tại Lò Rèn Lăng Kính (cần nguyên liệu hiếm & đủ cấp độ).
+ *   2) boss_only: Rơi độc quyền từ Boss vùng đất & World Boss The Eraser (100% lần đầu hạ Boss, tỷ lệ cao các lần sau).
+ */
+export const HIDDEN_ITEMS: Record<string, ItemDef> = {
+  // =========================================================================
+  // NGUỒN 1 — CRAFT ONLY (CHỈ CHẾ TẠO TẠI LÒ RÈN LĂNG KÍNH)
+  // =========================================================================
+  hid_craft_prism_blade: {
+    id: "hid_craft_prism_blade",
+    name: "Kiếm Thất Sắc Nguyên Thủy",
+    category: "equipment",
+    rarity: "legendary",
+    tier: 5,
+    slot: "weapon",
+    iconKind: "sword",
+    spriteKey: "sword_t5",
+    paperDollKey: "wpn_sword_t5",
+    iconColor: "#ff9922",
+    visualColor: "#ff66c4",
+    accentColor: "#5ef2ff",
+    visualStyle: { outline: "#1c0a2e", primary: "#ff66c4", accent: "#5ef2ff", shape: "sovereign" },
+    requiredClass: "all",
+    biomeTheme: "ruins",
+    setId: "set_sovereign",
+    dismantleShards: 18,
+    isHidden: true,
+    hiddenSource: "craft_only",
+    hiddenHint: "Bản vẽ cổ ẩn giấu trong Ngôi Sao Khởi Nguyên (hạ The Eraser để thu thập nguyên liệu mở khóa).",
+    passiveId: "restored_prism_surge",
+    passiveDesc: "Quang Triều Hồi Sắc: Đứng tại vùng đã khôi phục màu tăng +10% ATK & +22% Sát thương Nguyên tố/Kỹ năng.",
+    desc: "[Cổ Vật Ẩn] Thanh thánh kiếm kết tinh từ ánh sáng đầu tiên trước khi Nhiễu Trắng xuất hiện.",
+    lore: "Lưu trữ Aethel-16 #H1: Lưỡi kiếm chỉ phản chiếu bảy sắc cầu vồng khi vùng đất đã tỉnh giấc.",
+    sellPrice: 440,
+    baseStats: { atk: 54, critRate: 20, moveSpeed: 10, maxHp: 50, elementBonus: 30, poiseBreakPct: 20 },
+    craftRecipe: {
+      goldCost: 620,
+      requiredLevel: 12,
+      revealMaterialId: "mat_origin_star",
+      unlockHint: "Cần sở hữu Ngôi Sao Khởi Nguyên & đạt LV.12 để giải mã bản vẽ Kiếm Bí Truyền.",
+      materials: [
+        { defId: "mat_origin_star", qty: 1 },
+        { defId: "mat_void_prism", qty: 4 },
+        { defId: "mat_pigment_chroma", qty: 2 },
+        { defId: "mat_prism_shard", qty: 10 },
+      ],
+    },
+  },
+  hid_craft_aethel_crown: {
+    id: "hid_craft_aethel_crown",
+    name: "Vương Miện Aethel-16",
+    category: "equipment",
+    rarity: "epic",
+    tier: 4,
+    slot: "helmet",
+    iconKind: "helmet",
+    spriteKey: "helm_t4",
+    paperDollKey: "helm_t4",
+    iconColor: "#c266ff",
+    visualColor: "#8e44ff",
+    accentColor: "#ffe066",
+    visualStyle: { outline: "#1c0a2e", primary: "#8e44ff", accent: "#ffe066", shape: "crown", offsetY: -1 },
+    requiredClass: "all",
+    biomeTheme: "quartz",
+    setId: "set_quartz",
+    dismantleShards: 12,
+    isHidden: true,
+    hiddenSource: "craft_only",
+    hiddenHint: "Bản vẽ cổ gắn liền với Trái Tim Pha Lê của Rồng Lăng Kính tại Rừng Thạch Anh.",
+    passiveId: "set_resonance_echo",
+    passiveDesc: "Cộng Hưởng Cổ Tộc: Tăng +4% ATK/DEF & +6% ELEM cơ bản (+8% ATK/DEF & +10% ELEM khi kích hoạt Bộ Trang Bị).",
+    desc: "[Cổ Vật Ẩn] Vương miện ký ức của hội đồng Chroma-Architect đời đầu.",
+    lore: "Lưu trữ Aethel-16 #H2: Mỗi viên tinh thể trên vương miện ghi lại một tần số cộng hưởng của bộ giáp.",
+    sellPrice: 240,
+    baseStats: { def: 15, maxHp: 135, atk: 10, critRate: 8, elementBonus: 14 },
+    craftRecipe: {
+      goldCost: 340,
+      requiredLevel: 8,
+      revealMaterialId: "mat_crystal_heart",
+      unlockHint: "Cần sở hữu Trái Tim Pha Lê & đạt LV.8 để giải mã bản vẽ Vương Miện Bí Truyền.",
+      materials: [
+        { defId: "mat_crystal_heart", qty: 1 },
+        { defId: "mat_quartz_shard", qty: 6 },
+        { defId: "mat_amber_gem", qty: 4 },
+        { defId: "mat_prism_shard", qty: 6 },
+      ],
+    },
+  },
+  hid_craft_chroma_aegis: {
+    id: "hid_craft_chroma_aegis",
+    name: "Thánh Giáp Hồi Sắc",
+    category: "equipment",
+    rarity: "legendary",
+    tier: 5,
+    slot: "armor",
+    iconKind: "armor",
+    spriteKey: "armor_t5",
+    paperDollKey: "armor_t5",
+    capeKey: "cape_t5",
+    iconColor: "#ff9922",
+    visualColor: "#38b6ff",
+    accentColor: "#ffe066",
+    visualStyle: { outline: "#140b29", primary: "#38b6ff", accent: "#ffe066", shape: "mantle" },
+    requiredClass: "all",
+    biomeTheme: "amber",
+    setId: "set_amber",
+    dismantleShards: 18,
+    isHidden: true,
+    hiddenSource: "craft_only",
+    hiddenHint: "Bản vẽ thất truyền đòi hỏi Nanh Hổ Phách Cổ từ Gilded Null tại Hầm Mỏ.",
+    passiveId: "restored_prism_surge",
+    passiveDesc: "Quang Triều Hồi Sắc: Đứng tại vùng đã khôi phục màu tăng +10% ATK & +22% Sát thương Nguyên tố/Kỹ năng.",
+    desc: "[Cổ Vật Ẩn] Chiến giáp tích hợp trường sắc độ, tự khuếch đại sức mạnh trên vùng đất đã giải phóng.",
+    lore: "Lưu trữ Aethel-16 #H3: Giáp hấp thụ ánh sáng Trụ Sắc Màu để tạo lớp khiên quang phổ.",
+    sellPrice: 430,
+    baseStats: { def: 28, maxHp: 245, atk: 12, moveSpeed: 10, elementBonus: 20 },
+    craftRecipe: {
+      goldCost: 640,
+      requiredLevel: 14,
+      revealMaterialId: "mat_amber_fang",
+      unlockHint: "Cần sở hữu Nanh Hổ Phách Cổ & đạt LV.14 để giải mã bản vẽ Thánh Giáp Bí Truyền.",
+      materials: [
+        { defId: "mat_amber_fang", qty: 1 },
+        { defId: "mat_crystal_heart", qty: 1 },
+        { defId: "mat_void_prism", qty: 4 },
+        { defId: "mat_prism_shard", qty: 10 },
+      ],
+    },
+  },
+  hid_craft_siphon_sigil: {
+    id: "hid_craft_siphon_sigil",
+    name: "Ấn Hút Mạch Lăng Kính",
+    category: "equipment",
+    rarity: "epic",
+    tier: 4,
+    slot: "accessory",
+    iconKind: "core",
+    spriteKey: "chip_t4",
+    paperDollKey: "acc_chip_t4",
+    iconColor: "#c266ff",
+    visualColor: "#5ef2ff",
+    accentColor: "#c266ff",
+    visualStyle: { outline: "#101229", primary: "#5ef2ff", accent: "#c266ff", shape: "chip_orb" },
+    requiredClass: "all",
+    biomeTheme: "meadow",
+    setId: "set_meadow",
+    dismantleShards: 11,
+    isHidden: true,
+    hiddenSource: "craft_only",
+    hiddenHint: "Bản vẽ cổ được phong ấn bằng Ấn Chiến Thần Vệ Thạch ở Đồng Cỏ Xám.",
+    passiveId: "energy_siphon_magnet",
+    passiveDesc: "Từ Trường Sắc Năng: Mở rộng tầm hút mảnh/loot +60px & mỗi mạng hạ gục hồi +8% Thể Lực, +6% Nộ [Q].",
+    desc: "[Cổ Vật Ẩn] Mảnh ấn tạo trường hút năng lượng từ quái vật và chiến lợi phẩm xung quanh.",
+    lore: "Lưu trữ Aethel-16 #H4: Không một giọt sắc năng nào bị thất thoát trên chiến trường.",
+    sellPrice: 220,
+    baseStats: { atk: 14, moveSpeed: 14, maxHp: 60, critRate: 10, elementBonus: 14, maxStamina: 15 },
+    craftRecipe: {
+      goldCost: 290,
+      requiredLevel: 7,
+      revealMaterialId: "mat_warden_crest",
+      unlockHint: "Cần sở hữu Ấn Chiến Thần Vệ Thạch & đạt LV.7 để giải mã bản vẽ Ấn Hút Mạch.",
+      materials: [
+        { defId: "mat_warden_crest", qty: 1 },
+        { defId: "mat_pigment_wind", qty: 2 },
+        { defId: "mat_prism_shard", qty: 6 },
+      ],
+    },
+  },
+
+  // =========================================================================
+  // NGUỒN 2 — BOSS ONLY (CHỈ RƠI KHI HẠ BOSS VÙNG ĐẤT HOẶC THE ERASER)
+  // =========================================================================
+  hid_boss_warden_mantle: {
+    id: "hid_boss_warden_mantle",
+    name: "Áo Giáp Cổ Thụ Bất Diệt",
+    category: "equipment",
+    rarity: "epic",
+    tier: 4,
+    slot: "armor",
+    iconKind: "armor",
+    spriteKey: "armor_t4",
+    paperDollKey: "armor_t4",
+    capeKey: "cape_t4",
+    iconColor: "#44ee88",
+    visualColor: "#28b866",
+    accentColor: "#ffe066",
+    visualStyle: { outline: "#0c2116", primary: "#28b866", accent: "#ffe066", shape: "aegis" },
+    requiredClass: "all",
+    biomeTheme: "meadow",
+    setId: "set_meadow",
+    dismantleShards: 11,
+    isHidden: true,
+    hiddenSource: "boss_only",
+    sourceBossId: "boss_xing_warden",
+    hiddenDropChance: 0.35,
+    hiddenHint: "Cổ vật độc quyền chỉ rơi khi đánh bại Boss Đồng Cỏ: Hộ Vệ Cổ Thụ Xing Warden.",
+    passiveId: "set_resonance_echo",
+    passiveDesc: "Cộng Hưởng Cổ Tộc: Tăng +4% ATK/DEF & +6% ELEM cơ bản (+8% ATK/DEF & +10% ELEM khi kích hoạt Bộ Trang Bị).",
+    desc: "[Cổ Vật Boss] Lớp vỏ cổ thụ vĩnh cửu kết tinh từ chiến ý của Xing Warden.",
+    lore: "Lưu trữ Aethel-16 #H5: Rễ cổ thụ đan xen bảo vệ thân giáp và cộng hưởng với trang bị Thảo Nguyên.",
+    sellPrice: 230,
+    baseStats: { def: 19, maxHp: 160, atk: 8, moveSpeed: 6, elementBonus: 12 },
+  },
+  hid_boss_prism_visor: {
+    id: "hid_boss_prism_visor",
+    name: "Mũ Nhãn Rồng Lăng Kính",
+    category: "equipment",
+    rarity: "epic",
+    tier: 4,
+    slot: "helmet",
+    iconKind: "helmet",
+    spriteKey: "helm_t4",
+    paperDollKey: "helm_t4",
+    iconColor: "#38b6ff",
+    visualColor: "#26c4ff",
+    accentColor: "#ffffff",
+    visualStyle: { outline: "#0b1e33", primary: "#26c4ff", accent: "#ffffff", shape: "visor" },
+    requiredClass: "all",
+    biomeTheme: "quartz",
+    setId: "set_quartz",
+    dismantleShards: 12,
+    isHidden: true,
+    hiddenSource: "boss_only",
+    sourceBossId: "boss_blight_root",
+    hiddenDropChance: 0.35,
+    hiddenHint: "Cổ vật độc quyền chỉ rơi khi hạ Boss Rừng Thạch Anh: Rồng Lăng Kính Blight Prism.",
+    passiveId: "restored_prism_surge",
+    passiveDesc: "Quang Triều Hồi Sắc: Đứng tại vùng đã khôi phục màu tăng +10% ATK & +22% Sát thương Nguyên tố/Kỹ năng.",
+    desc: "[Cổ Vật Boss] Mũ kính kết tinh từ con mắt lăng kính của Blight Prism.",
+    lore: "Lưu trữ Aethel-16 #H6: Nhìn xuyên qua màn sương Nhiễu Trắng để bẻ gãy mọi lớp giáp băng.",
+    sellPrice: 245,
+    baseStats: { def: 14, maxHp: 125, atk: 10, critRate: 10, elementBonus: 18, poiseBreakPct: 12 },
+  },
+  hid_boss_null_treads: {
+    id: "hid_boss_null_treads",
+    name: "Hài Hổ Phách Vô Ảnh",
+    category: "equipment",
+    rarity: "legendary",
+    tier: 5,
+    slot: "boots",
+    iconKind: "boots",
+    spriteKey: "boots_t5",
+    paperDollKey: "boots_t5",
+    iconColor: "#ff9922",
+    visualColor: "#e66b19",
+    accentColor: "#5ef2ff",
+    visualStyle: { outline: "#290d0c", primary: "#e66b19", accent: "#5ef2ff", shape: "void_step" },
+    requiredClass: "all",
+    biomeTheme: "amber",
+    setId: "set_amber",
+    dismantleShards: 16,
+    isHidden: true,
+    hiddenSource: "boss_only",
+    sourceBossId: "boss_gilded_null",
+    hiddenDropChance: 0.35,
+    hiddenHint: "Cổ vật độc quyền chỉ rơi khi hạ Boss Hầm Mỏ: Cùng Kỳ Hổ Phách Gilded Null.",
+    passiveId: "energy_siphon_magnet",
+    passiveDesc: "Từ Trường Sắc Năng: Mở rộng tầm hút mảnh/loot +60px & mỗi mạng hạ gục hồi +8% Thể Lực, +6% Nộ [Q].",
+    desc: "[Cổ Vật Boss] Đôi hài dung nham rực lửa lướt trên chiến địa mà không để lại dấu vết.",
+    lore: "Lưu trữ Aethel-16 #H7: Bước chân thu hồi dư chấn năng lượng sau mỗi đòn kết liễu.",
+    sellPrice: 390,
+    baseStats: { def: 16, maxHp: 110, moveSpeed: 28, critRate: 11, elementBonus: 16, maxStamina: 20 },
+  },
+  hid_boss_eraser_edge: {
+    id: "hid_boss_eraser_edge",
+    name: "Thần Kiếm Xóa Sắc — Null Sever",
+    category: "equipment",
+    rarity: "legendary",
+    tier: 5,
+    slot: "weapon",
+    iconKind: "sword",
+    spriteKey: "sword_t5",
+    paperDollKey: "wpn_sword_t5",
+    iconColor: "#ff66d8",
+    visualColor: "#a838ff",
+    accentColor: "#ff3366",
+    visualStyle: { outline: "#140824", primary: "#a838ff", accent: "#ff3366", shape: "sovereign" },
+    requiredClass: "all",
+    biomeTheme: "ruins",
+    setId: "set_sovereign",
+    dismantleShards: 20,
+    isHidden: true,
+    hiddenSource: "boss_only",
+    sourceBossId: "boss_the_eraser",
+    hiddenDropChance: 0.5,
+    hiddenHint: "Cổ vật độc quyền tối thượng chỉ rơi khi thanh tẩy World Boss The Eraser tại Phế Tích Vô Sắc.",
+    passiveId: "restored_prism_surge",
+    passiveDesc: "Quang Triều Hồi Sắc: Đứng tại vùng đã khôi phục màu tăng +10% ATK & +22% Sát thương Nguyên tố/Kỹ năng.",
+    desc: "[Cổ Vật World Boss] Mảnh kiếm cắt đứt quyền năng xóa màu của chính The Eraser.",
+    lore: "Lưu trữ Aethel-16 #H8: Vũ khí tối thượng sinh ra từ lõi tan rã của Thực Thể Xóa Sắc.",
+    sellPrice: 480,
+    baseStats: { atk: 58, critRate: 22, moveSpeed: 12, maxHp: 60, elementBonus: 32, poiseBreakPct: 25 },
+  },
+};
+
+/**
+ * Danh sách bản vẽ Chế Tạo Ẩn tự động trích xuất từ các vật phẩm `craft_only`.
+ */
+export const HIDDEN_CRAFT_RECIPES: RecipeDef[] = Object.values(HIDDEN_ITEMS)
+  .filter((it) => it.hiddenSource === "craft_only" && it.craftRecipe)
+  .map((it) => ({
+    id: `rec_${it.id}`,
+    resultDefId: it.id,
+    goldCost: it.craftRecipe!.goldCost,
+    materials: it.craftRecipe!.materials,
+    requiredLevel: it.craftRecipe!.requiredLevel,
+    isHiddenRecipe: true,
+    revealMaterialId: it.craftRecipe!.revealMaterialId,
+    unlockHint: it.craftRecipe!.unlockHint,
+    desc: it.desc,
+  }));
+
+export interface BossHiddenDrop {
+  itemId: string;
+  qty: number;
+  enhanceLevel: number;
+}
+
+/**
+ * Roll vật phẩm ẩn độc quyền cho Boss:
+ * - Lần đầu tiên hạ Boss (`alreadyDefeated === false`): Đảm bảo rơi 100% cổ vật ẩn của Boss đó!
+ * - Các lần hạ lại: Roll theo `hiddenDropChance` (35%-50%).
+ */
+export function rollBossHiddenDrops(bossId: string, alreadyDefeated: boolean): BossHiddenDrop[] {
+  const candidates = Object.values(HIDDEN_ITEMS).filter(
+    (it) => it.isHidden && it.hiddenSource === "boss_only" && it.sourceBossId === bossId
+  );
+  const out: BossHiddenDrop[] = [];
+  for (const it of candidates) {
+    const chance = !alreadyDefeated ? 1.0 : it.hiddenDropChance ?? 0.35;
+    if (Math.random() <= chance) {
+      out.push({
+        itemId: it.id,
+        qty: 1,
+        enhanceLevel: it.rarity === "legendary" ? 3 : 2,
+      });
+    }
+  }
+  return out;
+}
