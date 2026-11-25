@@ -34,6 +34,8 @@
 {"created": "2026-11-25T12:15:55.236472+00:00", "dst": "file:src/systems/combat.ts", "note": "", "schema_version": 1, "src": "decision:20261125121555-4direction-monster-atlas", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T12:37:42.420995+00:00", "dst": "decision:20261125121555-4direction-monster-atlas", "note": "", "schema_version": 1, "src": "decision:20261125123742-multiframe-monster-animations", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T12:41:26.851322+00:00", "dst": "file:src/systems/combat.ts", "note": "", "schema_version": 1, "src": "decision:20261125124126-bit-rogue-pure-melee", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-25T13:30:11.378545+00:00", "dst": "file:.agents/skills/codixel/SKILL.md", "note": "", "schema_version": 1, "src": "file:.agents/skills/codixel/package.json", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-25T13:30:11.809596+00:00", "dst": "file:src/vfx/vfxManager.ts", "note": "", "schema_version": 1, "src": "file:.agents/skills/pixelfx/SKILL.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:.agents/skills/spritecook-polish-sprites/scripts/compare_alpha.py", "note": "", "schema_version": 1, "src": "file:.agents/skills/spritecook-polish-sprites/scripts/test_compare_alpha.py", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T05:02:37.739271+00:00", "dst": "file:src/game.ts", "note": "", "schema_version": 1, "src": "file:README.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T03:24:13.086846+00:00", "dst": "file:src/main.js", "note": "", "schema_version": 1, "src": "file:index.html", "type": "imports", "weight": 1.0}
@@ -46,6 +48,7 @@
 {"created": "2026-11-25T12:37:39.667899+00:00", "dst": "file:src/graphics/enemyAtlas.ts", "note": "", "schema_version": 1, "src": "file:scripts/extract_enemy_sprites.py", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T07:19:21.978026+00:00", "dst": "file:src/assets/codixel-icons.json", "note": "", "schema_version": 1, "src": "file:scripts/generate_codixel_assets.mjs", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T07:19:22.487225+00:00", "dst": "file:src/assets/codixel-paperdoll.json", "note": "", "schema_version": 1, "src": "file:scripts/generate_codixel_assets.mjs", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-25T13:30:10.944897+00:00", "dst": "file:src/graphics/enemyAtlas.ts", "note": "", "schema_version": 1, "src": "file:src/assets/codixel-enemies.json", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T07:19:00.535773+00:00", "dst": "file:src/graphics/codixelAtlas.ts", "note": "", "schema_version": 1, "src": "file:src/assets/codixel-icons.json", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T07:19:01.796190+00:00", "dst": "file:src/graphics/codixelAtlas.ts", "note": "", "schema_version": 1, "src": "file:src/assets/codixel-paperdoll.json", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T05:53:32.316351+00:00", "dst": "file:src/ui/InventoryModal.ts", "note": "", "schema_version": 1, "src": "file:src/audio/chiptuneSynth.ts", "type": "relates_to", "weight": 1.0}
@@ -140,9 +143,7 @@
 {"created": "2026-11-25T04:21:25.497688+00:00", "dst": "file:src/world/worldMap.ts", "note": "", "schema_version": 1, "src": "file:src/game.ts", "type": "depends_on", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/world/worldMap.ts", "note": "", "schema_version": 1, "src": "file:src/game.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/assets/codixel-icons.json", "note": "", "schema_version": 1, "src": "file:src/graphics/codixelAtlas.ts", "type": "imports", "weight": 1.0}
-{"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/assets/codixel-icons.png", "note": "", "schema_version": 1, "src": "file:src/graphics/codixelAtlas.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/assets/codixel-paperdoll.json", "note": "", "schema_version": 1, "src": "file:src/graphics/codixelAtlas.ts", "type": "imports", "weight": 1.0}
-{"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/assets/codixel-paperdoll.png", "note": "", "schema_version": 1, "src": "file:src/graphics/codixelAtlas.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T04:21:17.291473+00:00", "dst": "file:src/data/worldConfig.ts", "note": "", "schema_version": 1, "src": "file:src/graphics/colorRestoration.ts", "type": "depends_on", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/worldConfig.ts", "note": "", "schema_version": 1, "src": "file:src/graphics/colorRestoration.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T12:37:41.142143+00:00", "dst": "file:src/game.ts", "note": "", "schema_version": 1, "src": "file:src/graphics/enemyAtlas.ts", "type": "relates_to", "weight": 1.0}
