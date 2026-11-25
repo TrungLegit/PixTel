@@ -40,6 +40,17 @@
 
 ## Nhật Ký Cập Nhật (Newest First)
 
+### [2026-11-25 23:10] — Antigravity — Quay lại Video/GIF demo `PIXTEL v2.7` & làm mới ảnh bìa README
+- **Commit / Branch:** `main` (tiếp nối `bc4923c`)
+- **Giai đoạn / Version:** `PIXTEL v2.7` — Video/GIF Demo & Media Refresh
+- **Đã làm (Done):**
+  - Quay mới toàn bộ chuỗi gameplay demo (`docs/media/gameplay-demo.gif` `640×360` `4.04 MB`, `docs/media/gameplay-demo.mp4` `960×540` `17.4s` `1.56 MB` @ 12fps) từ bản chạy thực tế `PIXTEL v2.7`: mở đầu bằng màn chọn Class `PIXTEL 16-BIT` pixel-grid mới + `pixelfx`, chuyển sang chiến đấu thời gian thực + Tuyệt Kỹ `[Q] Bão Kiếm Ánh Sáng`, thắp sáng Trụ Sắc Màu & sóng khôi phục màu, Túi đồ 5 ô / khóa Class (`✕`), Ma Trận Luyện Khí, Tổ Đội Co-op `[P]` và Bản đồ thế giới `[M]`.
+  - Làm mới thêm `docs/media/class-select.png` & `docs/media/combat-color-wave.png` phản ánh đầy đủ nút Co-op `[P]` / Mobile `📱` / `⛶` và cập nhật thời lượng `17.4s` trong [README.md](README.md).
+- **File chính đã sửa / thêm:** `docs/media/gameplay-demo.gif`, `docs/media/gameplay-demo.mp4`, `docs/media/class-select.png`, `docs/media/combat-color-wave.png`, `README.md`, `DEV_LOG.md`
+- **Kiểm tra (Verified):** Kiểm tra trực quan từng phân cảnh keyframe, file size GIF/MP4 (`4.04 MB` / `1.56 MB`), `git diff --check` và Project Brain `lint`/`digest`.
+- **Lưu ý / Handoff (Breaking changes / Đang dở):** Không có thay đổi code runtime; GitHub Actions không cần chạy lại build code nhưng push sẽ cập nhật trang Pages & README.
+- **Gợi ý bước tiếp theo (Next Steps):** Kiểm tra hiển thị ảnh GIF động trực tiếp trên GitHub repository `https://github.com/TrungLegit/PixTel`.
+
 ### [2026-11-25 23:00] — Antigravity — Cập nhật `README.md` theo giao diện `PIXTEL v2.7`, 6 ảnh mới & link chơi GitHub Pages
 - **Commit / Branch:** `main` (hợp nhất sạch trên `946eddb`)
 - **Giai đoạn / Version:** `PIXTEL v2.7` — Documentation & Live Web Polish

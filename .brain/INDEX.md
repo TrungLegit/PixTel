@@ -1,5 +1,5 @@
 # Project Brain Index
-*Generated: 2026-11-25T16:01:24.406944+00:00*
+*Generated: 2026-11-25T16:10:59.945122+00:00*
 
 ## Description
 > **Thế giới mở 16-Bit Action RPG trên trình duyệt (PC · Mobile PWA · Co-op 2–4 Người)** — Khởi đầu tay không tại **Thị Trấn Khởi Nguyên**, săn trang bị **khóa chặt theo Class**, luyện **Ma Trận Luyện
@@ -21,7 +21,7 @@
 - `file:src/ui/HUD.ts` (file, 21 links): Merged v2.7 Co-op party roster & toolbar with getValidEquippedWeapon bare-handed/skill-lock display.
 - `file:src/graphics/pixelfxHeroModels.ts` (file, 17 links): Prioritized wpn_void_scythe renderer branch ahead of halberd check for Bit Rogue scythe visuals.
 - `file:src/data/equipments.ts` (file, 17 links): Locked all 8 former universal weapons strictly to prism_knight (7 swords/axes/mauls) or bit_rogue (wpn_void_scythe).
-- `file:DEV_LOG.md` (file, 14 links): Merged PIXTEL v2.7 log entries and appended strict class-locked weapons plus README v2.7 screenshot documentation logs newest-first.
+- `file:DEV_LOG.md` (file, 14 links): Logged new PIXTEL v2.7 gameplay-demo.gif/mp4 recording and README media refresh.
 
 ## Recent Decisions
 - **Phase 1 Mobile PWA + Twin-Stick & Phase 2 Dual-Transport 2-4P Co-op + GitHub Pages** (`decision:20261125154018-phase-1-mobile-pwa`): Shipped public GitHub Pages CI/CD + fullscreen landscape PWA, Phase 1 Mobile Twin-Stick controls with Smart Auto-Aim and Tap-to-Inspect tooltips, and Phase 2 2-4 Player Co-op (PeerJS WebRTC P2P + Dedicated Node.js WebSocket Room Server) with cross-player 9-element reactions, shar
@@ -31,6 +31,9 @@
 - **Hidden Items System (Craft-Only & Boss-Drop Only)** (`decision:20261125143028-hidden-items-system-craftonly`): Added 8 isHidden items (4 craft_only, 4 boss_only) strictly isolated from shops/chests/normal mobs, masked as ??? until discovered, permanently unlocked in localStorage, and integrated with combat passives, VFX, and Paper-Doll shimmer.
 
 ## Stale Files (Need Re-reading)
+- `file:.brain/INDEX.md` (.brain/INDEX.md)
+- `file:.brain/edges.jsonl` (.brain/edges.jsonl)
+- `file:.brain/nodes.jsonl` (.brain/nodes.jsonl)
 - `file:.agents/skills/codixel/LICENSE` (.agents/skills/codixel/LICENSE)
 - `file:.agents/skills/codixel/SKILL.md` (.agents/skills/codixel/SKILL.md)
 - `file:.agents/skills/codixel/core/pixel.js` (.agents/skills/codixel/core/pixel.js)
@@ -67,8 +70,6 @@
 - `file:.agents/skills/spritecook-use-presets/SKILL.md` (.agents/skills/spritecook-use-presets/SKILL.md)
 - `file:.agents/skills/spritecook-workflow-essentials/LICENSE` (.agents/skills/spritecook-workflow-essentials/LICENSE)
 - `file:.agents/skills/spritecook-workflow-essentials/SKILL.md` (.agents/skills/spritecook-workflow-essentials/SKILL.md)
-- `file:.brain/INDEX.md` (.brain/INDEX.md)
-- `file:.brain/edges.jsonl` (.brain/edges.jsonl)
-- `file:.brain/nodes.jsonl` (.brain/nodes.jsonl)
 - `file:.github/copilot-instructions.md` (.github/copilot-instructions.md)
 - `file:.github/workflows/deploy-pages.yml` (.github/workflows/deploy-pages.yml)
+- `file:.gitignore` (.gitignore)

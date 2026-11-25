@@ -64,7 +64,7 @@
 {"created": "2026-11-25T15:40:26.711784+00:00", "dst": "file:README.md", "note": "", "schema_version": 1, "src": "file:DEV_LOG.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:30:28.472899+00:00", "dst": "file:src/data/hiddenItems.ts", "note": "", "schema_version": 1, "src": "file:DEV_LOG.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:07:11.036763+00:00", "dst": "file:DEV_LOG.md", "note": "", "schema_version": 1, "src": "file:GEMINI.md", "type": "relates_to", "weight": 1.0}
-{"created": "2026-11-25T16:01:21.431301+00:00", "dst": "file:DEV_LOG.md", "note": "", "schema_version": 1, "src": "file:README.md", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-25T16:10:59.090069+00:00", "dst": "file:DEV_LOG.md", "note": "", "schema_version": 1, "src": "file:README.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T15:40:26.154711+00:00", "dst": "file:index.html", "note": "", "schema_version": 1, "src": "file:README.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T05:02:37.739271+00:00", "dst": "file:src/game.ts", "note": "", "schema_version": 1, "src": "file:README.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:38:08.471041+00:00", "dst": "decision:20261125143734-blockpixel-logo-lettering", "note": "", "schema_version": 1, "src": "file:index.html", "type": "relates_to", "weight": 1.0}

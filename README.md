@@ -30,9 +30,9 @@
 
 ## Video & Demo Gameplay
 
-![PIXTEL Gameplay Demo](docs/media/gameplay-demo.gif)
+![PIXTEL v2.7 Gameplay Demo](docs/media/gameplay-demo.gif)
 
-🎬 **[Xem / Tải Video Gameplay HD (MP4 — 18.8s, 960×540)](docs/media/gameplay-demo.mp4)** · 🌐 **[Chơi bản Live Web ngay](https://trunglegit.github.io/PixTel/)**
+🎬 **[Xem / Tải Video Gameplay HD (MP4 — 17.4s, 960×540)](docs/media/gameplay-demo.mp4)** · 🌐 **[Chơi bản Live Web ngay](https://trunglegit.github.io/PixTel/)**
 
 ---
 
