@@ -1,8 +1,9 @@
 import { ENEMIES } from "../data/enemies";
 import { ITEMS, createItemInstance, pickRandomEquipByRarity } from "../data/items";
 import { TILE_SIZE, WAYPOINTS, WORLD_CAMPS, WORLD_RESOURCES } from "../data/worldConfig";
-import type { Rarity, WaypointDef } from "../data/types";
+import type { InfusableElement, Rarity, WaypointDef } from "../data/types";
 import type {
+  ArenaTotemEntity,
   CampRuntime,
   ChestEntity,
   EnemyEntity,
@@ -18,7 +19,7 @@ export function nextEntityUid(): number {
 
 /**
  * Manages open-world Enemy Camps (patrol/aggro/leash + 30-90s respawn + locked chests),
- * Waypoint Chroma Chests, pixel-bounce Ground Loot, and respawning Ore / Crystal mining nodes.
+ * Waypoint Chroma Chests, Arena Chroma Totems, pixel-bounce Ground Loot, and respawning Ore / Crystal mining nodes.
  */
 export class WorldSpawner {
   readonly camps: CampRuntime[] = [];
@@ -26,6 +27,7 @@ export class WorldSpawner {
   readonly resources: ResourceEntity[] = [];
   readonly enemies: EnemyEntity[] = [];
   readonly groundLoot: GroundLootEntity[] = [];
+  readonly arenaTotems: ArenaTotemEntity[] = [];
 
   reset(openedChestIds: string[] = [], unlockedWaypoints: string[] = []) {
     this.camps.length = 0;
@@ -33,6 +35,7 @@ export class WorldSpawner {
     this.resources.length = 0;
     this.enemies.length = 0;
     this.groundLoot.length = 0;
+    this.arenaTotems.length = 0;
 
     const openedSet = new Set(openedChestIds);
     const unlockedSet = new Set(unlockedWaypoints);
@@ -84,6 +87,33 @@ export class WorldSpawner {
     }
   }
 
+  /** Spawns 4 Resonance Chroma Totems around The Eraser's arena during Phase 2 & 3 shield ritual. */
+  spawnEraserTotems(centerX: number, centerY: number, vfx: VfxManager | null) {
+    this.arenaTotems.length = 0;
+    const elems: InfusableElement[] = ["fire", "ice", "nature", "volt"];
+    const offsets: [number, number][] = [
+      [-68, -56],
+      [68, -56],
+      [-68, 56],
+      [68, 56],
+    ];
+    for (let i = 0; i < 4; i++) {
+      const tx = centerX + offsets[i][0];
+      const ty = centerY + offsets[i][1];
+      this.arenaTotems.push({
+        uid: nextEntityUid(),
+        element: elems[i],
+        x: tx,
+        y: ty,
+        lit: false,
+        hitFlash: 0,
+      });
+      if (vfx) {
+        vfx.spawnPooled("portal-void", { x: tx, y: ty, layer: "back" });
+      }
+    }
+  }
+
   private _waypointChestRarity(wp: WaypointDef): Rarity {
     if (wp.biome === "ruins") return "legendary";
     if (wp.biome === "amber") return "epic";
@@ -132,6 +162,10 @@ export class WorldSpawner {
         const ey = cy + Math.sin(ang) * dist;
         slot++;
 
+        // Non-boss bruisers get their bleachShield right away; Bosses activate bleachShield on Phase transitions (and start with 45% initial armor)
+        const maxShield = edef.bleachShield ?? 0;
+        const initShield = edef.isBoss ? Math.round(maxShield * 0.4) : maxShield;
+
         this.enemies.push({
           uid: nextEntityUid(),
           defId: edef.id,
@@ -164,11 +198,18 @@ export class WorldSpawner {
           walkTime: Math.random() * 5,
           element: null,
           elementTime: 0,
+          reactionIcd: 0,
           burnTime: 0,
           burnTick: 0,
           slowTime: 0,
           poisonTime: 0,
           poisonTick: 0,
+          rootTime: 0,
+          stunTime: 0,
+          vulnTime: 0,
+          bleachShield: initShield,
+          maxBleachShield: maxShield,
+          totemChannelTimer: 0,
         });
 
         if (vfx) {

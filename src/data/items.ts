@@ -94,8 +94,36 @@ export const ITEMS: Record<string, ItemDef> = {
     buyPrice: 55,
     consumableKind: "chroma_tonic",
   },
+  pot_coating: {
+    id: "pot_coating",
+    name: "Dầu Phủ Quang Phổ",
+    category: "consumable",
+    rarity: "rare",
+    iconColor: "#ff66d8",
+    iconKind: "potion",
+    visualColor: "#e639b8",
+    accentColor: "#78f9ff",
+    desc: "Phủ nguyên tố xoay vòng lên mọi đòn đánh & +20% Sát thương Nguyên Tố trong 25s. Phím tắt [4].",
+    sellPrice: 28,
+    buyPrice: 60,
+    consumableKind: "chroma_coating",
+  },
+  charm_undying: {
+    id: "charm_undying",
+    name: "Bùa Hộ Mệnh Bất Diệt",
+    category: "consumable",
+    rarity: "epic",
+    iconColor: "#ffe066",
+    iconKind: "totem",
+    visualColor: "#f0b429",
+    accentColor: "#44ee88",
+    desc: "Để trong Túi sẽ tự vỡ khi chịu đòn chí tử: chặn cái chết, hồi ngay 40% HP, 100% Thể lực & bất tử 1.5s!",
+    sellPrice: 65,
+    buyPrice: 160,
+    consumableKind: "undying_charm",
+  },
 
-  // === MATERIALS ===
+  // === MATERIALS, PIGMENTS & BOSS CORES ===
   mat_prism_shard: {
     id: "mat_prism_shard",
     name: "Mảnh Lăng Kính",
@@ -105,7 +133,7 @@ export const ITEMS: Record<string, ItemDef> = {
     iconKind: "shard",
     visualColor: "#2cc8e8",
     accentColor: "#ffffff",
-    desc: "Thu được khi phân rã trang bị trong Túi đồ. Dùng cường hóa & chế tạo.",
+    desc: "Thu được khi phân rã trang bị. Dùng chế tạo & làm Xúc Tác (+15% tỉ lệ) tại Lò Rèn.",
     sellPrice: 15,
     buyPrice: 38,
   },
@@ -173,6 +201,114 @@ export const ITEMS: Record<string, ItemDef> = {
     sellPrice: 55,
   },
 
+  // --- 4 Chroma Pigments (for +5 Elemental Infusion at Prism Forge) ---
+  mat_pigment_red: {
+    id: "mat_pigment_red",
+    name: "Bột Chu Sa Lửa",
+    category: "material",
+    rarity: "rare",
+    iconColor: "#ff4433",
+    iconKind: "pigment",
+    visualColor: "#e63222",
+    accentColor: "#ffaa66",
+    pigmentElement: "fire",
+    desc: "Sắc tố Đỏ tinh luyện. Dùng tại Lò Rèn để nhuộm hệ LỬA cho trang bị từ +5 trở lên.",
+    sellPrice: 22,
+    buyPrice: 65,
+  },
+  mat_pigment_cyan: {
+    id: "mat_pigment_cyan",
+    name: "Bột Lam Băng Tinh",
+    category: "material",
+    rarity: "rare",
+    iconColor: "#38e8ff",
+    iconKind: "pigment",
+    visualColor: "#1cb8e0",
+    accentColor: "#c8fbff",
+    pigmentElement: "ice",
+    desc: "Sắc tố Lam tinh luyện. Dùng tại Lò Rèn để nhuộm hệ BĂNG cho trang bị từ +5 trở lên.",
+    sellPrice: 22,
+    buyPrice: 65,
+  },
+  mat_pigment_green: {
+    id: "mat_pigment_green",
+    name: "Bột Lục Bào Tử",
+    category: "material",
+    rarity: "rare",
+    iconColor: "#44ee88",
+    iconKind: "pigment",
+    visualColor: "#24b862",
+    accentColor: "#b8ffd8",
+    pigmentElement: "nature",
+    desc: "Sắc tố Lục tinh luyện. Dùng tại Lò Rèn để nhuộm hệ MỘC/ĐỘC cho trang bị từ +5 trở lên.",
+    sellPrice: 22,
+    buyPrice: 65,
+  },
+  mat_pigment_gold: {
+    id: "mat_pigment_gold",
+    name: "Bột Hoàng Quang Điện",
+    category: "material",
+    rarity: "rare",
+    iconColor: "#ffee44",
+    iconKind: "pigment",
+    visualColor: "#e6b81c",
+    accentColor: "#ffffff",
+    pigmentElement: "volt",
+    desc: "Sắc tố Vàng tinh luyện. Dùng tại Lò Rèn để nhuộm hệ ĐIỆN/QUANG cho trang bị từ +5 trở lên.",
+    sellPrice: 22,
+    buyPrice: 65,
+  },
+
+  // --- 4 Boss Cores ---
+  mat_warden_crest: {
+    id: "mat_warden_crest",
+    name: "Ấn Chiến Thần Vệ Thạch",
+    category: "material",
+    rarity: "rare",
+    iconColor: "#66ccff",
+    iconKind: "core",
+    visualColor: "#3b78ad",
+    accentColor: "#ffe066",
+    desc: "Chiến ấn rơi từ Boss Hình Thiên Vệ Thạch (Đồng Cỏ Xám). Dùng rèn Đại Phủ & Dây Chuyền.",
+    sellPrice: 45,
+  },
+  mat_crystal_heart: {
+    id: "mat_crystal_heart",
+    name: "Trái Tim Pha Lê Lạnh",
+    category: "material",
+    rarity: "epic",
+    iconColor: "#4be8ff",
+    iconKind: "shard",
+    visualColor: "#1a9cd6",
+    accentColor: "#ffffff",
+    desc: "Kết tinh tinh khiết từ Boss Cổ Thụ Blight Root. Dùng chế tạo Cổ Thư & trang bị Tím.",
+    sellPrice: 70,
+  },
+  mat_amber_fang: {
+    id: "mat_amber_fang",
+    name: "Nanh Cùng Kỳ Hổ Phách",
+    category: "material",
+    rarity: "epic",
+    iconColor: "#ff9922",
+    iconKind: "shard",
+    visualColor: "#d95b16",
+    accentColor: "#ffee66",
+    desc: "Chiếc nanh nóng rực của Boss Gilded Null. Dùng đúc Đĩa Quang Phổ & trang bị Huyền Thoại.",
+    sellPrice: 90,
+  },
+  mat_origin_star: {
+    id: "mat_origin_star",
+    name: "Ngôi Sao Khởi Nguyên",
+    category: "material",
+    rarity: "legendary",
+    iconColor: "#ff9922",
+    iconKind: "shard",
+    visualColor: "#ffe066",
+    accentColor: "#78f9ff",
+    desc: "Mảnh lõi Thất Sắc giải phóng sau khi thanh tẩy World Boss The Eraser!",
+    sellPrice: 220,
+  },
+
   // === ALL 5-SLOT RPG EQUIPMENT (from equipments.ts) ===
   ...EQUIPMENT_ITEMS,
 };
@@ -181,6 +317,12 @@ export const MERCHANT_STOCK = [
   "pot_hp",
   "pot_stamina",
   "pot_tonic",
+  "pot_coating",
+  "charm_undying",
+  "mat_pigment_red",
+  "mat_pigment_cyan",
+  "mat_pigment_green",
+  "mat_pigment_gold",
   "mat_iron_ore",
   "mat_glitch_core",
   "mat_quartz_shard",
@@ -193,6 +335,7 @@ export function createItemInstance(defId: string, qty = 1, enhanceLevel = 0): It
     defId,
     qty,
     enhanceLevel,
+    pityBonus: 0,
   };
 }
 
@@ -203,9 +346,16 @@ export interface NormalizedEquipStats {
   spd: number;
   crit: number;
   elementBonus: number;
+  maxStamina: number;
+  staminaCostPct: number;
+  poiseBreakPct: number;
+  skillCdPct: number;
 }
 
-/** Computes effective stats of an equipment instance including rarity-weighted +0..+10 enhancement scaling. */
+/**
+ * Computes effective stats of an equipment instance including rarity-weighted +0..+10 scaling
+ * AND breakthrough milestones (+3 Tempered, +5 Chroma Socket, +7 Enchanted Aura, +10 Prismatic Awakening).
+ */
 export function getItemEffectiveStats(inst: ItemInstance): NormalizedEquipStats {
   const def = ITEMS[inst.defId];
   const b: StatBonus = def?.baseStats ?? {};
@@ -217,18 +367,90 @@ export function getItemEffectiveStats(inst: ItemInstance): NormalizedEquipStats 
   const baseSpd = b.moveSpeed ?? b.spd ?? 0;
   const baseElem = b.elementBonus ?? 0;
 
+  let maxStamina = b.maxStamina ?? 0;
+  let staminaCostPct = b.staminaCostPct ?? 0;
+  let poiseBreakPct = b.poiseBreakPct ?? 0;
+  let skillCdPct = b.skillCdPct ?? 0;
+
+  // +3 Breakthrough: Tempered Edge / Stride
+  if (lv >= 3) {
+    if (def?.slot === "weapon") poiseBreakPct += 10;
+    if (def?.slot === "boots") maxStamina += 6;
+  }
+  // +5 Breakthrough: Chroma Socket Resonance
+  const infusedBonusElem = lv >= 5 && inst.infusedElement ? 8 : 0;
+  // +7 Breakthrough: Enchanted Aura
+  if (lv >= 7) {
+    if (def?.slot === "weapon") staminaCostPct -= 15;
+    if (def?.slot === "boots") maxStamina += 15;
+    if (def?.slot === "accessory") skillCdPct -= 10;
+  }
+  // +10 Breakthrough: Prismatic Awakening
+  if (lv >= 10) {
+    if (def?.slot === "weapon") poiseBreakPct += 20;
+    maxStamina += 5;
+  }
+
   return {
-    atk: Math.round((b.atk ?? 0) * mult) + (def?.slot === "weapon" ? lv * 2 : 0),
+    atk:
+      Math.round((b.atk ?? 0) * mult) +
+      (def?.slot === "weapon" ? lv * 2 + (lv >= 10 ? 8 : 0) : 0),
     def:
       Math.round((b.def ?? 0) * mult) +
-      (def?.slot === "armor" || def?.slot === "helmet" ? lv * 1 : 0),
+      (def?.slot === "armor" || def?.slot === "helmet" ? lv * 1 + (lv >= 3 ? 2 : 0) : 0),
     maxHp:
       Math.round((b.maxHp ?? 0) * mult) +
-      (def?.slot === "armor" ? lv * 8 : def?.slot === "helmet" ? lv * 5 : 0),
-    spd: Math.round(baseSpd * (1 + lv * 0.06)) + (def?.slot === "boots" && lv >= 5 ? 2 : 0),
-    crit: Math.round(baseCrit + (lv >= 5 ? 3 : 0) + (lv >= 8 ? 4 : 0)),
-    elementBonus: Math.round(baseElem * (1 + lv * 0.08)) + (lv >= 5 && baseElem > 0 ? 2 : 0),
+      (def?.slot === "armor" ? lv * 8 : def?.slot === "helmet" ? lv * 5 : 0) +
+      (lv >= 3 && (def?.slot === "armor" || def?.slot === "helmet") ? 15 : 0),
+    spd: Math.round(baseSpd * (1 + lv * 0.06)) + (def?.slot === "boots" && lv >= 5 ? 3 : 0),
+    crit: Math.round(baseCrit + (lv >= 5 ? 3 : 0) + (lv >= 8 ? 4 : 0) + (lv >= 10 ? 3 : 0)),
+    elementBonus:
+      Math.round(baseElem * (1 + lv * 0.08)) +
+      (lv >= 5 && baseElem > 0 ? 3 : 0) +
+      infusedBonusElem +
+      (lv >= 10 ? 10 : 0),
+    maxStamina,
+    staminaCostPct,
+    poiseBreakPct,
+    skillCdPct,
   };
+}
+
+/** Returns human-readable breakthrough milestone description for an item at +3/+5/+7/+10. */
+export function getItemMilestoneSummary(inst: ItemInstance): string[] {
+  const def = ITEMS[inst.defId];
+  if (!def || def.category !== "equipment") return [];
+  const lv = inst.enhanceLevel;
+  const notes: string[] = [];
+  notes.push(
+    `${lv >= 3 ? "★" : "○"} [+3 Tôi Luyện]: ${
+      def.slot === "weapon"
+        ? "+10% Phá Giáp Trắng Boss"
+        : def.slot === "boots"
+          ? "+6 Thể Lực Tối Đa"
+          : "+15 HP & +2 DEF"
+    }`
+  );
+  notes.push(
+    `${lv >= 5 ? "★" : "○"} [+5 Khe Sắc Tố]: Mở khóa Nhuộm Nguyên Tố (+8% ELEM & gắn Ấn)`
+  );
+  notes.push(
+    `${lv >= 7 ? "★" : "○"} [+7 Hào Quang]: ${
+      def.slot === "weapon"
+        ? "-15% Thể lực Tụ Lực & Hào quang"
+        : def.slot === "boots"
+          ? "+15 Thể Lực Tối Đa"
+          : def.slot === "accessory"
+            ? "-10% Hồi chiêu Kỹ năng [E]"
+            : "Tăng cường kháng chấn"
+    }`
+  );
+  notes.push(
+    `${lv >= 10 ? "★" : "○"} [+10 Thức Tỉnh]: Cộng hưởng Lăng Kính (+10% ELEM, +3% Crit${
+      def.slot === "weapon" ? ", đòn N3/Tụ Lực kích Khúc Xạ Cầu Vồng" : ""
+    })`
+  );
+  return notes;
 }
 
 /** Returns how many Prism Shards an equipment item yields when dismantled. */
@@ -238,7 +460,7 @@ export function getDismantleShardYield(inst: ItemInstance): number {
   const base =
     def.dismantleShards ??
     ({ common: 1, uncommon: 2, rare: 4, epic: 8, legendary: 15 }[def.rarity] || 1);
-  return base + Math.floor(inst.enhanceLevel * 0.75);
+  return base + Math.floor(inst.enhanceLevel * 0.85);
 }
 
 export function pickRandomEquipByRarity(rarity: Rarity): string {

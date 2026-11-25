@@ -39,12 +39,16 @@
         <div id="hud-status-line" class="hud-status-line"></div>
       </div>
 
-      <!-- Top-Center Boss HP Bar -->
+      <!-- Top-Center Boss HP & Bleach Shield Bar -->
       <div id="hud-boss-bar" class="hud-panel hud-boss-bar hidden">
         <div id="hud-boss-name" class="boss-name">THE ERASER</div>
         <div class="px-bar boss-hp">
           <div id="hud-boss-fill" class="px-bar-fill"></div>
-          <span id="hud-boss-hp" class="px-bar-lbl">2600 / 2600</span>
+          <span id="hud-boss-hp" class="px-bar-lbl">2800 / 2800</span>
+        </div>
+        <div id="hud-boss-shield-wrap" class="px-bar boss-shield hidden">
+          <div id="hud-boss-shield-fill" class="px-bar-fill"></div>
+          <span id="hud-boss-shield-lbl" class="px-bar-lbl">GIÁP TRẮNG</span>
         </div>
       </div>
 
@@ -53,7 +57,7 @@
         <div class="hud-toolbar">
           <button id="hud-btn-map" class="hud-mini-btn" title="Bản đồ thế giới [M]">M·MAP</button>
           <button id="hud-btn-bag" class="hud-mini-btn" title="Túi đồ [I / B]">I·TÚI</button>
-          <button id="hud-btn-quest" class="hud-mini-btn" title="Nhiệm vụ [J]">J·NV</button>
+          <button id="hud-btn-quest" class="hud-mini-btn" title="Nhiệm vụ & Biên Niên Sử [J]">J·SỔ</button>
           <button id="hud-btn-save" class="hud-mini-btn" title="Lưu nhanh">LƯU</button>
           <button id="hud-btn-mute" class="hud-mini-btn" title="Bật/Tắt âm thanh">SFX</button>
           <button id="hud-btn-pause" class="hud-mini-btn" title="Tạm dừng [ESC]">ESC</button>
@@ -63,7 +67,7 @@
           <span class="minimap-tag">BẢN ĐỒ [M]</span>
         </div>
         <div class="hud-panel quest-tracker">
-          <div class="qt-hdr">NHIỆM VỤ [J]</div>
+          <div class="qt-hdr">NHIỆM VỤ & HỒI KÝ [J]</div>
           <div id="hud-quest-list"></div>
         </div>
       </div>
@@ -76,10 +80,10 @@
 
       <!-- Bottom Skill & Consumable Hotbar -->
       <div class="hud-bottom-bar">
-        <div class="skill-slot" title="Đánh thường / Giữ Chuột trái để Tụ Lực">
+        <div class="skill-slot" title="Đánh thường 3 nhịp / Giữ Chuột trái để Tụ Lực (Just-Charge)">
           <span class="key-cap">LMB</span>
           <span class="slot-title">Đánh / Tụ</span>
-          <span class="slot-sub">COMBO</span>
+          <span id="skill-lmb-sub" class="slot-sub">COMBO</span>
         </div>
         <div id="slot-skill-e" class="skill-slot">
           <span class="key-cap">E</span>
@@ -91,7 +95,7 @@
           <span id="skill-q-name" class="slot-title">Tuyệt Kỹ</span>
           <span id="skill-q-cd" class="slot-sub">35%</span>
         </div>
-        <div id="slot-dash" class="skill-slot">
+        <div id="slot-dash" class="skill-slot" title="Lướt đúng khoảnh khắc đòn đánh chạm tới = CHROMA DODGE!">
           <span class="key-cap">SPC</span>
           <span class="slot-title">Dash</span>
           <span id="skill-dash-cd" class="slot-sub">READY</span>
@@ -112,6 +116,11 @@
           <span class="slot-title" style="color:#ffee44">Quang Phổ</span>
           <span id="c3-qty" class="slot-sub">x1</span>
         </button>
+        <button id="slot-c4" class="skill-slot cons-slot" title="Dầu Phủ Quang Phổ (Phủ nguyên tố mọi đòn đánh +20% ELEM)">
+          <span class="key-cap">4</span>
+          <span class="slot-title" style="color:#ff66d8">Dầu Phủ</span>
+          <span id="c4-qty" class="slot-sub">x1</span>
+        </button>
       </div>
     </div>
 
@@ -121,12 +130,12 @@
         <div class="title-header">
           <h1 class="pixel-logo">PIXTEL</h1>
           <div id="class-select-subtitle" class="title-sub">
-            THẾ GIỚI MỞ 16-BIT ACTION RPG — Đánh thức Trụ Sắc Màu & tiêu diệt The Eraser
+            BIÊN NIÊN SỬ AETHEL-16 — Giải mã Bia Ký, đánh thức Trụ Sắc Màu & thanh tẩy The Eraser
           </div>
         </div>
         <div id="class-grid" class="class-grid"></div>
         <div class="title-controls-hint">
-          <b>WASD</b> Di chuyển · <b>Shift</b> Chạy · <b>Space</b> Dash · <b>LMB / Giữ</b> Combo & Tụ lực · <b>E / Q</b> Kỹ năng · <b>F</b> Tương tác · <b>1-3</b> Bình thuốc · <b>I / B / J / M</b> Túi / Nhiệm vụ / Bản đồ
+          <b>WASD</b> Di chuyển · <b>Shift</b> Chạy · <b>Space</b> Chroma Dodge · <b>LMB / Giữ</b> Combo 3 nhịp & Just-Charge · <b>E / Q</b> Kỹ năng · <b>F</b> Tương tác · <b>1-4</b> Dược phẩm · <b>I / J / M</b> Túi / Sổ / Bản đồ
         </div>
         <div class="title-actions">
           <button id="btn-continue-save" class="px-btn good big hidden">▶ TIẾP TỤC PHIÊU LƯU (SAVE)</button>
@@ -192,8 +201,8 @@
         </div>
         <div class="forge-top-bar">
           <div class="forge-tabs">
-            <button id="forge-tab-enhance" class="px-btn active">CƯỜNG HÓA (+0 → +10)</button>
-            <button id="forge-tab-craft" class="px-btn">CHẾ TẠO (LAM / TÍM / CAM)</button>
+            <button id="forge-tab-enhance" class="px-btn active">CƯỜNG HÓA PITY & KHẢM SẮC (+0 → +10)</button>
+            <button id="forge-tab-craft" class="px-btn">CHẾ TẠO (LAM / TÍM / CAM / CỔ VẬT)</button>
           </div>
           <div class="forge-canvas-wrap">
             <canvas id="forge-vfx-canvas" width="220" height="72"></canvas>
@@ -230,11 +239,11 @@
       </div>
     </div>
 
-    <!-- MODAL: QUEST JOURNAL [J] -->
+    <!-- MODAL: QUEST JOURNAL & LORE CODEX [J] -->
     <div id="modal-journal" class="modal-backdrop hidden">
       <div class="modal-box modal-lg">
         <div class="modal-header">
-          <div>SỔ NHIỆM VỤ [J]</div>
+          <div>SỔ NHIỆM VỤ & BIÊN NIÊN SỬ AETHEL-16 [J]</div>
           <button id="btn-close-journal" class="px-btn sm">✕ ĐÓNG</button>
         </div>
         <div id="journal-body" class="modal-scroll"></div>

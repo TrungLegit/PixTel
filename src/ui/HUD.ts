@@ -1,23 +1,33 @@
 import { getClassDef } from "../data/classes";
 import { ENEMIES } from "../data/enemies";
-import { BIOME_CONFIGS, TILE_SIZE, TOWN_NPCS, WAYPOINTS, WORLD_CAMPS, WORLD_COLS, WORLD_ROWS } from "../data/worldConfig";
+import { LORE_TABLETS } from "../data/lore";
+import {
+  BIOME_CONFIGS,
+  TILE_SIZE,
+  TOWN_NPCS,
+  WAYPOINTS,
+  WORLD_CAMPS,
+  WORLD_COLS,
+  WORLD_ROWS,
+} from "../data/worldConfig";
+import { ELEMENT_DISPLAY } from "../systems/forgeSystem";
 import { HOTKEY_CONSUMABLES } from "../systems/inventorySystem";
 import type { PixTelOpenWorldGame } from "../game";
 import { sfx } from "../audio/chiptuneSynth";
 
 const ELEMENT_LABELS = [
   { name: "LỬA", color: "#ff5533" },
-  { name: "BĂNG", color: "#44eeff" },
-  { name: "ĐỘC", color: "#55ff66" },
+  { name: "BĂNG", color: "#38e8ff" },
+  { name: "MỘC", color: "#44ee88" },
+  { name: "ĐIỆN", color: "#ffee44" },
 ];
 
 /**
- * In-game HUD:
- * - Top-left Hero stats, HP/XP bars, Gold, Biome + Color Restoration progress
- * - Top-center Boss HP bar (when fighting a Boss)
- * - Top-right Live Pixel Minimap + Quest Tracker + Quick menu buttons
- * - Bottom Skill Hotbar (LMB, E, Q, Space, 1-3 Consumables) + [F] Interact Prompt
- * - Crisp Toast notification feed
+ * In-game HUD v2.5:
+ * - Top-left Hero stats, HP/XP bars, Gold, Biome + Color Restoration & Lore Codex progress
+ * - Top-center Boss HP + Phase + Bleach Shield / Totem Ritual / Vulnerable indicator
+ * - Top-right Live Pixel Minimap (with Waypoints, Bosses, Chests & Lore Tablets) + Quest Tracker
+ * - Bottom Skill Hotbar (Combo step, E, Q, Chroma Dodge, 1-4 Consumables) + [F] Interact Prompt
  */
 export class HudUI {
   private game: PixTelOpenWorldGame;
@@ -34,7 +44,6 @@ export class HudUI {
     this.miniCtx.imageSmoothingEnabled = false;
     this.toastContainer = document.getElementById("toast-stack")!;
 
-    // Quick toolbar buttons
     document.getElementById("hud-btn-map")!.addEventListener("click", () => this.game.toggleModal("world_map"));
     document.getElementById("hud-btn-bag")!.addEventListener("click", () => this.game.toggleModal("inventory"));
     document.getElementById("hud-btn-quest")!.addEventListener("click", () => this.game.toggleModal("journal"));
@@ -45,15 +54,13 @@ export class HudUI {
     });
     document.getElementById("hud-btn-pause")!.addEventListener("click", () => this.game.toggleModal("pause"));
 
-    // Clickable minimap opens World Map [M]
     this.miniCanvas.addEventListener("click", () => this.game.toggleModal("world_map"));
 
-    // Clickable consumable buttons
     document.getElementById("slot-c1")!.addEventListener("click", () => this.game.useConsumableSlot(1));
     document.getElementById("slot-c2")!.addEventListener("click", () => this.game.useConsumableSlot(2));
     document.getElementById("slot-c3")!.addEventListener("click", () => this.game.useConsumableSlot(3));
+    document.getElementById("slot-c4")?.addEventListener("click", () => this.game.useConsumableSlot(4));
 
-    // Clickable [F] prompt
     document.getElementById("interact-prompt")!.addEventListener("click", () => this.game.interactNearest());
   }
 
@@ -81,7 +88,6 @@ export class HudUI {
     const cdef = getClassDef(p.classId);
     const biomeCfg = BIOME_CONFIGS[this.game.currentBiome];
 
-    // Hero Identity & Bars
     const badge = document.getElementById("hud-class-badge")!;
     badge.textContent = `${cdef.vnName} · LV.${p.level}`;
     badge.style.color = cdef.accent;
@@ -96,32 +102,76 @@ export class HudUI {
 
     document.getElementById("hud-gold")!.textContent = `${this.game.inv.gold} G`;
     document.getElementById("hud-biome")!.textContent = `${biomeCfg.name} (${biomeCfg.levelRange})`;
-    document.getElementById("hud-restore")!.textContent = `Màu: ${this.game.colorSys.getProgressPct()}% · Trụ ${this.game.colorSys.unlockedWaypoints.size}/${WAYPOINTS.length}`;
+    document.getElementById("hud-restore")!.textContent = `Màu: ${this.game.colorSys.getProgressPct()}% · Trụ ${this.game.colorSys.unlockedWaypoints.size}/${WAYPOINTS.length} · Bia ${this.game.discoveredLore.size}/${LORE_TABLETS.length}`;
 
-    // Active buffs / Class indicator
+    // Active buffs / Class / Weapon Infusion / Counter status
     const extraBits: string[] = [];
     if (p.classId === "chroma_mage") {
-      const el = ELEMENT_LABELS[p.elementIdx % 3];
-      extraBits.push(`<span style="color:${el.color}">Hệ kế: ${el.name}</span>`);
+      const el = ELEMENT_LABELS[p.elementIdx % ELEMENT_LABELS.length];
+      extraBits.push(`<span style="color:${el.color}">Hệ: ${el.name}</span>`);
     } else if (p.classId === "pixel_tinker") {
       extraBits.push(`<span style="color:#44ee88">Trụ: ${this.game.turrets.length}/2</span>`);
     }
-    const wpnLv = this.game.inv.getWeaponEnhanceLevel();
-    if (wpnLv > 0) extraBits.push(`<span style="color:#ffe066">Vũ khí +${wpnLv}</span>`);
-    if (p.atkBuffTime > 0) extraBits.push(`<span style="color:#ffee44">ATK+30% (${Math.ceil(p.atkBuffTime)}s)</span>`);
-    if (p.speedBuffTime > 0) extraBits.push(`<span style="color:#44ee88">SPD+28% (${Math.ceil(p.speedBuffTime)}s)</span>`);
+
+    const wpn = this.game.inv.equipment.weapon;
+    if (wpn && wpn.enhanceLevel > 0) {
+      const inf = wpn.enhanceLevel >= 5 && wpn.infusedElement ? ` [${ELEMENT_DISPLAY[wpn.infusedElement].label}]` : "";
+      extraBits.push(`<span style="color:#ffe066">VK +${wpn.enhanceLevel}${inf}</span>`);
+    }
+    if (p.chromaCounterTimer > 0) {
+      extraBits.push(`<span style="color:#ffe066">★ PHẢN KÍCH!</span>`);
+    }
+    if (p.coatingTime > 0) {
+      extraBits.push(`<span style="color:#ff66d8">DẦU PHỦ (${Math.ceil(p.coatingTime)}s)</span>`);
+    }
+    if (p.atkBuffTime > 0) {
+      extraBits.push(`<span style="color:#ffee44">ATK+30% (${Math.ceil(p.atkBuffTime)}s)</span>`);
+    }
+    if (p.speedBuffTime > 0) {
+      extraBits.push(`<span style="color:#44ee88">SPD+28% (${Math.ceil(p.speedBuffTime)}s)</span>`);
+    }
+    if (p.bleachDebuffTime > 0) {
+      extraBits.push(`<span style="color:#b8c2d6">PHAI SẮC (${Math.ceil(p.bleachDebuffTime)}s)</span>`);
+    }
     document.getElementById("hud-status-line")!.innerHTML = extraBits.join(" · ");
 
-    // Boss HP Bar
+    // Boss HP Bar + Phase + Bleach Shield / Stagger Vulnerability
     const boss = this.game.getActiveBoss();
     const bossBox = document.getElementById("hud-boss-bar")!;
+    const shieldWrap = document.getElementById("hud-boss-shield-wrap");
     if (boss) {
       bossBox.classList.remove("hidden");
       const bdef = ENEMIES[boss.defId];
-      document.getElementById("hud-boss-name")!.textContent = `${bdef?.name ?? "BOSS"} (LV.${boss.level})`;
+      const phaseTag = `[PHASE ${boss.phase}]`;
+      document.getElementById("hud-boss-name")!.textContent = `${bdef?.name ?? "BOSS"} · ${phaseTag}`;
       const bpct = Math.max(0, Math.min(100, (boss.hp / boss.maxHp) * 100));
       document.getElementById("hud-boss-fill")!.style.width = `${bpct}%`;
       document.getElementById("hud-boss-hp")!.textContent = `${Math.max(0, Math.ceil(boss.hp))} / ${boss.maxHp}`;
+
+      if (shieldWrap) {
+        const shieldFill = document.getElementById("hud-boss-shield-fill")!;
+        const shieldLbl = document.getElementById("hud-boss-shield-lbl")!;
+        if (boss.totemChannelTimer > 0 && this.game.spawner.arenaTotems.length > 0) {
+          const lit = this.game.spawner.arenaTotems.filter((t) => t.lit).length;
+          shieldWrap.classList.remove("hidden");
+          shieldFill.style.width = `${Math.min(100, (boss.totemChannelTimer / 12) * 100)}%`;
+          shieldFill.style.background = "#c266ff";
+          shieldLbl.textContent = `⚡ THẮP TRỤ SẮC MÀU: ${lit}/2 (${boss.totemChannelTimer.toFixed(1)}s)`;
+        } else if (boss.bleachShield > 0 && boss.maxBleachShield > 0) {
+          shieldWrap.classList.remove("hidden");
+          const spct = Math.max(0, Math.min(100, (boss.bleachShield / boss.maxBleachShield) * 100));
+          shieldFill.style.width = `${spct}%`;
+          shieldFill.style.background = "#9fb6d6";
+          shieldLbl.textContent = `GIÁP NHIỄU TRẮNG ${Math.ceil(boss.bleachShield)}/${boss.maxBleachShield}`;
+        } else if (boss.vulnTime > 0) {
+          shieldWrap.classList.remove("hidden");
+          shieldFill.style.width = "100%";
+          shieldFill.style.background = "#ffe066";
+          shieldLbl.textContent = `★ VỠ GIÁP — ĐIỂM YẾU (+38% DMG · ${boss.vulnTime.toFixed(1)}s)`;
+        } else {
+          shieldWrap.classList.add("hidden");
+        }
+      }
     } else {
       bossBox.classList.add("hidden");
     }
@@ -130,7 +180,7 @@ export class HudUI {
     const tracker = document.getElementById("hud-quest-list")!;
     const tracked = this.game.quests.getTrackedQuests();
     if (tracked.length === 0) {
-      tracker.innerHTML = `<div class="qt-empty">Gặp Trưởng Làng Elian ở Thị Trấn [F] để nhận nhiệm vụ mới!</div>`;
+      tracker.innerHTML = `<div class="qt-empty">Gặp Trưởng Làng Elian [F] để nhận nhiệm vụ hoặc bấm [J] đọc Biên Niên Sử!</div>`;
     } else {
       tracker.innerHTML = tracked
         .slice(0, 3)
@@ -152,6 +202,17 @@ export class HudUI {
         .join("");
     }
 
+    // Combo & Quick-Charge indicator on LMB slot
+    const lmbSub = document.getElementById("skill-lmb-sub");
+    if (lmbSub) {
+      lmbSub.textContent =
+        p.quickChargeTimer > 0
+          ? "TỤ NHANH!"
+          : p.comboTimer > 0
+            ? `NHỊP ${p.comboStep === 0 ? 3 : p.comboStep}/3`
+            : "COMBO";
+    }
+
     // Skill Hotbar & Cooldowns
     document.getElementById("skill-e-name")!.textContent = cdef.skills.skill.name.replace(/\s*\(E\)/, "");
     document.getElementById("skill-e-cd")!.textContent = p.skillCd > 0 ? `${p.skillCd.toFixed(1)}s` : "READY";
@@ -165,11 +226,14 @@ export class HudUI {
     document.getElementById("skill-dash-cd")!.textContent = p.dashCd > 0 ? `${p.dashCd.toFixed(1)}s` : "READY";
     document.getElementById("slot-dash")!.classList.toggle("on-cd", p.dashCd > 0);
 
-    // Quick Consumables [1] [2] [3]
-    for (let i = 0; i < 3; i++) {
+    // Quick Consumables [1]..[4]
+    for (let i = 0; i < HOTKEY_CONSUMABLES.length; i++) {
+      const qtyEl = document.getElementById(`c${i + 1}-qty`);
+      const slotEl = document.getElementById(`slot-c${i + 1}`);
+      if (!qtyEl || !slotEl) continue;
       const cnt = this.game.inv.countItem(HOTKEY_CONSUMABLES[i]);
-      document.getElementById(`c${i + 1}-qty`)!.textContent = `x${cnt}`;
-      document.getElementById(`slot-c${i + 1}`)!.classList.toggle("empty", cnt <= 0);
+      qtyEl.textContent = `x${cnt}`;
+      slotEl.classList.toggle("empty", cnt <= 0);
     }
 
     // [F] Interact Prompt
@@ -181,7 +245,6 @@ export class HudUI {
       promptEl.classList.add("hidden");
     }
 
-    // Render Live Zoomed Pixel Minimap
     this._drawMinimap();
   }
 
@@ -193,7 +256,6 @@ export class HudUI {
     ctx.fillStyle = "#0e0c18";
     ctx.fillRect(0, 0, w, h);
 
-    // Crop 54x54 tiles centered on player -> draw 2x crisp pixels into 108x108 minimap
     const span = 54;
     const ptx = this.game.player.x / TILE_SIZE;
     const pty = this.game.player.y / TILE_SIZE;
@@ -213,17 +275,19 @@ export class HudUI {
       ctx.fillRect(x, y, size, size);
     };
 
-    // Waypoints
     for (const wp of WAYPOINTS) {
       const on = this.game.colorSys.unlockedWaypoints.has(wp.id);
       plot(wp.tx, wp.ty, on ? "#38f2ff" : "#b4bcc9", 4);
     }
-    // Town NPCs
+    for (const lore of LORE_TABLETS) {
+      if (!this.game.discoveredLore.has(lore.id)) {
+        plot(lore.tx, lore.ty, "#c266ff", 3);
+      }
+    }
     for (const npc of TOWN_NPCS) {
       const m = this.game.quests.getNpcMarker(npc.id);
       plot(npc.tx, npc.ty, m === "?" ? "#44ee88" : m === "!" ? "#ffe066" : "#ffaa44", 3);
     }
-    // Unopened Chests & Boss Camps
     for (const camp of WORLD_CAMPS) {
       const isBoss = camp.id.includes("boss");
       if (isBoss) plot(camp.tx, camp.ty, "#ff3355", 5);
@@ -234,7 +298,6 @@ export class HudUI {
       }
     }
 
-    // Blinking Player Dot
     const blink = (Math.floor(this.game.time * 4) & 1) === 0;
     plot(ptx, pty, blink ? "#ffffff" : "#5ef2ff", 4);
   }

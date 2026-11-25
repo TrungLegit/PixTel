@@ -170,4 +170,61 @@ export const FORGE_RECIPES: RecipeDef[] = [
     ],
     desc: "Lắp ráp Pix-Chip Alpha-Chroma phẩm Huyền Thoại (Cam).",
   },
+
+  // === BẢN VẼ CỔ VẬT & LÕI THỦ LĨNH (ARCHETYPE & TACTICAL) ===
+  {
+    id: "rec_warden_cleaver",
+    resultDefId: "wpn_warden_cleaver",
+    goldCost: 115,
+    materials: [
+      { defId: "mat_warden_crest", qty: 1 },
+      { defId: "mat_iron_ore", qty: 5 },
+      { defId: "mat_prism_shard", qty: 2 },
+    ],
+    desc: "Rèn Đại Phủ Hình Thiên (+35% Phá Giáp Nhiễu Trắng Boss) từ Ấn Chiến Thần Vệ Thạch.",
+  },
+  {
+    id: "rec_amulet_wind",
+    resultDefId: "acc_amulet_wind",
+    goldCost: 105,
+    materials: [
+      { defId: "mat_iron_ore", qty: 3 },
+      { defId: "mat_quartz_shard", qty: 3 },
+      { defId: "mat_prism_shard", qty: 2 },
+    ],
+    desc: "Chế tác Dây Chuyền Hơi Thở Gió (+22 Thể Lực & -15% tiêu hao Dash/Tụ Lực).",
+  },
+  {
+    id: "rec_grimoire_arcane",
+    resultDefId: "acc_grimoire_arcane",
+    goldCost: 240,
+    materials: [
+      { defId: "mat_crystal_heart", qty: 1 },
+      { defId: "mat_quartz_shard", qty: 4 },
+      { defId: "mat_prism_shard", qty: 4 },
+    ],
+    desc: "Đóng quyển Cổ Thư Tinh Tú Khúc Xạ (Tự động phóng cầu phép nguyên tố mỗi 4.2s).",
+  },
+  {
+    id: "rec_disc_spectrum",
+    resultDefId: "acc_disc_spectrum",
+    goldCost: 260,
+    materials: [
+      { defId: "mat_amber_fang", qty: 1 },
+      { defId: "mat_amber_gem", qty: 4 },
+      { defId: "mat_prism_shard", qty: 4 },
+    ],
+    desc: "Đúc Đĩa Quang Phổ Cổ Đại (+25% Sát thương nổ Phản Ứng Nguyên Tố & hồi Overdrive).",
+  },
+  {
+    id: "rec_charm_undying",
+    resultDefId: "charm_undying",
+    goldCost: 130,
+    materials: [
+      { defId: "mat_prism_shard", qty: 3 },
+      { defId: "mat_glitch_core", qty: 4 },
+    ],
+    desc: "Chế tác Bùa Hộ Mệnh Bất Diệt (Tự động chặn 1 đòn chí tử & hồi 40% HP).",
+  },
 ];
+

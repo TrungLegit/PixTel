@@ -441,7 +441,7 @@ const DRONE_DEF = {
   ],
 };
 
-function buildBossSprite(kind: "root" | "amber" | "eraser"): CompiledSprite {
+function buildBossSprite(kind: "warden" | "root" | "amber" | "eraser"): CompiledSprite {
   const w = 32, h = 32;
   const grid = Array.from({ length: h }, () => Array(w).fill("."));
   const plot = (x: number, y: number, ch: string) => {
@@ -472,6 +472,41 @@ function buildBossSprite(kind: "root" | "amber" | "eraser"): CompiledSprite {
           grid[y][x] = ch;
       }
   };
+
+  if (kind === "warden") {
+    // Xing Tian Stone Warden: broad armored torso, glowing eyes/maw on chest, heavy shield left & war-axe right
+    const pal = { k: "#0f111a", d: "#364052", m: "#667894", l: "#b5c7e0", g: "#ffe066", r: "#ff3355", w: "#ffffff" };
+    fillEllipse(16, 16, 8, 9, "m");
+    fillEllipse(16, 12, 9, 4, "l");
+    // Pauldrons
+    fillEllipse(8, 11, 3.5, 3, "l");
+    fillEllipse(24, 11, 3.5, 3, "l");
+    // Fierce face on torso (Xing Tian motif)
+    symPlot(13, 14, "r");
+    symPlot(14, 14, "w");
+    for (let x = 13; x <= 18; x++) plot(x, 18, x % 2 === 0 ? "g" : "k");
+    // Left Lion Tower Shield
+    for (let y = 10; y <= 23; y++) {
+      for (let x = 3; x <= 8; x++) {
+        plot(x, y, x === 3 || x === 8 || y === 10 || y === 23 ? "g" : "d");
+      }
+    }
+    fillEllipse(5.5, 16, 1.6, 2, "g");
+    // Right Great War-Axe
+    for (let y = 6; y <= 25; y++) plot(25, y, "d");
+    for (let y = 7; y <= 15; y++) {
+      for (let x = 26; x <= 29; x++) {
+        plot(x, y, x >= 28 ? "w" : "l");
+      }
+    }
+    // Armored greaves
+    for (let y = 23; y < 30; y++) {
+      symPlot(12, y, "d");
+      symPlot(13, y, "m");
+    }
+    outline("k");
+    return compileMatrix(grid.map((r) => r.join("")), pal);
+  }
 
   if (kind === "root") {
     const pal = { k: "#110d14", d: "#29333d", m: "#4a6370", l: "#89bcc7", v: "#5eead4", w: "#ffffff", r: "#ff3366" };
@@ -851,12 +886,56 @@ function buildInteractableSprites() {
     return c;
   };
 
+  const mkLoreTablet = (read: boolean) => {
+    const { c, ctx } = makeCanvas(16, 22);
+    ctx.fillStyle = "#0e0c18";
+    ctx.fillRect(2, 16, 12, 5);
+    ctx.fillRect(3, 3, 10, 15);
+    ctx.fillRect(5, 1, 6, 4);
+    ctx.fillStyle = read ? "#435275" : "#2f384f";
+    ctx.fillRect(3, 17, 10, 3);
+    ctx.fillStyle = read ? "#657aa8" : "#515e7d";
+    ctx.fillRect(4, 4, 8, 13);
+    ctx.fillRect(6, 2, 4, 3);
+    // Glowing ancient runes
+    ctx.fillStyle = read ? "#44ee88" : "#ffe066";
+    ctx.fillRect(6, 5, 4, 1);
+    ctx.fillRect(5, 8, 6, 1);
+    ctx.fillRect(6, 11, 4, 1);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(7, 5, 2, 1);
+    return c;
+  };
+
+  const mkArenaTotem = (col: string | null) => {
+    const { c, ctx } = makeCanvas(16, 24);
+    ctx.fillStyle = "#0e0c18";
+    ctx.fillRect(3, 17, 10, 6);
+    ctx.fillRect(5, 4, 6, 15);
+    ctx.fillStyle = col ? "#4d5678" : "#3a3d47";
+    ctx.fillRect(4, 18, 8, 4);
+    ctx.fillStyle = col ?? "#666b7a";
+    ctx.fillRect(6, 5, 4, 13);
+    if (col) {
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(7, 6, 2, 9);
+    }
+    return c;
+  };
+
   return {
     waypointOff: mkWaypoint(false),
     waypointOn: mkWaypoint(true),
     chestLocked: mkChest("locked"),
     chestUnlocked: mkChest("unlocked"),
     chestOpened: mkChest("opened"),
+    loreUnread: mkLoreTablet(false),
+    loreRead: mkLoreTablet(true),
+    totemOff: mkArenaTotem(null),
+    totem_fire: mkArenaTotem("#ff4433"),
+    totem_ice: mkArenaTotem("#38e8ff"),
+    totem_nature: mkArenaTotem("#44ee88"),
+    totem_volt: mkArenaTotem("#ffee44"),
     iron_vein: mkResource("#3a404f", "#7f8ba3", "#d4deed"),
     quartz_cluster: mkResource("#105b7a", "#26b8de", "#a8fbff"),
     amber_crystal: mkResource("#8f340e", "#f08a1d", "#ffe875"),
@@ -899,6 +978,7 @@ class PixelSpriteAtlas {
     }
 
     this.bosses = {
+      boss_xing_warden: buildBossSprite("warden"),
       boss_blight_root: buildBossSprite("root"),
       boss_gilded_null: buildBossSprite("amber"),
       boss_the_eraser: buildBossSprite("eraser"),

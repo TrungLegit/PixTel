@@ -19,6 +19,7 @@ export type ItemCategory = ItemType;
 
 export type ItemIconKind =
   | "sword"
+  | "axe"
   | "staff"
   | "dagger"
   | "gun"
@@ -26,6 +27,11 @@ export type ItemIconKind =
   | "armor"
   | "boots"
   | "accessory"
+  | "amulet"
+  | "book"
+  | "disc"
+  | "totem"
+  | "pigment"
   | "potion"
   | "ore"
   | "shard"
@@ -67,7 +73,14 @@ export interface EquipVisualStyle {
   offsetY?: number;
 }
 
-export type ElementType = "fire" | "ice" | "poison";
+export type InfusableElement = "fire" | "ice" | "nature" | "volt";
+export type ElementType = InfusableElement | "poison" | "prism";
+
+export type EquipPassiveId =
+  | "guard_breaker"
+  | "reaction_amp"
+  | "orbit_grimoire"
+  | "stamina_flow";
 
 export interface StatBonus {
   atk?: number;
@@ -78,6 +91,10 @@ export interface StatBonus {
   critRate?: number; // alias for crit
   moveSpeed?: number; // alias for spd
   elementBonus?: number; // % bonus elemental & skill damage
+  maxStamina?: number; // bonus max stamina capacity
+  staminaCostPct?: number; // negative = reduced stamina cost (e.g. -15)
+  poiseBreakPct?: number; // % bonus Bleach Shield break damage
+  skillCdPct?: number; // negative = faster [E] cooldown
 }
 
 export interface ItemDef {
@@ -96,10 +113,19 @@ export interface ItemDef {
   setId?: string;
   dismantleShards?: number;
   desc: string;
+  lore?: string;
+  passiveId?: EquipPassiveId;
+  passiveDesc?: string;
+  pigmentElement?: InfusableElement;
   sellPrice: number;
   buyPrice?: number;
   baseStats?: StatBonus;
-  consumableKind?: "hp_potion" | "stamina_elixir" | "chroma_tonic";
+  consumableKind?:
+    | "hp_potion"
+    | "stamina_elixir"
+    | "chroma_tonic"
+    | "chroma_coating"
+    | "undying_charm";
 }
 
 export interface ItemInstance {
@@ -107,6 +133,8 @@ export interface ItemInstance {
   defId: string;
   qty: number;
   enhanceLevel: number; // +0 .. +10 for equipment
+  pityBonus?: number; // accumulated failstack % bonus (+0..+100)
+  infusedElement?: InfusableElement; // unlocked at +5 via Chroma Pigments
 }
 
 export interface RecipeDef {
@@ -122,25 +150,30 @@ export type QuestObjectiveKind =
   | "kill_any"
   | "mine_resource"
   | "enhance_item"
+  | "infuse_item"
   | "activate_waypoint"
-  | "open_chest";
+  | "open_chest"
+  | "read_lore"
+  | "trigger_reaction";
 
 export interface QuestObjectiveDef {
   id: string;
   kind: QuestObjectiveKind;
-  targetId?: string; // enemyId or biomeId
+  targetId?: string; // enemyId, biomeId, or loreId
   required: number;
   label: string;
 }
 
 export interface QuestDef {
   id: string;
+  chapter?: string;
   title: string;
   giverNpcId: string;
   prereqQuestId?: string;
   repeatable?: boolean;
   isMain?: boolean;
   summary: string;
+  loreNote?: string;
   dialogueStart: string;
   dialogueActive: string;
   dialogueComplete: string;
@@ -159,6 +192,22 @@ export interface QuestProgress {
   state: QuestState;
   counts: Record<string, number>;
   completions: number;
+}
+
+export interface LoreTabletDef {
+  id: string;
+  chapter: string;
+  title: string;
+  biome: BiomeId;
+  tx: number;
+  ty: number;
+  author: string;
+  accent: string;
+  excerpt: string;
+  body: string[];
+  rewardXp: number;
+  rewardGold: number;
+  rewardItem?: { defId: string; qty: number };
 }
 
 export interface WaypointDef {
@@ -221,7 +270,16 @@ export interface EnemyDef {
   gold: [number, number];
   isBoss?: boolean;
   isWorldBoss?: boolean;
-  ai: "melee" | "ranged" | "flanker" | "bruiser" | "boss_root" | "boss_amber" | "boss_eraser";
+  bleachShield?: number;
+  ai:
+    | "melee"
+    | "ranged"
+    | "flanker"
+    | "bruiser"
+    | "boss_warden"
+    | "boss_root"
+    | "boss_amber"
+    | "boss_eraser";
   lootMaterials: { defId: string; chance: number }[];
   equipDropChance: number;
   minRarity: Rarity;
@@ -246,11 +304,13 @@ export interface SaveDataV2 {
   bag: ItemInstance[];
   unlockedWaypoints: string[];
   openedChests: string[];
+  discoveredLore?: string[];
   quests: Record<string, QuestProgress>;
   stats: {
     kills: number;
     mined: number;
     chestsOpened: number;
     bossesDefeated: number;
+    reactionsTriggered?: number;
   };
 }

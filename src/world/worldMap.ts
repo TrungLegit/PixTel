@@ -12,6 +12,7 @@ import {
   WORLD_W,
   getBiomeAtTile,
 } from "../data/worldConfig";
+import { LORE_TABLETS } from "../data/lore";
 import type { BiomeId } from "../data/types";
 
 export enum TileKind {
@@ -181,10 +182,11 @@ export class WorldMap {
     this._carveRoad(x0 - 2, cy, x1 + 2, cy, 1);
 
     // 4. Main highways from 4 gates to every biome's waypoints & boss arenas (auto-builds bridges!)
-    // West gate -> Meadow camps & waypoints
+    // West gate -> Meadow camps, waypoints & Xing Warden boss arena
     this._carveRoad(x0 - 2, cy, 56, 76, 1);
     this._carveRoad(56, 76, 52, 56, 1);
     this._carveRoad(52, 56, 22, 28, 1);
+    this._carveRoad(22, 28, 16, 18, 1);
     this._carveRoad(cx, y0 - 2, 52, 56, 1);
 
     // North/East gates -> Quartz Forest & Blight Root boss
@@ -207,6 +209,7 @@ export class WorldMap {
 
     // Clear stone boss arenas
     const arenas = [
+      { tx: 16, ty: 18, r: 8 },
       { tx: 138, ty: 20, r: 9 },
       { tx: 20, ty: 140, r: 9 },
       { tx: 140, ty: 140, r: 11 },
@@ -225,7 +228,7 @@ export class WorldMap {
       }
     }
 
-    // Ensure every Waypoint, Camp, and Resource sits on solid ground/road (not water/lava/wall)
+    // Ensure every Waypoint, Camp, Resource, and Lore Tablet sits on solid ground/road (not water/lava/wall)
     const clearPatch = (tx: number, ty: number, rad: number) => {
       for (let dy = -rad; dy <= rad; dy++) {
         for (let dx = -rad; dx <= rad; dx++) {
@@ -242,6 +245,7 @@ export class WorldMap {
     for (const wp of WAYPOINTS) clearPatch(wp.tx, wp.ty, 3);
     for (const camp of WORLD_CAMPS) clearPatch(camp.tx, camp.ty, 4);
     for (const res of WORLD_RESOURCES) clearPatch(res.tx, res.ty, 2);
+    for (const lore of LORE_TABLETS) clearPatch(lore.tx, lore.ty, 2);
 
     // 5. Place Origin Town Buildings + Class Altar (all clear of gates, roads, NPCs, waypoints)
     this.buildings.push(
@@ -288,6 +292,7 @@ export class WorldMap {
     for (const wp of WAYPOINTS) keepClearPts.push({ x: wp.tx, y: wp.ty, r: 5 });
     for (const camp of WORLD_CAMPS) keepClearPts.push({ x: camp.tx, y: camp.ty, r: 7 });
     for (const res of WORLD_RESOURCES) keepClearPts.push({ x: res.tx, y: res.ty, r: 3 });
+    for (const lore of LORE_TABLETS) keepClearPts.push({ x: lore.tx, y: lore.ty, r: 3 });
     for (const npc of TOWN_NPCS) keepClearPts.push({ x: npc.tx, y: npc.ty, r: 4 });
     keepClearPts.push({ x: CLASS_ALTAR_POS.tx, y: CLASS_ALTAR_POS.ty, r: 4 });
 

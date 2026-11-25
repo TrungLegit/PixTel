@@ -15,11 +15,12 @@ export const HOTKEY_CONSUMABLES: readonly string[] = [
   "pot_hp",
   "pot_stamina",
   "pot_tonic",
+  "pot_coating",
 ];
 
 /**
- * Recomputes total player stats (maxHp, atk, def, spd, crit, elementBonus)
- * from base class stats + level progression + equipped gear & enhancement levels.
+ * Recomputes total player stats (maxHp, atk, def, spd, crit, elementBonus, maxStamina, passives)
+ * from base class stats + level progression + equipped gear & enhancement milestones.
  */
 export function recalculatePlayerStats(
   player: PlayerEntity,
@@ -36,9 +37,21 @@ export function recalculatePlayerStats(
   player.atk = cdef.baseStats.atk + lv * 3 + eq.atk;
   player.def = cdef.baseStats.def + Math.floor(lv * 1.2) + eq.def;
   player.spd = cdef.baseStats.spd + eq.spd;
-  player.crit = Math.min(90, cdef.baseStats.crit + eq.crit);
+  player.crit = Math.min(92, cdef.baseStats.crit + eq.crit);
   player.critMult = cdef.baseStats.critMult;
   player.elementBonus = eq.elementBonus;
+
+  player.maxStamina = Math.max(100, 100 + eq.maxStamina);
+  player.stamina = preserveHpRatio
+    ? Math.min(player.maxStamina, player.stamina)
+    : player.maxStamina;
+  player.staminaCostPct = Math.max(-45, eq.staminaCostPct);
+  player.poiseBreakPct = eq.poiseBreakPct;
+  player.skillCdPct = Math.max(-40, eq.skillCdPct);
+
+  const passives = inv.getActivePassives();
+  player.hasOrbitGrimoire = passives.has("orbit_grimoire");
+  player.hasReactionAmp = passives.has("reaction_amp");
 
   if (preserveHpRatio) {
     player.hp = Math.min(player.maxHp, Math.max(1, Math.round(ratio * player.maxHp)));
@@ -49,7 +62,7 @@ export function recalculatePlayerStats(
 
 /**
  * Manages player gold, 5 equipment slots (helmet, armor, weapon, boots, accessory),
- * 32-slot bag, stat comparisons, dismantling, and 1-3 quick consumables.
+ * 32-slot bag, stat comparisons, dismantling, and 1-4 quick consumables.
  */
 export class InventorySystem {
   gold = 120;
@@ -69,6 +82,7 @@ export class InventorySystem {
       createItemInstance("pot_hp", 4, 0),
       createItemInstance("pot_stamina", 2, 0),
       createItemInstance("pot_tonic", 1, 0),
+      createItemInstance("pot_coating", 1, 0),
       createItemInstance("mat_iron_ore", 3, 0),
       createItemInstance("mat_glitch_core", 2, 0),
     ];
@@ -256,6 +270,17 @@ export class InventorySystem {
     return out;
   }
 
+  getActivePassives(): Set<string> {
+    const set = new Set<string>();
+    for (const slot of EQUIP_SLOTS) {
+      const eq = this.equipment[slot];
+      if (!eq) continue;
+      const def = ITEMS[eq.defId];
+      if (def?.passiveId) set.add(def.passiveId);
+    }
+    return set;
+  }
+
   getTotalEquipBonuses(): NormalizedEquipStats {
     const sum: NormalizedEquipStats = {
       atk: 0,
@@ -264,6 +289,10 @@ export class InventorySystem {
       spd: 0,
       crit: 0,
       elementBonus: 0,
+      maxStamina: 0,
+      staminaCostPct: 0,
+      poiseBreakPct: 0,
+      skillCdPct: 0,
     };
     for (const slot of EQUIP_SLOTS) {
       const eq = this.equipment[slot];
@@ -275,6 +304,10 @@ export class InventorySystem {
       sum.spd += st.spd;
       sum.crit += st.crit;
       sum.elementBonus += st.elementBonus;
+      sum.maxStamina += st.maxStamina;
+      sum.staminaCostPct += st.staminaCostPct;
+      sum.poiseBreakPct += st.poiseBreakPct;
+      sum.skillCdPct += st.skillCdPct;
     }
     return sum;
   }
@@ -287,7 +320,18 @@ export class InventorySystem {
     const cur = this.equipment[def.slot];
     if (!cur) return candStats;
     if (cur.uid === candidate.uid) {
-      return { atk: 0, def: 0, maxHp: 0, spd: 0, crit: 0, elementBonus: 0 };
+      return {
+        atk: 0,
+        def: 0,
+        maxHp: 0,
+        spd: 0,
+        crit: 0,
+        elementBonus: 0,
+        maxStamina: 0,
+        staminaCostPct: 0,
+        poiseBreakPct: 0,
+        skillCdPct: 0,
+      };
     }
     const curStats = getItemEffectiveStats(cur);
     return {
@@ -297,6 +341,10 @@ export class InventorySystem {
       spd: candStats.spd - curStats.spd,
       crit: candStats.crit - curStats.crit,
       elementBonus: candStats.elementBonus - curStats.elementBonus,
+      maxStamina: candStats.maxStamina - curStats.maxStamina,
+      staminaCostPct: candStats.staminaCostPct - curStats.staminaCostPct,
+      poiseBreakPct: candStats.poiseBreakPct - curStats.poiseBreakPct,
+      skillCdPct: candStats.skillCdPct - curStats.skillCdPct,
     };
   }
 

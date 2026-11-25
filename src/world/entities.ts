@@ -3,6 +3,7 @@ import type {
   CampDef,
   ClassId,
   ElementType,
+  InfusableElement,
   ItemInstance,
   Rarity,
   ResourceNodeDef,
@@ -65,9 +66,26 @@ export interface PlayerEntity {
   walkTime: number;
   attackAnimTime: number;
 
+  // Derived equipment bonuses & passives
+  staminaCostPct: number; // negative = cheaper charge/dash
+  poiseBreakPct: number; // % bonus vs Bleach Shield
+  skillCdPct: number; // negative = faster [E]
+  hasOrbitGrimoire: boolean;
+  hasReactionAmp: boolean;
+  grimoireTimer: number;
+
+  // Advanced 60FPS Combat Rhythm (Perfect Dash, Dash-Offset, Quick/Just-Charge)
+  perfectDashWindow: number;
+  chromaCounterTimer: number;
+  dashComboPreserveTimer: number;
+  quickChargeTimer: number;
+  bleachDebuffTime: number;
+
   // Consumable temporary buffs
   speedBuffTime: number;
   atkBuffTime: number;
+  coatingTime: number;
+  coatingElement: InfusableElement | null;
   respawnWaypointId: string;
 }
 
@@ -105,14 +123,30 @@ export interface EnemyEntity {
   hitFlash: number;
   walkTime: number;
 
-  // Elemental reaction states (Chroma Mage)
+  // Elemental reaction & Boss Bleach Shield / Stagger states
   element: ElementType | null;
   elementTime: number;
+  reactionIcd: number;
   burnTime: number;
   burnTick: number;
   slowTime: number;
   poisonTime: number;
   poisonTick: number;
+  rootTime: number;
+  stunTime: number;
+  vulnTime: number; // Def-down / Boss shield-break stagger vulnerability
+  bleachShield: number;
+  maxBleachShield: number;
+  totemChannelTimer: number;
+}
+
+export interface ArenaTotemEntity {
+  uid: number;
+  element: InfusableElement;
+  x: number;
+  y: number;
+  lit: boolean;
+  hitFlash: number;
 }
 
 export interface ProjectileEntity {
@@ -134,6 +168,7 @@ export interface ProjectileEntity {
   hitSet: Set<number>;
   canOverclockTurret?: boolean;
   hitPreset?: string;
+  poiseMult?: number;
 }
 
 export interface TurretEntity {
@@ -157,10 +192,16 @@ export interface HazardEntity {
     | "vortex"
     | "meteor"
     | "afterimage"
+    | "acid_pool"
+    | "flame_trail"
+    | "bleach_zone"
+    | "skyfall_crystal"
+    | "boss_cone"
     | "boss_slam"
     | "boss_thorns"
     | "boss_erase"
-    | "boss_cross";
+    | "boss_cross"
+    | "boss_rot_cross";
   x: number;
   y: number;
   radius: number;

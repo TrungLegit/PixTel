@@ -285,6 +285,17 @@ html, body {
   border-bottom: 3px solid #750b29;
 }
 
+.boss-shield {
+  height: 12px;
+  margin-top: 3px;
+  margin-bottom: 0;
+  border-color: #6b7ba8;
+}
+.boss-shield .px-bar-fill {
+  background: #9fb6d6;
+  border-bottom: 2px solid #58698c;
+}
+
 /* Top-Right Minimap & Quest Tracker */
 .hud-top-right {
   position: absolute;

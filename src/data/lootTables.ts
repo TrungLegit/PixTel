@@ -33,6 +33,7 @@ export const ENEMY_DROP_TABLES: Record<string, EnemyDropTable> = {
       { itemId: "bts_meadow_strider", chance: 0.12 },
       { itemId: "arm_meadow_mail", chance: 0.1 },
       { itemId: "rng_breeze", chance: 0.09 },
+      { itemId: "mat_pigment_green", chance: 0.16 },
     ],
   },
 
@@ -41,6 +42,7 @@ export const ENEMY_DROP_TABLES: Record<string, EnemyDropTable> = {
     rolls: [
       { itemId: "mat_glitch_core", chance: 0.75, minQty: 1, maxQty: 2 },
       { itemId: "mat_quartz_shard", chance: 0.5, minQty: 1, maxQty: 2 },
+      { itemId: "mat_pigment_gold", chance: 0.18 },
       { itemId: "pot_stamina", chance: 0.2 },
       { itemId: "hlm_quartz_visor", chance: 0.1 },
       { itemId: "rng_quartz_eye", chance: 0.08 },
@@ -51,6 +53,7 @@ export const ENEMY_DROP_TABLES: Record<string, EnemyDropTable> = {
     rolls: [
       { itemId: "mat_glitch_core", chance: 0.78, minQty: 1, maxQty: 2 },
       { itemId: "mat_quartz_shard", chance: 0.55, minQty: 1, maxQty: 2 },
+      { itemId: "mat_pigment_cyan", chance: 0.2 },
       { itemId: "bts_quartz_greaves", chance: 0.12 },
       { itemId: "wpn_glitch_fangs", chance: 0.08 },
       { itemId: "wpn_quartz_reaver", chance: 0.09 },
@@ -60,10 +63,12 @@ export const ENEMY_DROP_TABLES: Record<string, EnemyDropTable> = {
     rolls: [
       { itemId: "mat_quartz_shard", chance: 0.85, minQty: 1, maxQty: 3 },
       { itemId: "mat_prism_shard", chance: 0.35 },
+      { itemId: "mat_pigment_cyan", chance: 0.25 },
       { itemId: "arm_quartz_plate", chance: 0.14 },
       { itemId: "hlm_quartz_visor", chance: 0.12 },
       { itemId: "wpn_prism_halberd", chance: 0.09 },
       { itemId: "wpn_pulse_carbine", chance: 0.09 },
+      { itemId: "acc_amulet_wind", chance: 0.08 },
     ],
   },
 
@@ -72,6 +77,7 @@ export const ENEMY_DROP_TABLES: Record<string, EnemyDropTable> = {
     rolls: [
       { itemId: "mat_amber_gem", chance: 0.7, minQty: 1, maxQty: 2 },
       { itemId: "mat_iron_ore", chance: 0.55, minQty: 2, maxQty: 3 },
+      { itemId: "mat_pigment_gold", chance: 0.24 },
       { itemId: "arm_amber_aegis", chance: 0.11 },
       { itemId: "bts_amber_treads", chance: 0.12 },
       { itemId: "hlm_amber_crown", chance: 0.1 },
@@ -81,6 +87,7 @@ export const ENEMY_DROP_TABLES: Record<string, EnemyDropTable> = {
     rolls: [
       { itemId: "mat_amber_gem", chance: 0.72, minQty: 1, maxQty: 2 },
       { itemId: "mat_glitch_core", chance: 0.8, minQty: 1, maxQty: 3 },
+      { itemId: "mat_pigment_red", chance: 0.28 },
       { itemId: "pot_tonic", chance: 0.25 },
       { itemId: "rng_amber_heart", chance: 0.12 },
       { itemId: "wpn_amber_fury", chance: 0.1 },
@@ -92,6 +99,7 @@ export const ENEMY_DROP_TABLES: Record<string, EnemyDropTable> = {
     rolls: [
       { itemId: "mat_void_prism", chance: 0.65, minQty: 1, maxQty: 2 },
       { itemId: "mat_prism_shard", chance: 0.6, minQty: 1, maxQty: 2 },
+      { itemId: "pot_coating", chance: 0.25 },
       { itemId: "arm_amber_aegis", chance: 0.16, enhanceLevel: 2 },
       { itemId: "hlm_amber_crown", chance: 0.15, enhanceLevel: 2 },
       { itemId: "arm_prism_mantle", chance: 0.05 },
@@ -110,47 +118,64 @@ export const ENEMY_DROP_TABLES: Record<string, EnemyDropTable> = {
   },
 
   // === REGIONAL BOSSES & WORLD BOSS THE ERASER ===
+  boss_xing_warden: {
+    guaranteed: [
+      { itemId: "mat_warden_crest", chance: 1, minQty: 1, maxQty: 2 },
+      { itemId: "mat_prism_shard", chance: 1, minQty: 2, maxQty: 4 },
+      { itemId: "mat_pigment_green", chance: 1, minQty: 1, maxQty: 2 },
+      { itemId: "wpn_warden_cleaver", chance: 1, enhanceLevel: 1 },
+    ],
+    rolls: [
+      { itemId: "acc_amulet_wind", chance: 0.6, enhanceLevel: 1 },
+      { itemId: "arm_meadow_mail", chance: 0.55, enhanceLevel: 1 },
+      { itemId: "hlm_meadow_crest", chance: 0.55, enhanceLevel: 1 },
+    ],
+  },
   boss_blight_root: {
     guaranteed: [
+      { itemId: "mat_crystal_heart", chance: 1, minQty: 1, maxQty: 2 },
       { itemId: "mat_quartz_shard", chance: 1, minQty: 3, maxQty: 4 },
-      { itemId: "mat_amber_gem", chance: 1, minQty: 2, maxQty: 3 },
       { itemId: "mat_prism_shard", chance: 1, minQty: 3, maxQty: 5 },
+      { itemId: "mat_pigment_cyan", chance: 1, minQty: 1, maxQty: 2 },
       { itemId: "chp_root_pulse", chance: 1, enhanceLevel: 2 },
     ],
     rolls: [
+      { itemId: "acc_grimoire_arcane", chance: 0.55, enhanceLevel: 2 },
       { itemId: "hlm_quartz_visor", chance: 0.55, enhanceLevel: 2 },
       { itemId: "arm_quartz_plate", chance: 0.55, enhanceLevel: 2 },
-      { itemId: "bts_quartz_greaves", chance: 0.55, enhanceLevel: 2 },
       { itemId: "wpn_prism_halberd", chance: 0.35, enhanceLevel: 2 },
       { itemId: "wpn_chroma_scepter", chance: 0.35, enhanceLevel: 2 },
     ],
   },
   boss_gilded_null: {
     guaranteed: [
+      { itemId: "mat_amber_fang", chance: 1, minQty: 1, maxQty: 2 },
       { itemId: "mat_amber_gem", chance: 1, minQty: 3, maxQty: 5 },
       { itemId: "mat_void_prism", chance: 1, minQty: 2, maxQty: 3 },
-      { itemId: "mat_prism_shard", chance: 1, minQty: 5, maxQty: 7 },
+      { itemId: "mat_pigment_red", chance: 1, minQty: 1, maxQty: 2 },
       { itemId: "wpn_amber_fury", chance: 1, enhanceLevel: 3 },
     ],
     rolls: [
+      { itemId: "acc_disc_spectrum", chance: 0.6, enhanceLevel: 2 },
       { itemId: "hlm_amber_crown", chance: 0.6, enhanceLevel: 2 },
       { itemId: "arm_amber_aegis", chance: 0.6, enhanceLevel: 2 },
       { itemId: "bts_amber_treads", chance: 0.6, enhanceLevel: 2 },
-      { itemId: "rng_amber_heart", chance: 0.5, enhanceLevel: 2 },
     ],
   },
   boss_the_eraser: {
     guaranteed: [
+      { itemId: "mat_origin_star", chance: 1, minQty: 1, maxQty: 2 },
       { itemId: "mat_void_prism", chance: 1, minQty: 4, maxQty: 6 },
       { itemId: "mat_prism_shard", chance: 1, minQty: 8, maxQty: 12 },
       { itemId: "wpn_chroma_sovereign", chance: 1, enhanceLevel: 4 },
+      { itemId: "charm_undying", chance: 1, minQty: 1, maxQty: 1 },
     ],
     rolls: [
       { itemId: "hlm_prism_halo", chance: 0.7, enhanceLevel: 3 },
       { itemId: "arm_prism_mantle", chance: 0.7, enhanceLevel: 3 },
       { itemId: "bts_void_walkers", chance: 0.7, enhanceLevel: 3 },
       { itemId: "rng_spectrum", chance: 0.65, enhanceLevel: 3 },
-      { itemId: "chp_eraser_zero", chance: 0.55, enhanceLevel: 3 },
+      { itemId: "chp_eraser_zero", chance: 0.6, enhanceLevel: 3 },
     ],
   },
 };

@@ -278,6 +278,7 @@ export class InventoryModalUI {
         ["CRIT", st.crit, diff?.crit, "%"],
         ["SPD", st.spd, diff?.spd, ""],
         ["ELEM", st.elementBonus, diff?.elementBonus, "%"],
+        ["STAM", st.maxStamina, diff?.maxStamina, ""],
       ];
       statsHtml = `<div class="detail-stats">${rows
         .filter(([, val, d]) => val !== 0 || (d !== undefined && d !== 0))
@@ -311,6 +312,14 @@ export class InventoryModalUI {
       btns += `<button class="px-btn warn" id="inv-act-sell">BÁN 1 (+${def.sellPrice}G)</button>`;
     }
 
+    const infuseLine =
+      item.enhanceLevel >= 5 && item.infusedElement
+        ? `<div style="font-size:11px;color:#5ef2ff;margin-top:2px">★ Khảm Sắc Tố: <b>${item.infusedElement.toUpperCase()}</b> (+8% ELEM & gắn Ấn)</div>`
+        : "";
+    const passiveLine = def.passiveDesc
+      ? `<div style="font-size:11px;color:#ff9922;margin-top:2px">${def.passiveDesc}</div>`
+      : "";
+
     this.detailEl.innerHTML = `
       <div class="detail-head" style="color:${rInfo.color}">
         <canvas class="px-item-icon" width="24" height="24" data-icon-def="${def.id}"></canvas>
@@ -322,6 +331,8 @@ export class InventoryModalUI {
         <span style="color:${classMismatch ? "#ff4466" : "#99a3c4"}">${classReqText}</span>
       </div>
       <div class="detail-desc">${def.desc}</div>
+      ${passiveLine}
+      ${infuseLine}
       ${statsHtml}
       <div class="detail-actions">${btns}</div>
     `;

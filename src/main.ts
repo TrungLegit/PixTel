@@ -48,21 +48,22 @@ function bootstrap() {
       } else if (modal === "world_map") {
         worldMap.show();
       } else if (modal === "journal") {
-        journal.show();
+        journal.show(payload as { tab?: "quests" | "lore"; loreId?: string } | undefined);
       } else if (modal === "pause") {
         pauseModal.classList.remove("hidden");
       }
     },
     onBossVictory: (worldBoss: boolean, bossName: string) => {
       if (worldBoss) {
-        document.getElementById("victory-title")!.textContent = "ĐẠI CHIẾN THẮNG — THE ERASER ĐÃ BỊ THANH TẨY!";
+        document.getElementById("victory-title")!.textContent =
+          "BẢN GIAO HƯỞNG THẤT SẮC — THE ERASER ĐÃ ĐƯỢC THANH TẨY!";
         document.getElementById("victory-desc")!.textContent =
-          `Thế giới PIXTEL đã lấy lại toàn bộ 16-bit sắc màu rực rỡ! Bạn có thể tiếp tục khám phá thế giới mở, cường hóa trang bị +10 và mở toàn bộ Trụ Sắc Màu.`;
+          `Giao thức xóa sổ của Kiến Trúc Sư Vaelor đã khép lại trong bình yên, trả lại bầu trời 16-bit rực rỡ cho Aethel-16! Bạn có thể tiếp tục khám phá toàn bộ Bia Ký, mở đủ 9 Trụ Sắc Màu và thức tỉnh thần khí +10.`;
         document.getElementById("victory-stats")!.textContent =
-          `Cấp độ: LV.${game.player.level} · Hạ gục: ${game.stats.kills} · Khai thác: ${game.stats.mined} · Rương: ${game.stats.chestsOpened} · Màu khôi phục: ${game.colorSys.getProgressPct()}%`;
+          `LV.${game.player.level} · Hạ gục: ${game.stats.kills} · Phản ứng: ${game.stats.reactionsTriggered ?? 0} · Bia Ký: ${game.discoveredLore.size}/8 · Màu khôi phục: ${game.colorSys.getProgressPct()}%`;
         victoryModal.classList.remove("hidden");
       } else {
-        hud.toast(`ĐÃ HẠ BOSS VÙNG ${bossName}! Kiểm tra Rương kho báu & trả nhiệm vụ!`, "epic");
+        hud.toast(`ĐÃ GIẢI THOÁT THỦ LĨNH ${bossName}! Kiểm tra chiến lợi phẩm & về gặp Trưởng Làng Elian!`, "epic");
       }
     },
   });

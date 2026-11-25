@@ -1,16 +1,32 @@
-import { ITEMS, RARITY_INFO, SLOT_LABELS, getItemEffectiveStats } from "../data/items";
+import {
+  ITEMS,
+  RARITY_INFO,
+  SLOT_LABELS,
+  getItemEffectiveStats,
+  getItemMilestoneSummary,
+} from "../data/items";
 import { FORGE_RECIPES } from "../data/recipes";
+import type { InfusableElement } from "../data/types";
 import { drawItemIcon } from "../graphics/itemIcons";
+import {
+  CATALYST_BONUS_PCT,
+  CATALYST_SHARD_COST,
+  ELEMENT_DISPLAY,
+  INFUSE_GOLD_COST,
+} from "../systems/forgeSystem";
 import { createFrame, clearFrame, createFx, PAL } from "../vfx/pixelfx/core/index.js";
 import { PIXELFX_MODS } from "../vfx/vfxManager";
 import type { PixelfxFrame, PixelfxInstance } from "../vfx/pixelfxTypes";
 import type { PixTelOpenWorldGame } from "../game";
 import { sfx } from "../audio/chiptuneSynth";
 
+const INFUSE_ELEMENTS: readonly InfusableElement[] = ["fire", "ice", "nature", "volt"];
+
 /**
- * Blacksmith Prism Forge Modal:
- * - Tab 1: Enhance equipped/bag equipment (+0 -> +10, safe fail)
- * - Tab 2: Craft Rare / Epic / Legendary equipment
+ * Blacksmith Prism Forge Modal v2.5:
+ * - Tab 1: Safe +0 -> +10 Enhancement with Pity Bar, Prism Catalyst (+15%), Milestone Previews,
+ *   AND +5 Chroma Pigment Elemental Infusion socket!
+ * - Tab 2: Craft Rare / Epic / Legendary / Boss-Core Archetype equipment
  * - Live pixelfx Forge Sparks canvas bursting real pixel sparks on every forge!
  */
 export class ForgeModalUI {
@@ -19,10 +35,10 @@ export class ForgeModalUI {
   private contentEl: HTMLElement;
   private tab: "enhance" | "craft" = "enhance";
   private selectedUid: string | null = null;
+  private useCatalyst = false;
   private resultMsg = "";
   private resultOk = true;
 
-  // Live pixelfx Forge Sparks Canvas
   private fxCanvas: HTMLCanvasElement;
   private fxCtx: CanvasRenderingContext2D;
   private colorCanvas: HTMLCanvasElement;
@@ -138,7 +154,6 @@ export class ForgeModalUI {
       ctx.fillStyle = "#120f1e";
       ctx.fillRect(0, 0, w, h);
 
-      // Pixel Anvil silhouette at center
       ctx.fillStyle = "#2b3042";
       ctx.fillRect(w / 2 - 26, h - 18, 52, 8);
       ctx.fillStyle = "#5b6582";
@@ -146,7 +161,6 @@ export class ForgeModalUI {
       ctx.fillStyle = "#95a5cc";
       ctx.fillRect(w / 2 - 16, h - 24, 32, 2);
 
-      // Idle glowing embers
       if (Math.random() < 0.14) {
         ctx.fillStyle = "#ff9933";
         ctx.fillRect(Math.round(w / 2 + (Math.random() - 0.5) * 32), h - 26 - Math.round(Math.random() * 10), 2, 2);
@@ -205,10 +219,14 @@ export class ForgeModalUI {
         const def = ITEMS[item.defId];
         const col = RARITY_INFO[def.rarity].color;
         const sel = item.uid === this.selectedUid ? "selected" : "";
+        const infBadge =
+          item.enhanceLevel >= 5 && item.infusedElement
+            ? `<span style="color:${ELEMENT_DISPLAY[item.infusedElement].color};font-size:10px">[${ELEMENT_DISPLAY[item.infusedElement].label}]</span>`
+            : "";
         return `
           <div class="forge-list-item ${sel}" data-pick="${item.uid}" style="border-color:${col}">
             <canvas class="px-item-icon" width="16" height="16" data-icon-def="${def.id}"></canvas>
-            <span style="color:${col};flex:1">${def.name} ${item.enhanceLevel > 0 ? `+${item.enhanceLevel}` : ""}</span>
+            <span style="color:${col};flex:1">${def.name} ${item.enhanceLevel > 0 ? `+${item.enhanceLevel}` : ""} ${infBadge}</span>
             ${equipped ? `<span class="eq-badge">ĐANG MẶC</span>` : ""}
           </div>
         `;
@@ -222,8 +240,14 @@ export class ForgeModalUI {
         const item = found.item;
         const def = ITEMS[item.defId];
         const curSt = getItemEffectiveStats(item);
-        const nextSt = getItemEffectiveStats({ ...item, enhanceLevel: Math.min(10, item.enhanceLevel + 1) });
-        const info = this.game.forge.getEnhanceInfo(item, this.game.inv);
+        const nextSt = getItemEffectiveStats({
+          ...item,
+          enhanceLevel: Math.min(10, item.enhanceLevel + 1),
+        });
+        const info = this.game.forge.getEnhanceInfo(item, this.game.inv, this.useCatalyst);
+        const milestones = getItemMilestoneSummary(item)
+          .map((m) => `<div style="font-size:11px;color:${m.startsWith("★") ? "#ffe066" : "#8b95b5"}">${m}</div>`)
+          .join("");
 
         const matHtml = info.materials
           .map((m) => {
@@ -233,12 +257,60 @@ export class ForgeModalUI {
           })
           .join("");
 
+        const shardHave = this.game.inv.countItem("mat_prism_shard");
+        const catalystRow =
+          item.enhanceLevel >= 3 && item.enhanceLevel < 10
+            ? `
+              <label style="display:flex;align-items:center;gap:6px;margin:6px 0;font-size:12px;color:#5ef2ff;cursor:pointer">
+                <input type="checkbox" id="chk-forge-catalyst" ${this.useCatalyst ? "checked" : ""} ${shardHave < CATALYST_SHARD_COST && !this.useCatalyst ? "disabled" : ""} />
+                <span>Dùng Xúc Tác ${CATALYST_SHARD_COST} Mảnh Lăng Kính (+${CATALYST_BONUS_PCT}% tỉ lệ · Đang có: ${shardHave})</span>
+              </label>
+            `
+            : "";
+
+        // +5 Chroma Pigment Infusion Socket UI
+        let infuseHtml = "";
+        if (item.enhanceLevel >= 5) {
+          const curInf = item.infusedElement
+            ? `<b style="color:${ELEMENT_DISPLAY[item.infusedElement].color}">${ELEMENT_DISPLAY[item.infusedElement].label}</b>`
+            : `<span style="color:#9ba4bf">Chưa khảm</span>`;
+          const btns = INFUSE_ELEMENTS.map((el) => {
+            const meta = ELEMENT_DISPLAY[el];
+            const havePigment = this.game.inv.countItem(meta.pigmentId);
+            const canInf = havePigment >= 1 && this.game.inv.gold >= INFUSE_GOLD_COST;
+            return `
+              <button class="px-btn sm ${canInf ? "" : "disabled"}" data-infuse="${el}" style="border-color:${meta.color};color:${meta.color}">
+                ${meta.label} (${havePigment}/1)
+              </button>
+            `;
+          }).join("");
+          infuseHtml = `
+            <div style="margin-top:8px;padding:7px;background:#100e1c;border:1px solid #4a5275">
+              <div style="font-size:12px;font-weight:700;color:#5ef2ff;margin-bottom:4px">
+                ★ KHE NHUỘM SẮC TỐ [+5] · Hiện tại: ${curInf} (Phí: ${INFUSE_GOLD_COST}G + 1 Bột Sắc Tố)
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:5px">${btns}</div>
+            </div>
+          `;
+        } else {
+          infuseHtml = `
+            <div style="margin-top:8px;padding:6px;background:#100e1c;border:1px dashed #353954;font-size:11px;color:#8b95b5">
+              🔒 Đạt cấp cường hóa <b>+5</b> để mở khóa <b>Khe Nhuộm Bột Sắc Tố Nguyên Tố</b> (Lửa / Băng / Mộc / Điện)!
+            </div>
+          `;
+        }
+
         rightHtml = `
           <div class="forge-detail">
             <div style="color:${RARITY_INFO[def.rarity].color};font-size:15px;font-weight:700">
               ${def.name} (+${item.enhanceLevel} → +${info.nextLevel})
             </div>
-            <div class="forge-sub">${def.slot ? SLOT_LABELS[def.slot] : ""} · Tỉ lệ thành công: <b style="color:#44ee88">${info.successRate}%</b> (Thất bại không mất đồ!)</div>
+            <div class="forge-sub">
+              ${def.slot ? SLOT_LABELS[def.slot] : ""} · Tỉ lệ: <b style="color:#44ee88">${info.successRate}%</b>
+              ${info.pityBonus > 0 ? `<span style="color:#ffe066">(Đã cộng Bảo Hiểm Pity +${info.pityBonus}%)</span>` : ""}
+              · An toàn không mất đồ!
+            </div>
+            ${def.passiveDesc ? `<div style="font-size:11px;color:#ff9922;margin:3px 0">${def.passiveDesc}</div>` : ""}
             <div class="forge-stat-preview">
               ${curSt.atk || nextSt.atk ? `<div>ATK: ${curSt.atk} → <b style="color:#44ee88">${nextSt.atk}</b></div>` : ""}
               ${curSt.def || nextSt.def ? `<div>DEF: ${curSt.def} → <b style="color:#44ee88">${nextSt.def}</b></div>` : ""}
@@ -246,15 +318,21 @@ export class ForgeModalUI {
               ${curSt.crit || nextSt.crit ? `<div>CRIT: ${curSt.crit}% → <b style="color:#44ee88">${nextSt.crit}%</b></div>` : ""}
               ${curSt.spd || nextSt.spd ? `<div>SPD: ${curSt.spd} → <b style="color:#44ee88">${nextSt.spd}</b></div>` : ""}
               ${curSt.elementBonus || nextSt.elementBonus ? `<div>ELEM: ${curSt.elementBonus}% → <b style="color:#44ee88">${nextSt.elementBonus}%</b></div>` : ""}
+              ${curSt.maxStamina || nextSt.maxStamina ? `<div>STAM: +${curSt.maxStamina} → <b style="color:#44ee88">+${nextSt.maxStamina}</b></div>` : ""}
+            </div>
+            <div style="margin:5px 0;padding:5px 7px;background:#100e1c;border:1px solid #2d324d">
+              ${milestones}
             </div>
             <div class="forge-mats">
               <div class="mat-row ${this.game.inv.gold >= info.goldCost ? "ok" : "miss"}">Vàng: ${this.game.inv.gold}/${info.goldCost} G</div>
               ${matHtml}
             </div>
+            ${catalystRow}
             <button class="px-btn ${info.canEnhance ? "primary" : "disabled"}" id="btn-do-enhance">
               ⚒ CƯỜNG HÓA LÊN +${info.nextLevel}
             </button>
             ${info.reason ? `<div class="forge-reason">${info.reason}</div>` : ""}
+            ${infuseHtml}
           </div>
         `;
       }
@@ -278,9 +356,20 @@ export class ForgeModalUI {
       });
     });
 
+    this.contentEl.querySelector("#chk-forge-catalyst")?.addEventListener("change", (ev) => {
+      sfx.playUiClick();
+      this.useCatalyst = (ev.currentTarget as HTMLInputElement).checked;
+      this.render();
+    });
+
     this.contentEl.querySelector("#btn-do-enhance")?.addEventListener("click", () => {
       if (!this.selectedUid) return;
-      const res = this.game.forge.enhanceItem(this.selectedUid, this.game.inv, this.game.quests);
+      const res = this.game.forge.enhanceItem(
+        this.selectedUid,
+        this.game.inv,
+        this.game.quests,
+        this.useCatalyst
+      );
       this.resultMsg = res.message;
       this.resultOk = res.succeeded;
       if (res.ok) {
@@ -296,6 +385,30 @@ export class ForgeModalUI {
         sfx.playForgeFail();
       }
       this.render();
+    });
+
+    this.contentEl.querySelectorAll("[data-infuse]").forEach((el) => {
+      el.addEventListener("click", () => {
+        if (!this.selectedUid) return;
+        const elem = (el as HTMLElement).dataset.infuse as InfusableElement;
+        const res = this.game.forge.infuseElement(
+          this.selectedUid,
+          elem,
+          this.game.inv,
+          this.game.quests
+        );
+        this.resultMsg = res.message;
+        this.resultOk = res.succeeded;
+        if (res.succeeded) {
+          this._burstSparks(true);
+          sfx.playForgeSuccess();
+          this.game.recalcPlayerStats(true);
+          this.game.saveGame(false);
+        } else {
+          sfx.playForgeFail();
+        }
+        this.render();
+      });
     });
   }
 
@@ -319,6 +432,7 @@ export class ForgeModalUI {
             <span class="craft-rarity" style="color:${rInfo.color}">[${rInfo.label}]</span>
           </div>
           <div class="craft-desc">${rec.desc}</div>
+          ${def.passiveDesc ? `<div style="font-size:11px;color:#ff9922;margin-bottom:4px">${def.passiveDesc}</div>` : ""}
           <div class="craft-mats">
             <span class="craft-mat ${this.game.inv.gold >= rec.goldCost ? "ok" : "miss"}">${rec.goldCost}G</span>
             ${mats}

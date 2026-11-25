@@ -1,16 +1,37 @@
 import { ITEMS } from "../data/items";
 import { FORGE_RECIPES } from "../data/recipes";
-import type { ItemInstance, RecipeDef } from "../data/types";
+import type { InfusableElement, ItemInstance, RecipeDef } from "../data/types";
 import type { InventorySystem } from "./inventorySystem";
 import type { QuestSystem } from "./questSystem";
 
 export const MAX_ENHANCE_LEVEL = 10;
+export const CATALYST_SHARD_COST = 2;
+export const CATALYST_BONUS_PCT = 15;
+export const INFUSE_GOLD_COST = 40;
+
+export const PIGMENT_IDS: readonly string[] = [
+  "mat_pigment_red",
+  "mat_pigment_cyan",
+  "mat_pigment_green",
+  "mat_pigment_gold",
+];
+
+export const ELEMENT_DISPLAY: Record<InfusableElement, { label: string; color: string; pigmentId: string }> = {
+  fire: { label: "LỬA ĐỎ", color: "#ff5533", pigmentId: "mat_pigment_red" },
+  ice: { label: "BĂNG LAM", color: "#38e8ff", pigmentId: "mat_pigment_cyan" },
+  nature: { label: "MỘC ĐỘC", color: "#44ee88", pigmentId: "mat_pigment_green" },
+  volt: { label: "ĐIỆN QUANG", color: "#ffee44", pigmentId: "mat_pigment_gold" },
+};
 
 export interface EnhanceCostInfo {
   canEnhance: boolean;
   nextLevel: number;
   goldCost: number;
   materials: { defId: string; qty: number }[];
+  baseRate: number;
+  pityBonus: number;
+  catalystBonus: number;
+  canUseCatalyst: boolean;
   successRate: number; // 0..100
   reason?: string;
 }
@@ -22,12 +43,33 @@ export interface ForgeActionResult {
   item?: ItemInstance;
 }
 
+const BASE_RATES: Record<number, number> = {
+  1: 100,
+  2: 100,
+  3: 100,
+  4: 90,
+  5: 80,
+  6: 70,
+  7: 60,
+  8: 50,
+  9: 42,
+  10: 35,
+};
+
 /**
- * Blacksmith Prism Forge: +0 -> +10 enhancement (never breaks items on failure)
- * and Rare / Epic / Legendary equipment crafting.
+ * Blacksmith Prism Forge v2.5:
+ * - Safe +0 -> +10 enhancement (never breaks or downgrades items)
+ * - Prism Resonance Pity (+20% / +25% failstack accumulated per failure up to 100%)
+ * - Optional Prism Catalyst (+15% success rate using 2 Prism Shards)
+ * - +5 Chroma Pigment Elemental Infusion (fire / ice / nature / volt)
+ * - Rare / Epic / Legendary / Boss-Core equipment crafting
  */
 export class ForgeSystem {
-  getEnhanceInfo(item: ItemInstance, inv: InventorySystem): EnhanceCostInfo {
+  getEnhanceInfo(
+    item: ItemInstance,
+    inv: InventorySystem,
+    useCatalyst = false
+  ): EnhanceCostInfo {
     const def = ITEMS[item.defId];
     if (!def || def.category !== "equipment") {
       return {
@@ -35,6 +77,10 @@ export class ForgeSystem {
         nextLevel: item.enhanceLevel,
         goldCost: 0,
         materials: [],
+        baseRate: 0,
+        pityBonus: 0,
+        catalystBonus: 0,
+        canUseCatalyst: false,
         successRate: 0,
         reason: "Vật phẩm này không thể cường hóa.",
       };
@@ -46,8 +92,12 @@ export class ForgeSystem {
         nextLevel: MAX_ENHANCE_LEVEL,
         goldCost: 0,
         materials: [],
+        baseRate: 0,
+        pityBonus: 0,
+        catalystBonus: 0,
+        canUseCatalyst: false,
         successRate: 0,
-        reason: "Đã đạt cấp cường hóa tối đa (+10)!",
+        reason: "Đã đạt cấp cường hóa tối đa (+10 Thức Tỉnh)!",
       };
     }
 
@@ -67,7 +117,19 @@ export class ForgeSystem {
       materials.push({ defId: "mat_void_prism", qty: nextLevel - 8 });
     }
 
-    const successRate = nextLevel <= 4 ? 100 : Math.max(50, 95 - (nextLevel - 4) * 8);
+    const baseRate = BASE_RATES[nextLevel] ?? 50;
+    const pityBonus = item.pityBonus ?? 0;
+    const canUseCatalyst =
+      nextLevel >= 4 &&
+      baseRate + pityBonus < 100 &&
+      inv.countItem("mat_prism_shard") >= CATALYST_SHARD_COST;
+    const catalystBonus = useCatalyst && canUseCatalyst ? CATALYST_BONUS_PCT : 0;
+
+    if (catalystBonus > 0) {
+      materials.push({ defId: "mat_prism_shard", qty: CATALYST_SHARD_COST });
+    }
+
+    const successRate = Math.min(100, baseRate + pityBonus + catalystBonus);
 
     let canEnhance = inv.gold >= goldCost;
     let reason: string | undefined;
@@ -80,17 +142,29 @@ export class ForgeSystem {
       }
     }
 
-    return { canEnhance, nextLevel, goldCost, materials, successRate, reason };
+    return {
+      canEnhance,
+      nextLevel,
+      goldCost,
+      materials,
+      baseRate,
+      pityBonus,
+      catalystBonus,
+      canUseCatalyst,
+      successRate,
+      reason,
+    };
   }
 
   enhanceItem(
     uid: string,
     inv: InventorySystem,
-    quests: QuestSystem
+    quests: QuestSystem,
+    useCatalyst = false
   ): ForgeActionResult {
     const found = inv.findByUid(uid);
     if (!found) return { ok: false, succeeded: false, message: "Không tìm thấy trang bị." };
-    const info = this.getEnhanceInfo(found.item, inv);
+    const info = this.getEnhanceInfo(found.item, inv, useCatalyst);
     if (!info.canEnhance) {
       return { ok: false, succeeded: false, message: info.reason ?? "Không đủ điều kiện." };
     }
@@ -99,27 +173,85 @@ export class ForgeSystem {
     for (const m of info.materials) inv.consumeItem(m.defId, m.qty);
 
     const roll = Math.random() * 100;
-    if (roll <= info.successRate) {
+    const def = ITEMS[found.item.defId];
+    if (info.successRate >= 100 || roll <= info.successRate) {
       found.item.enhanceLevel = info.nextLevel;
+      found.item.pityBonus = 0;
       quests.recordEvent("enhance_item", undefined, 1);
-      const def = ITEMS[found.item.defId];
-      const glowNote =
-        found.item.enhanceLevel === 5 && def?.slot === "weapon"
-          ? " Vũ khí đã phát hào quang +5!"
-          : "";
+
+      let milestoneNote = "";
+      if (found.item.enhanceLevel === 3) {
+        milestoneNote = " ★ Đột phá [+3 Tôi Luyện] đã kích hoạt!";
+      } else if (found.item.enhanceLevel === 5) {
+        milestoneNote = " ★ Đột phá [+5]: Đã mở KHE NHUỘM BỘT SẮC TỐ NGUYÊN TỐ!";
+      } else if (found.item.enhanceLevel === 7) {
+        milestoneNote = " ★ Đột phá [+7 Hào Quang]: Mở khóa hào quang & giảm tiêu hao chiến đấu!";
+      } else if (found.item.enhanceLevel === 10) {
+        milestoneNote = " ★★★ THỨC TỈNH THẦN KHÍ [+10]: Cộng hưởng Lăng Kính tối thượng!";
+      }
+
       return {
         ok: true,
         succeeded: true,
         item: found.item,
-        message: `Cường hóa thành công! ${def?.name ?? ""} đạt +${found.item.enhanceLevel}!${glowNote}`,
+        message: `Cường hóa thành công! ${def?.name ?? ""} đạt +${found.item.enhanceLevel}!${milestoneNote}`,
       };
     }
+
+    const gainPity = info.nextLevel === 10 ? 25 : 20;
+    found.item.pityBonus = Math.min(100, (found.item.pityBonus ?? 0) + gainPity);
 
     return {
       ok: true,
       succeeded: false,
       item: found.item,
-      message: `Cường hóa thất bại (tỉ lệ ${info.successRate}%). Trang bị vẫn giữ nguyên cấp +${found.item.enhanceLevel}!`,
+      message: `Chưa hội tụ đủ nhiệt (tỉ lệ ${info.successRate}%). Trang bị an toàn ở +${found.item.enhanceLevel} & tích lũy Bảo Hiểm Pity +${found.item.pityBonus}% cho lần đập kế!`,
+    };
+  }
+
+  /** Infuses a +5..+10 equipment item with a Chroma Pigment element (fire/ice/nature/volt). */
+  infuseElement(
+    uid: string,
+    element: InfusableElement,
+    inv: InventorySystem,
+    quests: QuestSystem
+  ): ForgeActionResult {
+    const found = inv.findByUid(uid);
+    if (!found) return { ok: false, succeeded: false, message: "Không tìm thấy trang bị." };
+    const item = found.item;
+    const def = ITEMS[item.defId];
+    if (!def || def.category !== "equipment") {
+      return { ok: false, succeeded: false, message: "Vật phẩm không hỗ trợ khảm sắc tố." };
+    }
+    if (item.enhanceLevel < 5) {
+      return {
+        ok: false,
+        succeeded: false,
+        message: "Cần cường hóa trang bị đạt tối thiểu +5 để mở Khe Nhuộm Sắc Tố!",
+      };
+    }
+    const elInfo = ELEMENT_DISPLAY[element];
+    if (inv.gold < INFUSE_GOLD_COST) {
+      return { ok: false, succeeded: false, message: `Cần ${INFUSE_GOLD_COST} Vàng để nhuộm sắc tố.` };
+    }
+    if (inv.countItem(elInfo.pigmentId) < 1) {
+      return {
+        ok: false,
+        succeeded: false,
+        message: `Thiếu ${ITEMS[elInfo.pigmentId]?.name ?? elInfo.pigmentId}! Tìm tại Bia Ký, Boss hoặc Tiệm Mira.`,
+      };
+    }
+
+    inv.gold -= INFUSE_GOLD_COST;
+    inv.consumeItem(elInfo.pigmentId, 1);
+    item.infusedElement = element;
+    quests.recordEvent("infuse_item", element, 1);
+
+    return {
+      ok: true,
+      succeeded: true,
+      item,
+      message: `Đã khảm sắc tố [${elInfo.label}] vào ${def.name} +${item.enhanceLevel}! (+8% ELEM & đòn đánh cộng hưởng nguyên tố)`,
     };
   }
 
