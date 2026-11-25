@@ -181,6 +181,23 @@ class ChiptuneSynth {
     this.tone(160, 90, 0.22, "sawtooth", 0.2, 0.14);
   }
 
+  playMatrixChannel() {
+    const notes = [294, 370, 440, 587, 740, 880];
+    notes.forEach((n, i) => this.tone(n, n * 1.06, 0.18, "triangle", 0.17, i * 0.18));
+  }
+
+  playMatrixShatter() {
+    this.tone(260, 62, 0.35, "sawtooth", 0.28, 0);
+    this.tone(190, 48, 0.32, "square", 0.22, 0.08);
+    this.noise(0.28, 0.25, 1100);
+  }
+
+  playPunch() {
+    if (!this.throttle("punch", 50)) return;
+    this.tone(240, 95, 0.075, "triangle", 0.2);
+    this.noise(0.045, 0.14, 1500);
+  }
+
   playQuestComplete() {
     const fanfare = [523, 659, 784, 1046];
     fanfare.forEach((n, i) => this.tone(n, n, 0.16, "square", 0.2, i * 0.085));

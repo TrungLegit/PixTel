@@ -239,10 +239,10 @@ export class ClassSelectUI {
     const frameIdx = Math.floor(this.animT * 5) % 4;
 
     for (const p of this.previews) {
-      // Animated 16x16 Hero sprite scaled 3x
+      // Animated 24x24 high-craft Hero sprite scaled cleanly 2x -> 48x48
       p.spriteCtx.clearRect(0, 0, 48, 48);
       const sp = sprites.getHero(p.classId, frameIdx);
-      p.spriteCtx.drawImage(sp.right, 0, 0, 16, 16, 0, 0, 48, 48);
+      p.spriteCtx.drawImage(sp.right, 0, 0, sp.w, sp.h, 0, 0, 48, 48);
 
       // Live pixelfx two-buffer preview
       if (!p.fx) {

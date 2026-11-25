@@ -1,4 +1,4 @@
-import { ITEMS, MERCHANT_STOCK, RARITY_INFO } from "../data/items";
+import { ITEMS, MERCHANT_STOCK, RARITY_INFO, resolveClassReward } from "../data/items";
 import { TOWN_NPCS } from "../data/worldConfig";
 import type { PixTelOpenWorldGame } from "../game";
 import { sfx } from "../audio/chiptuneSynth";
@@ -48,7 +48,7 @@ export class DialogueModalUI {
     if (npc.kind === "blacksmith") {
       html += `
         <div class="npc-action-row">
-          <button class="px-btn primary" data-action="open-forge">⚒ MỞ LÒ RÈN LĂNG KÍNH (Cường Hóa & Chế Tạo)</button>
+          <button class="px-btn primary" data-action="open-forge">✡ MỞ MA TRẬN LUYỆN KHÍ (Luyện Trận & Chế Tạo)</button>
         </div>
       `;
     }
@@ -91,7 +91,14 @@ export class DialogueModalUI {
     if (quests.length > 0) {
       html += `<div class="section-hdr">NHIỆM VỤ TỪ ${npc.name.toUpperCase()}</div>`;
       for (const { def, state } of quests) {
-        const rewardItems = (def.rewards.items ?? [])
+        const allRewardEntries = [
+          ...(def.rewards.items ?? []),
+          ...(def.rewards.classRewards ?? []).map((key) => ({
+            defId: resolveClassReward(this.game.player.classId, key),
+            qty: 1,
+          })),
+        ];
+        const rewardItems = allRewardEntries
           .map((ri) => `${ITEMS[ri.defId]?.name ?? ri.defId} x${ri.qty}`)
           .join(", ");
         const speech =
@@ -153,6 +160,7 @@ export class DialogueModalUI {
         this.game.inv.gold -= def.buyPrice;
         sfx.playBuy();
         this.game.uiToast(`Đã mua ${def.name}!`, "good");
+        this.game.refreshHud();
         this.render();
       });
     });
@@ -172,6 +180,7 @@ export class DialogueModalUI {
         if (sold > 0) {
           sfx.playBuy();
           this.game.uiToast(`Đã bán ${sold} trang bị Thường, thu về +${earned} G!`, "good");
+          this.game.refreshHud();
           this.render();
         } else {
           this.game.uiToast("Không có trang bị Thường (+0) nào trong túi để bán.", "info");
@@ -186,6 +195,7 @@ export class DialogueModalUI {
           sfx.playQuestComplete();
           this.game.uiToast("Đã nhận nhiệm vụ mới! Xem tiến độ ở góc phải hoặc nhấn [J].", "good");
           this.game.saveGame(false);
+          this.game.refreshHud();
           this.render();
         }
       });
@@ -194,7 +204,7 @@ export class DialogueModalUI {
     this.bodyEl.querySelectorAll("[data-turnin]").forEach((el) => {
       el.addEventListener("click", () => {
         const qid = (el as HTMLElement).dataset.turnin!;
-        const reward = this.game.quests.turnInQuest(qid);
+        const reward = this.game.quests.turnInQuest(qid, this.game.player.classId);
         if (!reward) return;
         this.game.inv.gold += reward.gold;
         for (const ri of reward.items) {
@@ -204,6 +214,7 @@ export class DialogueModalUI {
         sfx.playLevelUp();
         this.game.uiToast(`Hoàn thành "${reward.quest.title}"! +${reward.gold}G, +${reward.xp} XP!`, "epic");
         this.game.saveGame(false);
+        this.game.refreshHud();
         this.render();
       });
     });

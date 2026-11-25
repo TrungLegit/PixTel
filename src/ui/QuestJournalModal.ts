@@ -1,4 +1,4 @@
-import { ITEMS } from "../data/items";
+import { ITEMS, resolveClassReward } from "../data/items";
 import { QUESTS } from "../data/quests";
 import { TOWN_NPCS } from "../data/worldConfig";
 import type { PixTelOpenWorldGame } from "../game";
@@ -44,7 +44,14 @@ export class QuestJournalModalUI {
       if (st === "locked") continue;
       const p = this.game.quests.progress[q.id];
       const giver = TOWN_NPCS.find((n) => n.id === q.giverNpcId)?.name ?? "NPC";
-      const rewards = (q.rewards.items ?? [])
+      const allRewardEntries = [
+        ...(q.rewards.items ?? []),
+        ...(q.rewards.classRewards ?? []).map((key) => ({
+          defId: resolveClassReward(this.game.player.classId, key),
+          qty: 1,
+        })),
+      ];
+      const rewards = allRewardEntries
         .map((r) => `${ITEMS[r.defId]?.name ?? r.defId} x${r.qty}`)
         .join(", ");
 

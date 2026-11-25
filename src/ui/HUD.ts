@@ -37,6 +37,7 @@ export class HudUI {
     // Quick toolbar buttons
     document.getElementById("hud-btn-map")!.addEventListener("click", () => this.game.toggleModal("world_map"));
     document.getElementById("hud-btn-bag")!.addEventListener("click", () => this.game.toggleModal("inventory"));
+    document.getElementById("hud-stat-pts-btn")!.addEventListener("click", () => this.game.toggleModal("inventory"));
     document.getElementById("hud-btn-quest")!.addEventListener("click", () => this.game.toggleModal("journal"));
     document.getElementById("hud-btn-save")!.addEventListener("click", () => this.game.saveGame(true));
     document.getElementById("hud-btn-mute")!.addEventListener("click", (ev) => {
@@ -98,8 +99,17 @@ export class HudUI {
     document.getElementById("hud-biome")!.textContent = `${biomeCfg.name} (${biomeCfg.levelRange})`;
     document.getElementById("hud-restore")!.textContent = `Màu: ${this.game.colorSys.getProgressPct()}% · Trụ ${this.game.colorSys.unlockedWaypoints.size}/${WAYPOINTS.length}`;
 
-    // Active buffs / Class indicator
+    // Active buffs / Class indicator & Stat Points Reminder
+    const statPtsBtn = document.getElementById("hud-stat-pts-btn")!;
+    statPtsBtn.classList.toggle("hidden", p.statPoints <= 0);
+    if (p.statPoints > 0) {
+      statPtsBtn.textContent = `✨ +${p.statPoints} ĐIỂM TIỀM NĂNG [I]`;
+    }
+
     const extraBits: string[] = [];
+    if (!this.game.inv.equipment.weapon) {
+      extraBits.push(`<span style="color:#ff99aa">✊ Tay Không</span>`);
+    }
     if (p.classId === "chroma_mage") {
       const el = ELEMENT_LABELS[p.elementIdx % 3];
       extraBits.push(`<span style="color:${el.color}">Hệ kế: ${el.name}</span>`);
@@ -112,9 +122,10 @@ export class HudUI {
     if (p.speedBuffTime > 0) extraBits.push(`<span style="color:#44ee88">SPD+28% (${Math.ceil(p.speedBuffTime)}s)</span>`);
     document.getElementById("hud-status-line")!.innerHTML = extraBits.join(" · ");
 
-    // Boss HP Bar
+    // Boss HP Bar & Territory Lock Tag
     const boss = this.game.getActiveBoss();
     const bossBox = document.getElementById("hud-boss-bar")!;
+    const lockTag = document.getElementById("hud-boss-lock-tag")!;
     if (boss) {
       bossBox.classList.remove("hidden");
       const bdef = ENEMIES[boss.defId];
@@ -122,8 +133,14 @@ export class HudUI {
       const bpct = Math.max(0, Math.min(100, (boss.hp / boss.maxHp) * 100));
       document.getElementById("hud-boss-fill")!.style.width = `${bpct}%`;
       document.getElementById("hud-boss-hp")!.textContent = `${Math.max(0, Math.ceil(boss.hp))} / ${boss.maxHp}`;
+      const lock = this.game.activeBossLock;
+      lockTag.classList.toggle("hidden", !lock);
+      if (lock) {
+        lockTag.textContent = `🔒 LÃNH ĐỊA ${lock.bossName} PHONG ẤN — KHÔNG THỂ THOÁT`;
+      }
     } else {
       bossBox.classList.add("hidden");
+      lockTag.classList.add("hidden");
     }
 
     // Quest Tracker (Right Panel)
@@ -152,15 +169,46 @@ export class HudUI {
         .join("");
     }
 
-    // Skill Hotbar & Cooldowns
-    document.getElementById("skill-e-name")!.textContent = cdef.skills.skill.name.replace(/\s*\(E\)/, "");
-    document.getElementById("skill-e-cd")!.textContent = p.skillCd > 0 ? `${p.skillCd.toFixed(1)}s` : "READY";
-    document.getElementById("slot-skill-e")!.classList.toggle("on-cd", p.skillCd > 0);
+    // Skill Hotbar & Equipment-Gated Skill Unlocks
+    const eqWpn = this.game.inv.getEquippedDef("weapon");
+    const eqChip = this.game.inv.getEquippedDef("chip");
+
+    const lmbNameEl = document.getElementById("skill-lmb-name")!;
+    const lmbSubEl = document.getElementById("skill-lmb-sub")!;
+    if (!eqWpn) {
+      lmbNameEl.textContent = "Đấm Tay Không";
+      lmbSubEl.textContent = "TAY KHÔNG";
+    } else {
+      lmbNameEl.textContent = cdef.skills.lmb.name.replace(/\s*\(LMB\)/, "");
+      lmbSubEl.textContent = "COMBO";
+    }
+
+    const slotE = document.getElementById("slot-skill-e")!;
+    if (!eqWpn?.grantsSkillE) {
+      slotE.classList.add("locked");
+      slotE.classList.remove("on-cd");
+      document.getElementById("skill-e-name")!.textContent = "🔒 Cần Vũ Khí";
+      document.getElementById("skill-e-cd")!.textContent = "KHÓA";
+    } else {
+      slotE.classList.remove("locked");
+      document.getElementById("skill-e-name")!.textContent = eqWpn.grantsSkillE.name;
+      document.getElementById("skill-e-cd")!.textContent = p.skillCd > 0 ? `${p.skillCd.toFixed(1)}s` : "READY";
+      slotE.classList.toggle("on-cd", p.skillCd > 0);
+    }
 
     const ultPct = Math.floor(p.overdrive);
-    document.getElementById("skill-q-name")!.textContent = cdef.skills.ult.name.replace(/\s*\(Q\)/, "");
-    document.getElementById("skill-q-cd")!.textContent = ultPct >= 100 ? "SẴN SÀNG!" : `${ultPct}%`;
-    document.getElementById("slot-skill-q")!.classList.toggle("ult-ready", ultPct >= 100);
+    const slotQ = document.getElementById("slot-skill-q")!;
+    if (!eqChip?.grantsSkillQ) {
+      slotQ.classList.add("locked");
+      slotQ.classList.remove("ult-ready");
+      document.getElementById("skill-q-name")!.textContent = "🔒 Cần Chip";
+      document.getElementById("skill-q-cd")!.textContent = "KHÓA";
+    } else {
+      slotQ.classList.remove("locked");
+      document.getElementById("skill-q-name")!.textContent = eqChip.grantsSkillQ.name;
+      document.getElementById("skill-q-cd")!.textContent = ultPct >= 100 ? "SẴN SÀNG!" : `${ultPct}%`;
+      slotQ.classList.toggle("ult-ready", ultPct >= 100);
+    }
 
     document.getElementById("skill-dash-cd")!.textContent = p.dashCd > 0 ? `${p.dashCd.toFixed(1)}s` : "READY";
     document.getElementById("slot-dash")!.classList.toggle("on-cd", p.dashCd > 0);

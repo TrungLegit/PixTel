@@ -10,6 +10,53 @@ export type ItemCategory = "equipment" | "material" | "consumable";
 
 export type ElementType = "fire" | "ice" | "poison";
 
+export type StatAllocKey = "str" | "vit" | "agi" | "crt";
+
+export type AllocatedStats = Record<StatAllocKey, number>;
+
+export type GearVisualTier = "none" | "common" | "uncommon" | "rare" | "epic" | "legendary";
+
+export interface HeroVisualLoadout {
+  weaponTier: GearVisualTier;
+  armorTier: GearVisualTier;
+  ringTier: GearVisualTier;
+  chipTier: GearVisualTier;
+  weaponEnhance: number;
+}
+
+export type WeaponSkillVariant =
+  | "knight_shield_beam"
+  | "knight_quake_aegis"
+  | "knight_solar_prism"
+  | "mage_chroma_vortex"
+  | "mage_frost_nova"
+  | "mage_astral_collapse"
+  | "rogue_frame_skip"
+  | "rogue_shadow_ambush"
+  | "rogue_phantom_blitz"
+  | "tinker_compile_turret"
+  | "tinker_shock_mortar"
+  | "tinker_prism_cannon";
+
+export type ChipUltVariant = "ult_standard" | "ult_overclock" | "ult_cataclysm" | "ult_sovereign";
+
+export type ClassRewardKey =
+  | "starter_weapon"
+  | "uncommon_weapon"
+  | "uncommon_armor"
+  | "rare_weapon"
+  | "epic_weapon"
+  | "legendary_weapon";
+
+export interface ActiveBossLock {
+  bossUid: number;
+  bossDefId: string;
+  bossName: string;
+  cx: number;
+  cy: number;
+  radius: number;
+}
+
 export interface StatBonus {
   atk?: number;
   def?: number;
@@ -30,6 +77,11 @@ export interface ItemDef {
   buyPrice?: number;
   baseStats?: StatBonus;
   consumableKind?: "hp_potion" | "stamina_elixir" | "chroma_tonic";
+  allowedClasses?: ClassId[];
+  visualTier?: GearVisualTier;
+  grantsSkillE?: { variant: WeaponSkillVariant; name: string; desc: string };
+  grantsSkillQ?: { variant: ChipUltVariant; name: string; desc: string };
+  passiveSkill?: { id: string; name: string; desc: string };
 }
 
 export interface ItemInstance {
@@ -37,6 +89,8 @@ export interface ItemInstance {
   defId: string;
   qty: number;
   enhanceLevel: number; // +0 .. +10 for equipment
+  pityBonus?: number;
+  bonusStats?: StatBonus;
 }
 
 export interface RecipeDef {
@@ -79,6 +133,7 @@ export interface QuestDef {
     gold: number;
     xp: number;
     items?: { defId: string; qty: number }[];
+    classRewards?: ClassRewardKey[];
   };
 }
 
@@ -171,6 +226,8 @@ export interface SaveDataV2 {
     gold: number;
     overdrive: number;
     respawnWaypointId: string;
+    statPoints: number;
+    allocatedStats: AllocatedStats;
   };
   equipment: Partial<Record<EquipSlot, ItemInstance>>;
   bag: ItemInstance[];

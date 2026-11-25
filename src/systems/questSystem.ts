@@ -1,5 +1,6 @@
+import { resolveClassReward } from "../data/items";
 import { QUESTS, getQuestDef } from "../data/quests";
-import type { QuestDef, QuestObjectiveKind, QuestProgress } from "../data/types";
+import type { ClassId, QuestDef, QuestObjectiveKind, QuestProgress } from "../data/types";
 
 export interface QuestRewardPayload {
   quest: QuestDef;
@@ -106,18 +107,22 @@ export class QuestSystem {
     return true;
   }
 
-  turnInQuest(questId: string): QuestRewardPayload | null {
+  turnInQuest(questId: string, classId: ClassId = "prism_knight"): QuestRewardPayload | null {
     const def = getQuestDef(questId);
     if (!def || this.getState(questId) !== "completable") return null;
     const p = this.progress[questId];
     p.completions += 1;
     p.counts = {};
     p.state = def.repeatable ? "available" : "completed";
+    const items = def.rewards.items ? def.rewards.items.map((x) => ({ ...x })) : [];
+    for (const cr of def.rewards.classRewards ?? []) {
+      items.push({ defId: resolveClassReward(classId, cr), qty: 1 });
+    }
     return {
       quest: def,
       gold: def.rewards.gold,
       xp: def.rewards.xp,
-      items: def.rewards.items ? def.rewards.items.map((x) => ({ ...x })) : [],
+      items,
     };
   }
 

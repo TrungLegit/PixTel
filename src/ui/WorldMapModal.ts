@@ -121,19 +121,26 @@ export class WorldMapModalUI {
     ctx.fillRect(px - 1, py - 1, 3, 3);
 
     // Stats & Fast Travel Waypoint List
-    this.statsEl.textContent = `Khôi phục sắc màu: ${this.game.colorSys.getProgressPct()}% · Trụ đã mở: ${this.game.colorSys.unlockedWaypoints.size}/${WAYPOINTS.length}`;
+    const lock = this.game.activeBossLock;
+    if (lock) {
+      this.statsEl.innerHTML = `<span style="color:#ff5577">🔒 ĐANG PHONG ẤN TRONG LÃNH ĐỊA ${lock.bossName} — KHÔNG THỂ DỊCH CHUYỂN!</span> · Màu: ${this.game.colorSys.getProgressPct()}%`;
+    } else {
+      this.statsEl.textContent = `Khôi phục sắc màu: ${this.game.colorSys.getProgressPct()}% · Trụ đã mở: ${this.game.colorSys.unlockedWaypoints.size}/${WAYPOINTS.length}`;
+    }
 
     this.listEl.innerHTML = WAYPOINTS.map((wp) => {
       const on = this.game.colorSys.unlockedWaypoints.has(wp.id);
       const bCfg = BIOME_CONFIGS[wp.biome];
+      const canTp = on && !lock;
+      const btnText = lock ? "🔒 BỊ KHÓA" : on ? "DỊCH CHUYỂN" : "CHƯA MỞ";
       return `
         <div class="wp-row ${on ? "on" : "off"}">
           <div>
             <div class="wp-name">${on ? "◆ " : "◇ "}${wp.name}</div>
             <div class="wp-biome">${bCfg.name} (${bCfg.levelRange})</div>
           </div>
-          <button class="px-btn ${on ? "primary" : "disabled"}" data-tp="${wp.id}">
-            ${on ? "DỊCH CHUYỂN" : "CHƯA MỞ"}
+          <button class="px-btn ${canTp ? "primary" : "disabled"}" data-tp="${wp.id}" ${lock ? "disabled" : ""}>
+            ${btnText}
           </button>
         </div>
       `;

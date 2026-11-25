@@ -1,7 +1,14 @@
 import { hex } from "../vfx/pixelfx/core/color.js";
 import type { PixelfxActor } from "../vfx/pixelfxTypes";
-import { BIOME_CONFIGS, type BiomePalette } from "../data/worldConfig";
-import type { BiomeId, ClassId } from "../data/types";
+import { BIOME_CONFIGS } from "../data/worldConfig";
+import type { BiomeId, ClassId, HeroVisualLoadout } from "../data/types";
+import { buildAllHeroSprites, buildAllNpcSprites, buildDynamicHeroFrames } from "./heroSprites";
+import {
+  buildRichBuildings,
+  buildRichInteractables,
+  buildRichTileSet,
+  type RichTileSet,
+} from "./worldSprites";
 
 export interface CompiledSprite {
   w: number;
@@ -13,21 +20,7 @@ export interface CompiledSprite {
   actor: PixelfxActor;
 }
 
-export interface TileSet {
-  ground0: HTMLCanvasElement;
-  ground1: HTMLCanvasElement;
-  ground2: HTMLCanvasElement;
-  road: HTMLCanvasElement;
-  wall: HTMLCanvasElement;
-  water0: HTMLCanvasElement;
-  water1: HTMLCanvasElement;
-  lava0: HTMLCanvasElement;
-  lava1: HTMLCanvasElement;
-  bridge: HTMLCanvasElement;
-  tree: HTMLCanvasElement;
-  rock: HTMLCanvasElement;
-  pillar: HTMLCanvasElement;
-}
+export type TileSet = RichTileSet;
 
 function makeCanvas(w: number, h: number) {
   const c = document.createElement("canvas");
@@ -88,175 +81,6 @@ function compileMatrix(rows: string[], pal: Record<string, string>): CompiledSpr
     },
   };
 }
-
-// =========================================================================
-// HERO MATRICES (4 Classes x 4 Walk Frames, 16x16)
-// =========================================================================
-
-const HERO_DEFS: Record<ClassId, { pal: Record<string, string>; frames: string[][] }> = {
-  prism_knight: {
-    pal: {
-      k: "#10121c", s: "#9fb6d6", S: "#e2f1ff", d: "#495d82",
-      c: "#2ae8ff", C: "#a8fbff", b: "#1d4e89", g: "#ffe066", w: "#ffffff",
-    },
-    frames: [
-      [
-        "......kkkk......", "....kkSSSSkk....", "...kSSssssSSk...", "...kSdCCCCdSk...",
-        "...kSdcwwcdSk...", "....kkddddkk....", "..kkbbSSSSbbkk..", ".kccbkSggSkbSSk.",
-        ".kCcbkSSSSkbSwk.", ".kccbkbbbbkbSdk.", "..kk.kbbbbk.kk..", ".....kddddk.....",
-        "....kkd..dkk....", "....kdd..ddk....", "....kkk..kkk....", "................",
-      ],
-      [
-        "................", "......kkkk......", "....kkSSSSkk....", "...kSSssssSSk...",
-        "...kSdCCCCdSk...", "...kSdcwwcdSk...", "....kkddddkk....", "..kkbbSSSSbbkk..",
-        ".kccbkSggSkbSSk.", ".kCcbkSSSSkbSwk.", ".kccbkbbbbkbSdk.", "..kk.kbbbbk.kk..",
-        "....kkd..dkk....", "...kddk...kddk..", "...kkk.....kkk..", "................",
-      ],
-      [
-        "......kkkk......", "....kkSSSSkk....", "...kSSssssSSk...", "...kSdCCCCdSk...",
-        "...kSdcwwcdSk...", "....kkddddkk....", "..kkbbSSSSbbkk..", ".kccbkSggSkbSSk.",
-        ".kCcbkSSSSkbSwk.", ".kccbkbbbbkbSdk.", "..kk.kbbbbk.kk..", ".....kddddk.....",
-        "....kkd..dkk....", "....kdd..ddk....", "....kkk..kkk....", "................",
-      ],
-      [
-        "................", "......kkkk......", "....kkSSSSkk....", "...kSSssssSSk...",
-        "...kSdCCCCdSk...", "...kSdcwwcdSk...", "....kkddddkk....", "..kkbbSSSSbbkk..",
-        ".kccbkSggSkbSSk.", ".kCcbkSSSSkbSwk.", ".kccbkbbbbkbSdk.", "..kk.kbbbbk.kk..",
-        "....kdd..ddk....", ".....kdkkdk.....", ".....kkkkkk.....", "................",
-      ],
-    ],
-  },
-  chroma_mage: {
-    pal: {
-      k: "#140b24", h: "#5d24a8", H: "#9d5cff", g: "#ffdd55", f: "#ffd1b3",
-      e: "#33eeff", r: "#ff52c8", R: "#3b176b", w: "#ffffff", t: "#7a4d2e",
-    },
-    frames: [
-      [
-        "......kkkk......", ".....kHHHHk.....", "....kHHggHHk....", "...khhhhhhhhk...",
-        "..kkkkkkkkkkkk..", "....kffeffek....", "....kffffffk....", "...kkrrrrrrkk...",
-        "..kRRrRRRRrRtk..", "..kRRrRggRrRtk..", "...kRRrrrrRRtk..", "...kRRRRRRRRwk..",
-        "....kRRRRRRk....", "....kRR..RRk....", "....kkk..kkk....", "................",
-      ],
-      [
-        "................", "......kkkk......", ".....kHHHHk.....", "....kHHggHHk....",
-        "...khhhhhhhhk...", "..kkkkkkkkkkkk..", "....kffeffek....", "....kffffffk....",
-        "...kkrrrrrrkk...", "..kRRrRRRRrRtk..", "..kRRrRggRrRtk..", "...kRRrrrrRRwk..",
-        "...kRRRRRRRRtk..", "....kRR..RRk....", "...kkk....kkk...", "................",
-      ],
-      [
-        "......kkkk......", ".....kHHHHk.....", "....kHHggHHk....", "...khhhhhhhhk...",
-        "..kkkkkkkkkkkk..", "....kffeffek....", "....kffffffk....", "...kkrrrrrrkk...",
-        "..kRRrRRRRrRtk..", "..kRRrRggRrRtk..", "...kRRrrrrRRtk..", "...kRRRRRRRRwk..",
-        "....kRRRRRRk....", "....kRR..RRk....", "....kkk..kkk....", "................",
-      ],
-      [
-        "................", "......kkkk......", ".....kHHHHk.....", "....kHHggHHk....",
-        "...khhhhhhhhk...", "..kkkkkkkkkkkk..", "....kffeffek....", "....kffffffk....",
-        "...kkrrrrrrkk...", "..kRRrRRRRrRtk..", "..kRRrRggRrRtk..", "...kRRrrrrRRtk..",
-        "...kRRRRRRRRwk..", ".....kRRRRk.....", ".....kk..kk.....", "................",
-      ],
-    ],
-  },
-  bit_rogue: {
-    pal: {
-      k: "#0e0a16", d: "#27243b", D: "#464266", r: "#ff2e63", R: "#ff88aa",
-      c: "#2ef2ff", w: "#ffffff",
-    },
-    frames: [
-      [
-        ".....kkkkkk.....", "....kDDDDDDk....", "...kDDddddDDk...", "...kdkckkckdk...",
-        "...kddddddddk...", "..kkrrrrrrrrkk..", ".kRRkddddddkcck.", ".krrkddccddkcwk.",
-        "..kk.kddddk.kk..", "....kkddddkk....", "....kdd..ddk....", "....kdk..kdk....",
-        "...kddk..kddk...", "...kkk....kkk...", "................", "................",
-      ],
-      [
-        "................", ".....kkkkkk.....", "....kDDDDDDk....", "...kDDddddDDk...",
-        "...kdkckkckdk...", "...kddddddddk...", ".kkkrrrrrrrrkk..", "kRRrkddddddkcck.",
-        "krr.kddccddkcwk.", "....kkddddkk.kk.", "....kdd..ddk....", "...kdk....kdk...",
-        "..kddk....kddk..", "..kkk......kkk..", "................", "................",
-      ],
-      [
-        ".....kkkkkk.....", "....kDDDDDDk....", "...kDDddddDDk...", "...kdkckkckdk...",
-        "...kddddddddk...", "..kkrrrrrrrrkk..", ".kRRkddddddkcck.", ".krrkddccddkcwk.",
-        "..kk.kddddk.kk..", "....kkddddkk....", "....kdd..ddk....", "....kdk..kdk....",
-        "...kddk..kddk...", "...kkk....kkk...", "................", "................",
-      ],
-      [
-        "................", ".....kkkkkk.....", "....kDDDDDDk....", "...kDDddddDDk...",
-        "...kdkckkckdk...", "...kddddddddk...", "..kkrrrrrrrrkk..", ".kRRkddddddkcck.",
-        ".krrkddccddkcwk.", "....kkddddkk.kk.", ".....kddddk.....", "....kdd..ddk....",
-        "....kkk..kkk....", "................", "................", "................",
-      ],
-    ],
-  },
-  pixel_tinker: {
-    pal: {
-      k: "#0b1414", h: "#8d582c", H: "#d69a4a", g: "#44ee88", G: "#b8ffcf",
-      a: "#285e4e", s: "#9eb3c2", S: "#e2f0f7", f: "#f2c29b", w: "#ffffff",
-    },
-    frames: [
-      [
-        ".....kkkkkk.....", "....kHHHHHHk....", "...kHhGGGGhHk...", "...kHhgggghHk...",
-        "....kffffffk....", "..kkkaaaaaakkk..", ".kHHkaagggakksk.", ".khhkaaaaaakSSw.",
-        ".kHHkaaaaaakssk.", "..kk.kaaaak.kk..", ".....khhhhk.....", "....khh..hhk....",
-        "....khh..hhk....", "....kkk..kkk....", "................", "................",
-      ],
-      [
-        "................", ".....kkkkkk.....", "....kHHHHHHk....", "...kHhGGGGhHk...",
-        "...kHhgggghHk...", "....kffffffk....", "..kkkaaaaaakkk..", ".kHHkaagggakksk.",
-        ".khhkaaaaaakSSw.", ".kHHkaaaaaakssk.", "..kk.kaaaak.kk..", "....khh..hhk....",
-        "...khhk..khhk...", "...kkk....kkk...", "................", "................",
-      ],
-      [
-        ".....kkkkkk.....", "....kHHHHHHk....", "...kHhGGGGhHk...", "...kHhgggghHk...",
-        "....kffffffk....", "..kkkaaaaaakkk..", ".kHHkaagggakksk.", ".khhkaaaaaakSSw.",
-        ".kHHkaaaaaakssk.", "..kk.kaaaak.kk..", ".....khhhhk.....", "....khh..hhk....",
-        "....khh..hhk....", "....kkk..kkk....", "................", "................",
-      ],
-      [
-        "................", ".....kkkkkk.....", "....kHHHHHHk....", "...kHhGGGGhHk...",
-        "...kHhgggghHk...", "....kffffffk....", "..kkkaaaaaakkk..", ".kHHkaagggakksk.",
-        ".khhkaaaaaakSSw.", ".kHHkaaaaaakssk.", "..kk.kaaaak.kk..", ".....khhhhk.....",
-        ".....khhhhk.....", ".....kk..kk.....", "................", "................",
-      ],
-    ],
-  },
-};
-
-// =========================================================================
-// NPC MATRICES (Elder, Blacksmith, Merchant)
-// =========================================================================
-
-const NPC_DEFS: Record<string, { pal: Record<string, string>; rows: string[] }> = {
-  elder: {
-    pal: { k: "#110f1c", w: "#edf2ff", g: "#ffe066", b: "#324994", B: "#5678d6", f: "#f2c29b", t: "#7a4e2b" },
-    rows: [
-      ".....kkkkkk.....", "....kggggggk....", "...kwwwwwwwwk...", "...kwfkwfkwwk...",
-      "...kwwwwwwwwk...", "...kkwwwwwwkk...", "..kBBbbbbbbBtk..", "..kBBbggggbBtk..",
-      "..kBBbbbbbbBtk..", "...kbbbbbbbbgk..", "...kbbbbbbbbtk..", "....kbbbbbbk....",
-      "....kbb..bbk....", "....kkk..kkk....", "................", "................",
-    ],
-  },
-  blacksmith: {
-    pal: { k: "#120d0c", h: "#694127", g: "#ff9933", f: "#e8b48e", a: "#593524", s: "#9aa6ba", S: "#e2edf7" },
-    rows: [
-      "....kkkkkkkk....", "...khhhhhhhhk...", "...khggkkggkh...", "...kffffffffk...",
-      "....khhffhhk....", "..kkkaaaaaakkk..", ".kffkaaaaaakssk.", ".kffkaaaaaakSSk.",
-      ".kffkaaaaaakssk.", "..kk.kaaaak.kh..", ".....kaaaak.kh..", "....khh..hhk....",
-      "....khh..hhk....", "....kkk..kkk....", "................", "................",
-    ],
-  },
-  merchant: {
-    pal: { k: "#0d1714", g: "#1e8050", G: "#5ee896", y: "#ffe066", f: "#f2c29b", b: "#473324" },
-    rows: [
-      "....kkkkkkkk....", "...kGGGGGGGGk...", "..kGGggggggGGk..", "...kgfkffkfkg...",
-      "....kffffffk....", "..kkggggggggkk..", ".kGGggggggggGGk.", ".kGGggyyyyggGGk.",
-      "..kkggggggggkk..", "...kggggggggk...", "....kbbbbbbk....", "....kbb..bbk....",
-      "....kkk..kkk....", "................", "................", "................",
-    ],
-  },
-};
 
 // =========================================================================
 // ENEMY MATRICES (9 Regular Enemies + Turret/Drone)
@@ -524,324 +348,9 @@ function buildBossSprite(kind: "root" | "amber" | "eraser"): CompiledSprite {
   return compileMatrix(grid.map((r) => r.join("")), pal);
 }
 
-// =========================================================================
-// TILE & WORLD STRUCTURE BUILDERS
-// =========================================================================
-
-function buildTileSet(pal: BiomePalette): TileSet {
-  const mkGround = (variant: number) => {
-    const { c, ctx } = makeCanvas(16, 16);
-    ctx.fillStyle = variant === 1 ? pal.groundB : pal.groundA;
-    ctx.fillRect(0, 0, 16, 16);
-    if (variant === 0) {
-      ctx.fillStyle = pal.groundC;
-      ctx.fillRect(2, 4, 3, 2);
-      ctx.fillRect(10, 11, 4, 2);
-    } else if (variant === 1) {
-      ctx.fillStyle = pal.groundC;
-      ctx.fillRect(4, 9, 2, 3);
-      ctx.fillRect(11, 3, 3, 2);
-    } else {
-      ctx.fillStyle = pal.foliageMid;
-      ctx.fillRect(4, 9, 2, 3);
-      ctx.fillRect(7, 8, 2, 4);
-      ctx.fillStyle = pal.flower;
-      ctx.fillRect(10, 5, 2, 2);
-      ctx.fillStyle = pal.crystalLight;
-      ctx.fillRect(11, 6, 1, 1);
-    }
-    return c;
-  };
-
-  const mkRoad = () => {
-    const { c, ctx } = makeCanvas(16, 16);
-    ctx.fillStyle = pal.roadEdge;
-    ctx.fillRect(0, 0, 16, 16);
-    ctx.fillStyle = pal.road;
-    ctx.fillRect(1, 1, 14, 14);
-    ctx.fillStyle = pal.roadEdge;
-    ctx.fillRect(7, 1, 1, 7);
-    ctx.fillRect(1, 8, 14, 1);
-    ctx.fillRect(11, 9, 1, 6);
-    ctx.fillStyle = pal.groundC;
-    ctx.fillRect(2, 2, 3, 2);
-    ctx.fillRect(9, 10, 2, 2);
-    return c;
-  };
-
-  const mkWall = () => {
-    const { c, ctx } = makeCanvas(16, 16);
-    ctx.fillStyle = pal.outline;
-    ctx.fillRect(0, 0, 16, 16);
-    ctx.fillStyle = pal.wallDark;
-    ctx.fillRect(1, 1, 14, 14);
-    ctx.fillStyle = pal.wallMid;
-    ctx.fillRect(1, 1, 14, 9);
-    ctx.fillStyle = pal.wallLight;
-    ctx.fillRect(2, 2, 5, 3);
-    ctx.fillRect(9, 2, 5, 3);
-    ctx.fillStyle = pal.outline;
-    ctx.fillRect(1, 6, 14, 1);
-    ctx.fillRect(8, 1, 1, 6);
-    ctx.fillRect(4, 7, 1, 8);
-    ctx.fillRect(12, 7, 1, 8);
-    return c;
-  };
-
-  const mkLiquid = (a: string, b: string, shift: number) => {
-    const { c, ctx } = makeCanvas(16, 16);
-    ctx.fillStyle = a;
-    ctx.fillRect(0, 0, 16, 16);
-    ctx.fillStyle = b;
-    ctx.fillRect((2 + shift * 4) % 12, 3, 5, 2);
-    ctx.fillRect((8 - shift * 3 + 12) % 12, 10, 6, 2);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect((3 + shift * 4) % 12, 3, 2, 1);
-    return c;
-  };
-
-  const mkBridge = () => {
-    const { c, ctx } = makeCanvas(16, 16);
-    ctx.fillStyle = "#2b190d";
-    ctx.fillRect(0, 0, 16, 16);
-    for (let y = 1; y < 15; y += 3) {
-      ctx.fillStyle = "#7a4b29";
-      ctx.fillRect(1, y, 14, 2);
-      ctx.fillStyle = "#a36a3d";
-      ctx.fillRect(2, y, 12, 1);
-    }
-    return c;
-  };
-
-  const mkTree = () => {
-    const { c, ctx } = makeCanvas(24, 28);
-    ctx.fillStyle = pal.outline;
-    ctx.fillRect(9, 14, 6, 13);
-    ctx.fillStyle = pal.trunk;
-    ctx.fillRect(10, 14, 4, 12);
-    ctx.fillStyle = pal.outline;
-    ctx.fillRect(3, 4, 18, 13);
-    ctx.fillRect(5, 2, 14, 16);
-    ctx.fillStyle = pal.foliageDark;
-    ctx.fillRect(4, 5, 16, 11);
-    ctx.fillStyle = pal.foliageMid;
-    ctx.fillRect(5, 4, 14, 10);
-    ctx.fillStyle = pal.foliageLight;
-    ctx.fillRect(6, 4, 9, 5);
-    ctx.fillRect(14, 6, 3, 3);
-    ctx.fillStyle = pal.flower;
-    ctx.fillRect(8, 8, 2, 2);
-    ctx.fillRect(15, 10, 2, 2);
-    return c;
-  };
-
-  const mkRock = () => {
-    const { c, ctx } = makeCanvas(18, 18);
-    ctx.fillStyle = pal.outline;
-    ctx.fillRect(2, 6, 14, 11);
-    ctx.fillRect(4, 3, 10, 14);
-    ctx.fillStyle = pal.wallDark;
-    ctx.fillRect(3, 7, 12, 9);
-    ctx.fillStyle = pal.wallMid;
-    ctx.fillRect(4, 5, 10, 9);
-    ctx.fillStyle = pal.wallLight;
-    ctx.fillRect(5, 5, 5, 4);
-    ctx.fillStyle = pal.crystalDark;
-    ctx.fillRect(9, 2, 4, 7);
-    ctx.fillStyle = pal.crystalLight;
-    ctx.fillRect(10, 2, 2, 5);
-    return c;
-  };
-
-  const mkPillar = () => {
-    const { c, ctx } = makeCanvas(16, 26);
-    ctx.fillStyle = pal.outline;
-    ctx.fillRect(3, 18, 10, 7);
-    ctx.fillRect(5, 4, 6, 16);
-    ctx.fillStyle = pal.wallDark;
-    ctx.fillRect(4, 19, 8, 5);
-    ctx.fillStyle = pal.wallMid;
-    ctx.fillRect(6, 5, 4, 15);
-    ctx.fillStyle = pal.crystalDark;
-    ctx.fillRect(5, 2, 6, 5);
-    ctx.fillStyle = pal.crystalLight;
-    ctx.fillRect(6, 3, 4, 3);
-    ctx.fillRect(7, 9, 2, 7);
-    return c;
-  };
-
-  return {
-    ground0: mkGround(0),
-    ground1: mkGround(1),
-    ground2: mkGround(2),
-    road: mkRoad(),
-    wall: mkWall(),
-    water0: mkLiquid(pal.waterA, pal.waterB, 0),
-    water1: mkLiquid(pal.waterA, pal.waterB, 1),
-    lava0: mkLiquid(pal.lavaA, pal.lavaB, 0),
-    lava1: mkLiquid(pal.lavaA, pal.lavaB, 1),
-    bridge: mkBridge(),
-    tree: mkTree(),
-    rock: mkRock(),
-    pillar: mkPillar(),
-  };
-}
-
-function buildBuildings() {
-  const mkHouse = (roofA: string, roofB: string, wall: string, trim: string, signColor: string) => {
-    const { c, ctx } = makeCanvas(48, 42);
-    // Roof
-    ctx.fillStyle = "#110f1a";
-    ctx.fillRect(2, 4, 44, 18);
-    ctx.fillRect(6, 1, 36, 5);
-    ctx.fillStyle = roofA;
-    ctx.fillRect(4, 6, 40, 14);
-    ctx.fillStyle = roofB;
-    for (let x = 6; x < 42; x += 6) ctx.fillRect(x, 6, 3, 13);
-    // Body
-    ctx.fillStyle = "#110f1a";
-    ctx.fillRect(5, 20, 38, 21);
-    ctx.fillStyle = wall;
-    ctx.fillRect(7, 21, 34, 18);
-    ctx.fillStyle = trim;
-    ctx.fillRect(7, 21, 34, 3);
-    ctx.fillRect(7, 36, 34, 3);
-    // Door
-    ctx.fillStyle = "#110f1a";
-    ctx.fillRect(19, 27, 10, 12);
-    ctx.fillStyle = "#5c361e";
-    ctx.fillRect(20, 28, 8, 11);
-    ctx.fillStyle = "#ffe066";
-    ctx.fillRect(26, 33, 1, 2);
-    // Glowing Windows
-    for (const wx of [10, 32]) {
-      ctx.fillStyle = "#110f1a";
-      ctx.fillRect(wx, 26, 6, 6);
-      ctx.fillStyle = signColor;
-      ctx.fillRect(wx + 1, 27, 4, 4);
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(wx + 1, 27, 2, 1);
-    }
-    return c;
-  };
-
-  const mkAltar = () => {
-    const { c, ctx } = makeCanvas(28, 28);
-    ctx.fillStyle = "#110f1c";
-    ctx.fillRect(2, 14, 24, 12);
-    ctx.fillRect(5, 11, 18, 15);
-    ctx.fillStyle = "#48527a";
-    ctx.fillRect(4, 15, 20, 9);
-    ctx.fillStyle = "#8899cc";
-    ctx.fillRect(6, 13, 16, 7);
-    // Floating prism crystal
-    ctx.fillStyle = "#110f1c";
-    ctx.fillRect(10, 2, 8, 12);
-    ctx.fillStyle = "#33ddff";
-    ctx.fillRect(11, 3, 6, 10);
-    ctx.fillStyle = "#ff66d8";
-    ctx.fillRect(14, 4, 3, 8);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(12, 4, 2, 5);
-    return c;
-  };
-
-  return {
-    elderHouse: mkHouse("#2e4694", "#4a6cd1", "#9e8e7b", "#5c4d3e", "#ffe066"),
-    forgeHouse: mkHouse("#8c2d1f", "#cc4c28", "#6b6678", "#3a3645", "#ff9933"),
-    shopHouse: mkHouse("#1c754c", "#34b872", "#a89882", "#5c4d3e", "#44ee88"),
-    classAltar: mkAltar(),
-  };
-}
-
-function buildInteractableSprites() {
-  const mkWaypoint = (active: boolean) => {
-    const { c, ctx } = makeCanvas(20, 32);
-    // Pedestal
-    ctx.fillStyle = "#0e0c18";
-    ctx.fillRect(2, 23, 16, 8);
-    ctx.fillStyle = active ? "#4a5680" : "#3a3d45";
-    ctx.fillRect(3, 24, 14, 6);
-    ctx.fillStyle = active ? "#93a6de" : "#676b75";
-    ctx.fillRect(5, 22, 10, 4);
-    // Obelisk spire
-    ctx.fillStyle = "#0e0c18";
-    ctx.fillRect(6, 3, 8, 20);
-    ctx.fillRect(8, 1, 4, 4);
-    ctx.fillStyle = active ? "#2ee8ff" : "#5c606b";
-    ctx.fillRect(7, 4, 6, 18);
-    if (active) {
-      ctx.fillStyle = "#ff66d8";
-      ctx.fillRect(10, 6, 3, 14);
-      ctx.fillStyle = "#ffee55";
-      ctx.fillRect(8, 10, 2, 8);
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(9, 4, 2, 16);
-    } else {
-      ctx.fillStyle = "#8a909e";
-      ctx.fillRect(8, 5, 2, 14);
-    }
-    return c;
-  };
-
-  const mkChest = (state: "locked" | "unlocked" | "opened") => {
-    const { c, ctx } = makeCanvas(16, 16);
-    ctx.fillStyle = "#120d16";
-    ctx.fillRect(1, 3, 14, 12);
-    if (state === "opened") {
-      ctx.fillStyle = "#4f2c17";
-      ctx.fillRect(2, 4, 12, 4);
-      ctx.fillStyle = "#29150a";
-      ctx.fillRect(2, 8, 12, 6);
-      ctx.fillStyle = "#ffe066";
-      ctx.fillRect(4, 9, 8, 2);
-      return c;
-    }
-    ctx.fillStyle = "#8a4b24";
-    ctx.fillRect(2, 4, 12, 10);
-    ctx.fillStyle = "#c47837";
-    ctx.fillRect(2, 4, 12, 4);
-    ctx.fillStyle = state === "locked" ? "#ff3355" : "#ffe066";
-    ctx.fillRect(2, 8, 12, 2);
-    ctx.fillRect(6, 7, 4, 4);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(7, 8, 2, 2);
-    return c;
-  };
-
-  const mkResource = (dark: string, mid: string, light: string) => {
-    const { c, ctx } = makeCanvas(18, 18);
-    ctx.fillStyle = "#100e18";
-    ctx.fillRect(2, 7, 14, 10);
-    ctx.fillRect(5, 2, 8, 14);
-    ctx.fillStyle = dark;
-    ctx.fillRect(3, 8, 12, 8);
-    ctx.fillStyle = mid;
-    ctx.fillRect(5, 4, 8, 10);
-    ctx.fillRect(10, 6, 4, 8);
-    ctx.fillStyle = light;
-    ctx.fillRect(6, 4, 4, 6);
-    ctx.fillRect(11, 7, 2, 4);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(7, 5, 2, 2);
-    return c;
-  };
-
-  return {
-    waypointOff: mkWaypoint(false),
-    waypointOn: mkWaypoint(true),
-    chestLocked: mkChest("locked"),
-    chestUnlocked: mkChest("unlocked"),
-    chestOpened: mkChest("opened"),
-    iron_vein: mkResource("#3a404f", "#7f8ba3", "#d4deed"),
-    quartz_cluster: mkResource("#105b7a", "#26b8de", "#a8fbff"),
-    amber_crystal: mkResource("#8f340e", "#f08a1d", "#ffe875"),
-    void_crystal: mkResource("#3b106e", "#a238eb", "#ff88f2"),
-  };
-}
-
 class PixelSpriteAtlas {
   private ready = false;
+  private dynamicHeroCache = new Map<string, CompiledSprite[]>();
   heroes!: Record<ClassId, CompiledSprite[]>;
   npcs!: Record<string, CompiledSprite>;
   enemies!: Record<string, CompiledSprite[]>;
@@ -849,25 +358,15 @@ class PixelSpriteAtlas {
   summons!: { turret: CompiledSprite; drone: CompiledSprite };
   tilesBleached!: Record<BiomeId, TileSet>;
   tilesRestored!: Record<BiomeId, TileSet>;
-  buildings!: ReturnType<typeof buildBuildings>;
-  interactables!: ReturnType<typeof buildInteractableSprites>;
+  buildings!: ReturnType<typeof buildRichBuildings>;
+  interactables!: ReturnType<typeof buildRichInteractables>;
 
   init() {
     if (this.ready) return;
     this.ready = true;
 
-    this.heroes = {
-      prism_knight: HERO_DEFS.prism_knight.frames.map((f) => compileMatrix(f, HERO_DEFS.prism_knight.pal)),
-      chroma_mage: HERO_DEFS.chroma_mage.frames.map((f) => compileMatrix(f, HERO_DEFS.chroma_mage.pal)),
-      bit_rogue: HERO_DEFS.bit_rogue.frames.map((f) => compileMatrix(f, HERO_DEFS.bit_rogue.pal)),
-      pixel_tinker: HERO_DEFS.pixel_tinker.frames.map((f) => compileMatrix(f, HERO_DEFS.pixel_tinker.pal)),
-    };
-
-    this.npcs = {
-      elder: compileMatrix(NPC_DEFS.elder.rows, NPC_DEFS.elder.pal),
-      blacksmith: compileMatrix(NPC_DEFS.blacksmith.rows, NPC_DEFS.blacksmith.pal),
-      merchant: compileMatrix(NPC_DEFS.merchant.rows, NPC_DEFS.merchant.pal),
-    };
+    this.heroes = buildAllHeroSprites();
+    this.npcs = buildAllNpcSprites();
 
     this.enemies = {};
     for (const [id, def] of Object.entries(ENEMY_MATRICES)) {
@@ -888,17 +387,30 @@ class PixelSpriteAtlas {
     this.tilesBleached = {} as Record<BiomeId, TileSet>;
     this.tilesRestored = {} as Record<BiomeId, TileSet>;
     for (const biome of Object.values(BIOME_CONFIGS)) {
-      this.tilesBleached[biome.id] = buildTileSet(biome.bleached);
-      this.tilesRestored[biome.id] = buildTileSet(biome.restored);
+      this.tilesBleached[biome.id] = buildRichTileSet(biome.id, biome.bleached, false);
+      this.tilesRestored[biome.id] = buildRichTileSet(biome.id, biome.restored, true);
     }
 
-    this.buildings = buildBuildings();
-    this.interactables = buildInteractableSprites();
+    this.buildings = buildRichBuildings();
+    this.interactables = buildRichInteractables();
   }
 
   getHero(id: ClassId, frame = 0): CompiledSprite {
     this.init();
     const list = this.heroes[id];
+    const idx = ((Math.floor(frame) % list.length) + list.length) % list.length;
+    return list[idx];
+  }
+
+  getHeroDynamic(id: ClassId, loadout: HeroVisualLoadout, frame = 0): CompiledSprite {
+    this.init();
+    const enhTag = loadout.weaponEnhance >= 5 ? 1 : 0;
+    const key = `${id}|${loadout.weaponTier}|${loadout.armorTier}|${loadout.ringTier}|${loadout.chipTier}|${enhTag}`;
+    let list = this.dynamicHeroCache.get(key);
+    if (!list) {
+      list = buildDynamicHeroFrames(id, loadout);
+      this.dynamicHeroCache.set(key, list);
+    }
     const idx = ((Math.floor(frame) % list.length) + list.length) % list.length;
     return list[idx];
   }

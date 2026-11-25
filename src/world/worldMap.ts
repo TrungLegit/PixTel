@@ -251,8 +251,8 @@ export class WorldMap {
         label: "LÒ RÈN LĂNG KÍNH",
         x: 72 * TILE_SIZE + 8,
         y: 74 * TILE_SIZE + 8,
-        halfW: 20,
-        halfH: 10,
+        halfW: 24,
+        halfH: 12,
       },
       {
         id: "b_shop",
@@ -260,8 +260,8 @@ export class WorldMap {
         label: "TIỆM TẠP HÓA",
         x: 88 * TILE_SIZE + 8,
         y: 74 * TILE_SIZE + 8,
-        halfW: 20,
-        halfH: 10,
+        halfW: 24,
+        halfH: 12,
       },
       {
         id: "b_elder",
@@ -269,8 +269,8 @@ export class WorldMap {
         label: "NHÀ TRƯỞNG LÀNG",
         x: 72 * TILE_SIZE + 8,
         y: 88 * TILE_SIZE + 8,
-        halfW: 20,
-        halfH: 10,
+        halfW: 24,
+        halfH: 12,
       },
       {
         id: "b_altar",
@@ -278,8 +278,8 @@ export class WorldMap {
         label: "ĐÀI ĐỔI CLASS",
         x: CLASS_ALTAR_POS.tx * TILE_SIZE + 8,
         y: CLASS_ALTAR_POS.ty * TILE_SIZE + 8,
-        halfW: 11,
-        halfH: 7,
+        halfW: 13,
+        halfH: 8,
       }
     );
 

@@ -1,5 +1,6 @@
 import { ENEMIES } from "../data/enemies";
 import { ITEMS, createItemInstance, pickRandomEquipByRarity } from "../data/items";
+import type { BiomeId, ClassId } from "../data/types";
 import { TILE_SIZE, WORLD_CAMPS, WORLD_RESOURCES } from "../data/worldConfig";
 import type {
   CampRuntime,
@@ -157,8 +158,86 @@ export class WorldSpawner {
     return { chestUnlocked: false };
   }
 
+  /** Summons a combat minion (e.g., Blight Root Phase 2 guards). */
+  spawnBossMinion(
+    typeId: string,
+    x: number,
+    y: number,
+    campId: string,
+    biome: BiomeId,
+    vfx: VfxManager | null
+  ) {
+    const edef = ENEMIES[typeId];
+    if (!edef) return;
+    this.enemies.push({
+      uid: nextEntityUid(),
+      defId: edef.id,
+      campId,
+      biome,
+      x,
+      y,
+      homeX: x,
+      homeY: y,
+      vx: 0,
+      vy: 0,
+      facing: 1,
+      radius: edef.radius,
+      hp: edef.maxHp,
+      maxHp: edef.maxHp,
+      atk: edef.atk,
+      def: edef.def,
+      spd: edef.spd,
+      level: edef.level,
+      isBoss: false,
+      isWorldBoss: false,
+      isSummonedMinion: true,
+      state: "aggro",
+      patrolTargetX: x,
+      patrolTargetY: y,
+      patrolWait: 0.5,
+      aiTimer: 0.8,
+      specialTimer: 3.0,
+      phase: 1,
+      hitFlash: 0,
+      walkTime: 0,
+      element: null,
+      elementTime: 0,
+      burnTime: 0,
+      burnTick: 0,
+      slowTime: 0,
+      poisonTime: 0,
+      poisonTick: 0,
+    });
+    if (vfx) {
+      vfx.spawnPooled("portal-void", { x, y, layer: "back" });
+    }
+  }
+
+  /** Restores locked boss to full HP & clears summoned adds if player dies inside boss territory. */
+  resetBossOnPlayerDeath(bossUid: number) {
+    const boss = this.enemies.find((e) => e.uid === bossUid);
+    if (!boss) return;
+    boss.hp = boss.maxHp;
+    boss.phase = 1;
+    boss.state = "patrol";
+    boss.x = boss.homeX;
+    boss.y = boss.homeY;
+    boss.bossSummonedAdds = false;
+    boss.aiTimer = 1.2;
+    boss.specialTimer = 3.0;
+    boss.element = null;
+    boss.burnTime = 0;
+    boss.slowTime = 0;
+    boss.poisonTime = 0;
+    for (let i = this.enemies.length - 1; i >= 0; i--) {
+      if (this.enemies[i].isSummonedMinion && this.enemies[i].campId === boss.campId) {
+        this.enemies.splice(i, 1);
+      }
+    }
+  }
+
   /** Opens an unlocked camp chest and bursts gold + guaranteed rarity equipment + materials. */
-  openChest(chest: ChestEntity, vfx: VfxManager) {
+  openChest(chest: ChestEntity, vfx: VfxManager, playerClassId?: ClassId) {
     if (chest.state !== "unlocked") return;
     chest.state = "opened";
     vfx.spawnPooled("chest-open", { x: chest.x, y: chest.y - 4, scale: 1.1 });
@@ -174,8 +253,8 @@ export class WorldSpawner {
             : 45;
     this.spawnGoldLoot(chest.x - 10, chest.y + 8, goldBase + Math.floor(Math.random() * 35));
 
-    // Guaranteed equipment of chest rarity
-    const eqId = pickRandomEquipByRarity(chest.rarity);
+    // Guaranteed equipment of chest rarity (biased toward player's class)
+    const eqId = pickRandomEquipByRarity(chest.rarity, playerClassId);
     this.spawnItemLoot(chest.x + 10, chest.y + 8, eqId, 1);
 
     // Bonus potion or crafting material

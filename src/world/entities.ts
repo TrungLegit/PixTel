@@ -1,4 +1,5 @@
 import type {
+  AllocatedStats,
   BiomeId,
   CampDef,
   ClassId,
@@ -22,6 +23,8 @@ export interface PlayerEntity {
   level: number;
   xp: number;
   xpNext: number;
+  statPoints: number;
+  allocatedStats: AllocatedStats;
   hp: number;
   maxHp: number;
   atk: number;
@@ -90,6 +93,8 @@ export interface EnemyEntity {
   level: number;
   isBoss: boolean;
   isWorldBoss: boolean;
+  bossSummonedAdds?: boolean;
+  isSummonedMinion?: boolean;
 
   state: "patrol" | "aggro" | "leash";
   patrolTargetX: number;

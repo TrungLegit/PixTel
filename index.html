@@ -37,6 +37,7 @@
           <span id="hud-restore" style="color:#5ef2ff">Màu: 5% · Trụ 1/9</span>
         </div>
         <div id="hud-status-line" class="hud-status-line"></div>
+        <button id="hud-stat-pts-btn" class="hud-stat-pts-btn hidden" title="Nhấn [I] để cộng điểm tiềm năng!">✨ +0 ĐIỂM TIỀM NĂNG [I]</button>
       </div>
 
       <!-- Top-Center Boss HP Bar -->
@@ -46,6 +47,7 @@
           <div id="hud-boss-fill" class="px-bar-fill"></div>
           <span id="hud-boss-hp" class="px-bar-lbl">2600 / 2600</span>
         </div>
+        <div id="hud-boss-lock-tag" class="boss-lock-tag hidden">🔒 LÃNH ĐỊA PHONG ẤN — KHÔNG THỂ THOÁT</div>
       </div>
 
       <!-- Top-Right Minimap + Toolbar + Quest Tracker -->
@@ -76,20 +78,20 @@
 
       <!-- Bottom Skill & Consumable Hotbar -->
       <div class="hud-bottom-bar">
-        <div class="skill-slot" title="Đánh thường / Giữ Chuột trái để Tụ Lực">
+        <div id="slot-skill-lmb" class="skill-slot" title="Đánh thường / Giữ Chuột trái để Tụ Lực">
           <span class="key-cap">LMB</span>
-          <span class="slot-title">Đánh / Tụ</span>
-          <span class="slot-sub">COMBO</span>
+          <span id="skill-lmb-name" class="slot-title">Đấm Tay Không</span>
+          <span id="skill-lmb-sub" class="slot-sub">TAY KHÔNG</span>
         </div>
-        <div id="slot-skill-e" class="skill-slot">
+        <div id="slot-skill-e" class="skill-slot locked">
           <span class="key-cap">E</span>
-          <span id="skill-e-name" class="slot-title">Kỹ Năng</span>
-          <span id="skill-e-cd" class="slot-sub">READY</span>
+          <span id="skill-e-name" class="slot-title">🔒 Cần Vũ Khí</span>
+          <span id="skill-e-cd" class="slot-sub">KHÓA</span>
         </div>
-        <div id="slot-skill-q" class="skill-slot">
+        <div id="slot-skill-q" class="skill-slot locked">
           <span class="key-cap">Q</span>
-          <span id="skill-q-name" class="slot-title">Tuyệt Kỹ</span>
-          <span id="skill-q-cd" class="slot-sub">35%</span>
+          <span id="skill-q-name" class="slot-title">🔒 Cần Chip</span>
+          <span id="skill-q-cd" class="slot-sub">0%</span>
         </div>
         <div id="slot-dash" class="skill-slot">
           <span class="key-cap">SPC</span>
@@ -151,43 +153,58 @@
     <div id="modal-inventory" class="modal-backdrop hidden">
       <div class="modal-box modal-xl">
         <div class="modal-header">
-          <div>TÚI ĐỒ & TRANG BỊ [I]</div>
+          <div>TÚI ĐỒ, NGOẠI HÌNH & TIỀM NĂNG [I]</div>
           <button id="btn-close-inventory" class="px-btn sm">✕ ĐÓNG</button>
         </div>
         <div id="inv-hero-stats" class="inv-hero-stats"></div>
-        <div class="inv-layout">
-          <div class="inv-left">
-            <div class="section-hdr">4 Ô TRANG BỊ ĐANG MẶC</div>
-            <div id="inv-equip-slots" class="equip-grid"></div>
-            <div class="section-hdr">CHI TIẾT & SO SÁNH CHỈ SỐ</div>
-            <div id="inv-item-detail" class="item-detail-box"></div>
-          </div>
-          <div class="inv-right">
-            <div class="section-hdr">TÚI ĐỒ (32 Ô)</div>
-            <div id="inv-bag-grid" class="bag-grid"></div>
+        <div class="modal-scroll">
+          <div class="inv-layout">
+            <div class="inv-left">
+              <div class="inv-paperdoll-row">
+                <div class="inv-preview-wrap">
+                  <canvas id="inv-hero-preview" width="72" height="72"></canvas>
+                  <div id="inv-preview-tier" class="inv-preview-tier">Tay Không</div>
+                </div>
+                <div id="inv-stat-alloc" class="stat-alloc-panel"></div>
+              </div>
+              <div class="section-hdr">4 Ô TRANG BỊ ĐANG MẶC</div>
+              <div id="inv-equip-slots" class="equip-grid"></div>
+            </div>
+            <div class="inv-right">
+              <div class="section-hdr">CHI TIẾT & SO SÁNH CHỈ SỐ</div>
+              <div id="inv-item-detail" class="item-detail-box"></div>
+              <div class="section-hdr">TÚI ĐỒ (32 Ô)</div>
+              <div id="inv-bag-grid" class="bag-grid"></div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- MODAL: BLACKSMITH PRISM FORGE -->
+    <!-- MODAL: BLACKSMITH RUNE MATRIX FORGE -->
     <div id="modal-forge" class="modal-backdrop hidden">
       <div class="modal-box modal-xl">
         <div class="modal-header">
-          <div>⚒ LÒ RÈN LĂNG KÍNH — <span id="forge-gold-val" style="color:#ffe066">0 G</span></div>
+          <div>✡ MA TRẬN LUYỆN KHÍ — <span id="forge-gold-val" style="color:#ffe066">0 G</span></div>
           <button id="btn-close-forge" class="px-btn sm">✕ ĐÓNG</button>
         </div>
         <div class="forge-top-bar">
           <div class="forge-tabs">
-            <button id="forge-tab-enhance" class="px-btn active">CƯỜNG HÓA (+0 → +10)</button>
-            <button id="forge-tab-craft" class="px-btn">CHẾ TẠO (LAM / TÍM / CAM)</button>
+            <button id="forge-tab-enhance" class="px-btn active">✡ LUYỆN MA TRẬN (+0 → +10)</button>
+            <button id="forge-tab-craft" class="px-btn">⚒ CHẾ TẠO (LAM / TÍM / CAM)</button>
           </div>
-          <div class="forge-canvas-wrap">
-            <canvas id="forge-vfx-canvas" width="220" height="72"></canvas>
-            <span class="fx-tag">PIXELFX FORGE</span>
-          </div>
+          <div id="forge-banner-msg" class="forge-banner-hint">Đặt trang bị & Tinh Thể vào Trận Pháp để thăng cấp +1!</div>
         </div>
-        <div id="forge-content" class="modal-scroll"></div>
+        <div class="forge-matrix-shell">
+          <div class="forge-matrix-col">
+            <div class="forge-canvas-wrap">
+              <canvas id="forge-vfx-canvas" width="240" height="176"></canvas>
+              <span class="fx-tag">MA TRẬN LUYỆN KHÍ</span>
+            </div>
+            <div id="forge-matrix-legend" class="forge-matrix-legend"></div>
+          </div>
+          <div id="forge-content" class="modal-scroll forge-main-col"></div>
+        </div>
       </div>
     </div>
 

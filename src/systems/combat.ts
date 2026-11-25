@@ -1,8 +1,8 @@
 import { getClassDef } from "../data/classes";
 import { ENEMIES } from "../data/enemies";
 import { ITEMS, RARITY_INFO, pickRandomEquipByRarity } from "../data/items";
-import { CHROMA_RAINBOW } from "../data/worldConfig";
-import type { ElementType, Rarity } from "../data/types";
+import { BOSS_ARENAS, CHROMA_RAINBOW } from "../data/worldConfig";
+import type { ActiveBossLock, ElementType, Rarity } from "../data/types";
 import type {
   EnemyEntity,
   HazardEntity,
@@ -37,6 +37,8 @@ export interface CombatContext {
   onGainXp: (amount: number) => void;
   onBossDefeated: (enemy: EnemyEntity) => void;
   onPlayerDefeated: () => void;
+  getBossLock: () => ActiveBossLock | null;
+  onBossLockTrigger: (boss: EnemyEntity) => void;
   stats: { kills: number; mined: number; chestsOpened: number; bossesDefeated: number };
 }
 
@@ -52,18 +54,22 @@ function rollRarityUpgrade(minRarity: Rarity): Rarity {
   let idx = order.indexOf(minRarity);
   if (idx < 0) idx = 0;
   const r = Math.random();
-  if (r < 0.08 && idx < 4) idx = Math.min(4, idx + 2);
-  else if (r < 0.3 && idx < 4) idx = Math.min(4, idx + 1);
+  if (r < 0.04 && idx < 4) idx = Math.min(4, idx + 2);
+  else if (r < 0.26 && idx < 4) idx = Math.min(4, idx + 1);
   return order[idx];
 }
 
 /**
  * Full Open-World Real-Time Action Combat Engine:
- * - 4 distinct classes with combos, Hold-LMB charge attacks, E skills, Q ultimates
- * - Elemental reactions, Prism Shield laser reflection, Frame-Skip glitch bombs, Compile Turrets + Overload Drone
- * - Mining resource nodes, Enemy patrol/aggro/leash AI, and 3 Regional/World Bosses with telegraphs
+ * - Unarmed bare-handed start -> Weapons unlock class skills & E variants, Pix-Chips unlock Q Ultimates
+ * - 4 distinct classes with combos, Hold-LMB charge attacks, E skills, Q ultimates, Armor/Ring passives
+ * - Smooth armor mitigation, level-gap difficulty scaling, and Boss Territory Lock-In
  */
 export class CombatSystem {
+  private lastLifestealTime = 0;
+  private lastLevelWarnTime = 0;
+  private activeUltMult = 1.0;
+
   private _rollDamage(player: PlayerEntity, mult = 1, extraCrit = 0): { dmg: number; crit: boolean } {
     const buffMult = player.atkBuffTime > 0 ? 1.3 : 1.0;
     const critChance =
@@ -85,12 +91,27 @@ export class CombatSystem {
     if (player.atkCd > 0) return;
 
     const cdef = getClassDef(player.classId);
-    const speedFactor = player.cloneTime > 0 ? 0.5 : 1.0;
-    player.atkCd = cdef.baseStats.atkCooldown * speedFactor;
-
+    const agiFactor = 1 / (1 + (player.allocatedStats?.agi ?? 0) * 0.015);
+    const speedFactor = (player.cloneTime > 0 ? 0.5 : 1.0) * agiFactor;
     const ang = player.aimAngle;
     const flip = Math.cos(ang) < 0;
     player.facing = flip ? -1 : 1;
+
+    // Unarmed bare-handed fighting until the player earns & equips their first Weapon!
+    if (!ctx.inv.equipment.weapon) {
+      player.atkCd = 0.36 * speedFactor;
+      sfx.playPunch();
+      ctx.world.moveWithCollision(player, Math.cos(ang) * 3, Math.sin(ang) * 3, player.radius);
+      vfx.spawnPooled("hit-gold", {
+        x: player.x + Math.cos(ang) * 14,
+        y: player.y - 4 + Math.sin(ang) * 14,
+        scale: 0.85,
+      });
+      this._meleeArcHit(ctx, player.x, player.y, ang, 24, 1.35, 0.72, "hit-gold");
+      return;
+    }
+
+    player.atkCd = cdef.baseStats.atkCooldown * speedFactor;
 
     if (player.classId === "prism_knight") {
       const step = player.comboStep;
@@ -211,7 +232,7 @@ export class CombatSystem {
     }
   }
 
-  /** Triggered when player holds LMB >= 0.4s and releases (costs 22 Stamina). */
+  /** Triggered when player holds LMB >= 0.4s and releases (costs 18-22 Stamina). */
   performChargedAttack(ctx: CombatContext) {
     const { player, vfx } = ctx;
     if (player.stamina < 18) {
@@ -224,6 +245,21 @@ export class CombatSystem {
 
     const ang = player.aimAngle;
     player.facing = Math.cos(ang) < 0 ? -1 : 1;
+    const strMult = 1 + (player.allocatedStats?.str ?? 0) * 0.015;
+
+    // Unarmed Heavy Uppercut!
+    if (!ctx.inv.equipment.weapon) {
+      sfx.playPunch();
+      ctx.addShake(2.4);
+      ctx.world.moveWithCollision(player, Math.cos(ang) * 8, Math.sin(ang) * 8, player.radius);
+      vfx.spawnPooled("crit-gold", {
+        x: player.x + Math.cos(ang) * 18,
+        y: player.y - 4 + Math.sin(ang) * 18,
+      });
+      this._meleeArcHit(ctx, player.x, player.y, ang, 30, 1.45, 1.25 * strMult, "crit-gold");
+      return;
+    }
+
     sfx.playChargeRelease();
     ctx.addShake(3.2);
 
@@ -240,8 +276,7 @@ export class CombatSystem {
         options: { palette: PAL.cyber },
         priority: 4,
       });
-      // Pierce enemies along thrust line
-      this._linePierceHit(ctx, player.x, player.y, ang, 78, 18, 2.25, "hit-cyan");
+      this._linePierceHit(ctx, player.x, player.y, ang, 78, 18, 2.25 * strMult, "hit-cyan");
       return;
     }
 
@@ -250,7 +285,7 @@ export class CombatSystem {
       const offsets = [-0.22, 0, 0.22];
       const presets = ["proj-fireball", "proj-icelance", "proj-poison"];
       for (let i = 0; i < 3; i++) {
-        const { dmg, crit } = this._rollDamage(player, 1.15);
+        const { dmg, crit } = this._rollDamage(player, 1.15 * strMult);
         this._spawnPlayerProj(ctx, {
           x: player.x + Math.cos(ang) * 10,
           y: player.y - 4 + Math.sin(ang) * 10,
@@ -272,7 +307,7 @@ export class CombatSystem {
     if (player.classId === "bit_rogue") {
       // 5-Shuriken Fan Burst
       for (let i = -2; i <= 2; i++) {
-        const { dmg, crit } = this._rollDamage(player, 0.95, 18);
+        const { dmg, crit } = this._rollDamage(player, 0.95 * strMult, 18);
         this._spawnPlayerProj(ctx, {
           x: player.x + Math.cos(ang) * 8,
           y: player.y - 3 + Math.sin(ang) * 8,
@@ -299,43 +334,93 @@ export class CombatSystem {
         options: { length: 150, palette: PAL.cyber },
         priority: 4,
       });
-      this._linePierceHit(ctx, player.x, player.y, ang, 155, 16, 2.2, "zap-hit");
+      this._linePierceHit(ctx, player.x, player.y, ang, 155, 16, 2.2 * strMult, "zap-hit");
     }
   }
 
-  /** Class active skill [E] */
+  /** Class active skill [E] — unlocked & specialized by the equipped Weapon! */
   performSkillE(ctx: CombatContext) {
     const { player, vfx } = ctx;
+    const weaponDef = ctx.inv.getEquippedDef("weapon");
+    if (!weaponDef || !weaponDef.grantsSkillE) {
+      ctx.notify("Kỹ năng [E] đang KHÓA! Trang bị Vũ Khí để mở khóa.", "warn");
+      sfx.playForgeFail();
+      return;
+    }
     if (player.skillCd > 0) return;
 
     const cdef = getClassDef(player.classId);
     player.skillCd = cdef.baseStats.skillCooldown;
     const ang = player.aimAngle;
+    const variant = weaponDef.grantsSkillE.variant;
 
-    if (player.classId === "prism_knight") {
-      player.shieldTime = 1.05;
+    // --- PRISM KNIGHT VARIANTS ---
+    if (variant === "knight_shield_beam" || variant === "knight_quake_aegis" || variant === "knight_solar_prism") {
+      player.shieldTime = variant === "knight_solar_prism" ? 1.25 : 1.05;
       sfx.playBlock();
       vfx.spawnLive("impacts/shield-block", {
         x: player.x,
         y: player.y,
         follow: player,
-        options: { palette: PAL.cyber },
+        options: { palette: variant === "knight_solar_prism" ? PAL.gold : PAL.cyber },
         priority: 4,
-        maxLife: 1.05,
+        maxLife: player.shieldTime,
       });
-      // Fire immediate counter-prism beam along aim direction too so E feels punchy even proactively!
-      this.firePrismBeam(ctx, ang, 1.85);
+
+      if (variant === "knight_solar_prism") {
+        for (const off of [-0.24, 0, 0.24]) {
+          this.firePrismBeam(ctx, ang + off, 1.75);
+        }
+      } else if (variant === "knight_quake_aegis") {
+        vfx.spawnPooled("ground-slam", { x: player.x, y: player.y });
+        ctx.addShake(4.2);
+        for (const e of [...ctx.spawner.enemies]) {
+          const dx = e.x - player.x;
+          const dy = e.y - player.y;
+          const d = Math.hypot(dx, dy);
+          if (d <= 58 + e.radius) {
+            const { dmg, crit } = this._rollDamage(player, 1.9);
+            this.damageEnemy(ctx, e, dmg, crit, "hit-gold", undefined, (dx / (d || 1)) * 2.2, (dy / (d || 1)) * 2.2);
+          }
+        }
+        this.firePrismBeam(ctx, ang, 1.5);
+      } else {
+        this.firePrismBeam(ctx, ang, 1.85);
+      }
       return;
     }
 
-    if (player.classId === "chroma_mage") {
+    // --- CHROMA MAGE VARIANTS ---
+    if (variant === "mage_chroma_vortex" || variant === "mage_frost_nova" || variant === "mage_astral_collapse") {
       const tx = player.x + Math.cos(ang) * 64;
       const ty = player.y + Math.sin(ang) * 64;
+
+      if (variant === "mage_frost_nova") {
+        sfx.playExplosion();
+        ctx.addShake(3.0);
+        vfx.spawnLive("ice/frost-nova", {
+          x: player.x,
+          y: player.y,
+          options: { palette: PAL.ice },
+          priority: 5,
+          maxLife: 1.5,
+        });
+        for (const e of [...ctx.spawner.enemies]) {
+          const d = Math.hypot(e.x - player.x, e.y - player.y);
+          if (d <= 64 + e.radius) {
+            const { dmg, crit } = this._rollDamage(player, 2.05);
+            this.damageEnemy(ctx, e, dmg, crit, "hit-ice", "ice");
+            e.slowTime = Math.max(e.slowTime, 4.0);
+          }
+        }
+      }
+
       sfx.playMagic(1);
+      const isAstral = variant === "mage_astral_collapse";
       vfx.spawnLive("pixtel/chroma-vortex", {
         x: tx,
         y: ty,
-        options: { radius: 44 },
+        options: { radius: isAstral ? 56 : 44 },
         priority: 4,
         maxLife: 3.1,
       });
@@ -345,26 +430,48 @@ export class CombatSystem {
         kind: "vortex",
         x: tx,
         y: ty,
-        radius: 56,
+        radius: isAstral ? 68 : 56,
         delay: 0,
         age: 0,
         maxLife: 3.1,
         tickTimer: 0,
-        damage: Math.round(player.atk * 0.55),
+        damage: Math.round(player.atk * (isAstral ? 0.78 : 0.55)),
         triggered: true,
       });
+
+      if (isAstral) {
+        for (let i = 0; i < 3; i++) {
+          const mx = tx + Math.cos((i * Math.PI * 2) / 3) * 28;
+          const my = ty + Math.sin((i * Math.PI * 2) / 3) * 28;
+          ctx.hazards.push({
+            uid: nextEntityUid(),
+            owner: "player",
+            kind: "meteor",
+            x: mx,
+            y: my,
+            radius: 36,
+            delay: 0.25 + i * 0.14,
+            age: 0,
+            maxLife: 0.65 + i * 0.14,
+            tickTimer: 0,
+            damage: Math.round(player.atk * 2.1),
+            triggered: false,
+          });
+        }
+      }
       return;
     }
 
-    if (player.classId === "bit_rogue") {
-      // Frame-Skip: leave explosive glitch afterimage, dash invulnerably forward!
+    // --- BIT ROGUE VARIANTS ---
+    if (variant === "rogue_frame_skip" || variant === "rogue_shadow_ambush" || variant === "rogue_phantom_blitz") {
       const ox = player.x;
       const oy = player.y;
+      const isBlitz = variant === "rogue_phantom_blitz";
       sfx.playDash();
       vfx.spawnLive("pixtel/frame-skip", {
         x: ox,
         y: oy,
-        options: { actor: sprites.getHero("bit_rogue", 0).actor },
+        options: { actor: sprites.getHero(player.classId, 0).actor },
         priority: 4,
         maxLife: 1.25,
       });
@@ -374,14 +481,34 @@ export class CombatSystem {
         kind: "afterimage",
         x: ox,
         y: oy,
-        radius: 44,
-        delay: 0.78,
+        radius: isBlitz ? 56 : 44,
+        delay: 0.75,
         age: 0,
         maxLife: 1.0,
         tickTimer: 0,
-        damage: Math.round(player.atk * 2.4),
+        damage: Math.round(player.atk * (isBlitz ? 3.1 : 2.4)),
         triggered: false,
       });
+
+      if (variant === "rogue_shadow_ambush" || isBlitz) {
+        const fan = isBlitz ? [-2, -1, 0, 1, 2] : [-1, 0, 1];
+        for (const i of fan) {
+          const { dmg, crit } = this._rollDamage(player, isBlitz ? 1.05 : 0.9, 15);
+          this._spawnPlayerProj(ctx, {
+            x: ox,
+            y: oy - 3,
+            angle: ang + i * 0.16,
+            speed: 310,
+            radius: 5,
+            damage: dmg,
+            crit,
+            pierce: 1,
+            maxLife: 0.72,
+            preset: "proj-shuriken",
+            hitPreset: "crit-gold",
+          });
+        }
+      }
 
       player.dashing = 0.2;
       player.invuln = Math.max(player.invuln, 0.35);
@@ -390,41 +517,61 @@ export class CombatSystem {
       return;
     }
 
-    if (player.classId === "pixel_tinker") {
-      // Compile Pixel Turret (max 2)
-      const tx = player.x + Math.cos(ang) * 26;
-      const ty = player.y + Math.sin(ang) * 26;
-      const safeX = ctx.world.isBlocked(tx, ty, 6) ? player.x : tx;
-      const safeY = ctx.world.isBlocked(tx, ty, 6) ? player.y : ty;
-      if (ctx.turrets.length >= 2) {
-        ctx.turrets.shift();
+    // --- PIXEL TINKER VARIANTS ---
+    const tx = player.x + Math.cos(ang) * 26;
+    const ty = player.y + Math.sin(ang) * 26;
+    const safeX = ctx.world.isBlocked(tx, ty, 6) ? player.x : tx;
+    const safeY = ctx.world.isBlocked(tx, ty, 6) ? player.y : ty;
+    if (ctx.turrets.length >= 2) {
+      ctx.turrets.shift();
+    }
+    const baseTurretHp = 70 + player.level * 10;
+    const turretHp = ctx.inv.hasPassive("nano_repair") ? Math.round(baseTurretHp * 1.35) : baseTurretHp;
+    const startOverclock = variant === "tinker_shock_mortar" ? 5.0 : variant === "tinker_prism_cannon" ? 6.5 : 0;
+
+    ctx.turrets.push({
+      uid: nextEntityUid(),
+      x: safeX,
+      y: safeY,
+      hp: turretHp,
+      maxHp: turretHp,
+      life: 0,
+      maxLife: 18,
+      fireCd: 0.35,
+      overclockTime: startOverclock,
+      angle: ang,
+      hitFlash: 0,
+    });
+    sfx.playBlock();
+    vfx.spawnLive("pixtel/compile-turret", {
+      x: safeX,
+      y: safeY,
+      priority: 4,
+      maxLife: 1.1,
+    });
+
+    if (variant === "tinker_shock_mortar") {
+      vfx.spawnPooled("ice-nova", { x: safeX, y: safeY });
+      for (const e of [...ctx.spawner.enemies]) {
+        if (Math.hypot(e.x - safeX, e.y - safeY) <= 58 + e.radius) {
+          const { dmg, crit } = this._rollDamage(player, 1.65);
+          this.damageEnemy(ctx, e, dmg, crit, "zap-hit");
+        }
       }
-      ctx.turrets.push({
-        uid: nextEntityUid(),
-        x: safeX,
-        y: safeY,
-        hp: 70 + player.level * 8,
-        maxHp: 70 + player.level * 8,
-        life: 0,
-        maxLife: 18,
-        fireCd: 0.45,
-        overclockTime: 0,
-        angle: ang,
-        hitFlash: 0,
-      });
-      sfx.playBlock();
-      vfx.spawnLive("pixtel/compile-turret", {
-        x: safeX,
-        y: safeY,
-        priority: 4,
-        maxLife: 1.1,
-      });
+    } else if (variant === "tinker_prism_cannon") {
+      this.firePrismBeam(ctx, ang, 2.1);
     }
   }
 
-  /** Class Ultimate [Q] (requires 100% Overdrive) */
+  /** Class Ultimate [Q] — unlocked & powered up by equipped Pix-Chip! */
   performUltimateQ(ctx: CombatContext) {
     const { player, vfx } = ctx;
+    const chipDef = ctx.inv.getEquippedDef("chip");
+    if (!chipDef || !chipDef.grantsSkillQ) {
+      ctx.notify("Tuyệt Kỹ [Q] đang KHÓA! Trang bị Pix-Chip để mở khóa.", "warn");
+      sfx.playForgeFail();
+      return;
+    }
     if (player.overdrive < 100) {
       ctx.notify(`Chưa đủ năng lượng Tuyệt Kỹ (${Math.floor(player.overdrive)}/100)!`, "warn");
       return;
@@ -432,6 +579,40 @@ export class CombatSystem {
     player.overdrive = 0;
     sfx.playOverdrive();
     ctx.addShake(5);
+
+    const ultVariant = chipDef.grantsSkillQ.variant;
+    this.activeUltMult =
+      ultVariant === "ult_sovereign"
+        ? 1.65
+        : ultVariant === "ult_cataclysm"
+          ? 1.35
+          : ultVariant === "ult_overclock"
+            ? 1.1
+            : 1.0;
+
+    if (ultVariant === "ult_cataclysm" || ultVariant === "ult_sovereign") {
+      const healPct = ultVariant === "ult_sovereign" ? 0.25 : 0.16;
+      const heal = Math.round(player.maxHp * healPct);
+      player.hp = Math.min(player.maxHp, player.hp + heal);
+      vfx.spawnPooled("heal-burst", { x: player.x, y: player.y - 6 });
+      vfx.spawnDamageText(player.x, player.y - 16, `+${heal} HP`, { color: "#44ee88", crit: true });
+    }
+
+    if (ultVariant === "ult_sovereign") {
+      vfx.spawnLive("pixtel/color-wave", {
+        x: player.x,
+        y: player.y,
+        options: { radius: 95 },
+        priority: 5,
+        maxLife: 0.9,
+      });
+      for (const e of [...ctx.spawner.enemies]) {
+        if (Math.hypot(e.x - player.x, e.y - player.y) <= 95 + e.radius) {
+          const { dmg, crit } = this._rollDamage(player, 2.5);
+          this.damageEnemy(ctx, e, dmg, crit, "crit-gold");
+        }
+      }
+    }
 
     vfx.spawnLive("pixtel/overdrive-aura", {
       x: player.x,
@@ -457,7 +638,6 @@ export class CombatSystem {
     }
 
     if (player.classId === "chroma_mage") {
-      // Rainbow Meteor Rain: 6 staggered meteors around aim/enemies
       const baseAngle = player.aimAngle;
       for (let i = 0; i < 6; i++) {
         const spreadA = baseAngle + ((i - 2.5) * 0.42);
@@ -484,7 +664,7 @@ export class CombatSystem {
           age: 0,
           maxLife: delay + 0.3,
           tickTimer: 0,
-          damage: Math.round(player.atk * 2.5),
+          damage: Math.round(player.atk * 2.5 * this.activeUltMult),
           triggered: false,
         });
       }
@@ -519,7 +699,8 @@ export class CombatSystem {
     const { player, vfx } = ctx;
     if (player.dashCd > 0 || player.stamina < 24 || player.exhausted) return;
     const cdef = getClassDef(player.classId);
-    player.dashCd = cdef.baseStats.dashCooldown;
+    const dashMult = ctx.inv.hasPassive("shadow_step") ? 0.78 : 1.0;
+    player.dashCd = cdef.baseStats.dashCooldown * dashMult;
     player.stamina = Math.max(0, player.stamina - 24);
     player.staminaRegenDelay = 0.65;
     if (player.stamina <= 0) player.exhausted = true;
@@ -716,10 +897,25 @@ export class CombatSystem {
     const idx = ctx.spawner.enemies.indexOf(e);
     if (idx < 0) return;
 
-    const mitigated = Math.max(2, Math.round(rawDamage - e.def * 0.55));
+    // Trigger Boss Arena Territory Lock on the very first hit!
+    if (e.isBoss && !ctx.getBossLock()) {
+      ctx.onBossLockTrigger(e);
+    }
+
+    // Smooth armor mitigation + level-gap toughness penalty for underleveled heroes
+    const defMult = 100 / (100 + e.def * 3.2);
+    const levelGap = e.level - ctx.player.level;
+    const gapMult = levelGap > 2 ? Math.max(0.28, 1 - (levelGap - 2) * 0.12) : 1.0;
+    const mitigated = Math.max(2, Math.round(rawDamage * defMult * gapMult));
+
     e.hp -= mitigated;
     e.hitFlash = 0.13;
     e.state = "aggro";
+
+    if (gapMult < 0.7 && performance.now() - this.lastLevelWarnTime > 4500) {
+      this.lastLevelWarnTime = performance.now();
+      ctx.notify(`Địch LV.${e.level} quá mạnh so với bạn (LV.${ctx.player.level})! Hãy lên cấp & luyện trang bị.`, "warn");
+    }
 
     // Knockback (smaller for bosses)
     const kb = e.isBoss ? 2 : 7;
@@ -729,18 +925,33 @@ export class CombatSystem {
 
     sfx.playHit(crit);
     ctx.vfx.spawnPooled(crit ? "crit-gold" : hitPreset, { x: e.x, y: e.y - 6 });
-    ctx.vfx.spawnDamageText(e.x, e.y - 10, crit ? `CRIT ${mitigated}!` : `${mitigated}`, {
+    const label = crit ? `CRIT ${mitigated}!` : gapMult < 0.7 ? `${mitigated} (CỨNG)` : `${mitigated}`;
+    ctx.vfx.spawnDamageText(e.x, e.y - 10, label, {
       crit,
-      color: crit ? "#ffe25a" : "#ffffff",
+      color: crit ? "#ffe25a" : gapMult < 0.7 ? "#ff99aa" : "#ffffff",
     });
 
     if (crit) {
       ctx.addShake(2.0);
       ctx.addHitstop(0.025);
+      // Ring Crit-Lifesteal passive
+      if (
+        (ctx.inv.hasPassive("ring_lifesteal") || ctx.inv.hasPassive("ring_nova_kill")) &&
+        performance.now() - this.lastLifestealTime >= 400
+      ) {
+        this.lastLifestealTime = performance.now();
+        const heal = Math.max(2, Math.round(ctx.player.maxHp * 0.04));
+        ctx.player.hp = Math.min(ctx.player.maxHp, ctx.player.hp + heal);
+        ctx.vfx.spawnDamageText(ctx.player.x, ctx.player.y - 16, `+${heal}`, { color: "#44ee88" });
+      }
     }
 
-    // Charge Ultimate Q gauge
-    ctx.player.overdrive = Math.min(100, ctx.player.overdrive + (e.isBoss ? 4.5 : 6));
+    // Charge Ultimate Q gauge (requires Pix-Chip or boosts with Arcane Surge / Overclock Chip)
+    const chipDef = ctx.inv.getEquippedDef("chip");
+    const odMult =
+      (ctx.inv.hasPassive("arcane_surge") ? 1.25 : 1.0) *
+      (chipDef?.grantsSkillQ?.variant === "ult_overclock" ? 1.25 : 1.0);
+    ctx.player.overdrive = Math.min(100, ctx.player.overdrive + (e.isBoss ? 4.5 : 6) * odMult);
 
     // Elemental Reactions (Chroma Mage)
     if (element) {
@@ -757,7 +968,8 @@ export class CombatSystem {
       const pair = [e.element, incoming].sort().join("+");
       e.element = null;
       e.elementTime = 0;
-      const bonus = Math.round(ctx.player.atk * 1.45);
+      const surgeMult = ctx.inv.hasPassive("arcane_surge") ? 1.25 : 1.0;
+      const bonus = Math.round(ctx.player.atk * 1.45 * surgeMult);
       e.hp -= bonus;
 
       if (pair === "fire+ice") {
@@ -834,14 +1046,28 @@ export class CombatSystem {
         }
       }
 
-      // Equipment drop with pixelfx Loot Beam!
+      // Equipment drop with pixelfx Loot Beam! (class-biased + exciting rarity upgrades)
       if (Math.random() <= edef.equipDropChance) {
         const rarity = rollRarityUpgrade(edef.minRarity);
-        const eqId = pickRandomEquipByRarity(rarity);
+        const eqId = pickRandomEquipByRarity(rarity, ctx.player.classId);
         ctx.spawner.spawnItemLoot(e.x, e.y, eqId, 1);
         const eqDef = ITEMS[eqId];
         if (eqDef && (rarity === "rare" || rarity === "epic" || rarity === "legendary")) {
           ctx.notify(`Rơi trang bị [${RARITY_INFO[rarity].label}] ${eqDef.name}!`, "epic");
+        }
+      }
+    }
+
+    // Ring On-Kill Nova Explosion passive
+    if (ctx.inv.hasPassive("ring_nova_kill")) {
+      const novaDmg = Math.round(ctx.player.atk * 1.35);
+      ctx.vfx.spawnPooled("explode-fire", { x: e.x, y: e.y - 4 });
+      for (const other of [...ctx.spawner.enemies]) {
+        if (Math.hypot(other.x - e.x, other.y - e.y) <= 54) {
+          other.hp -= novaDmg;
+          other.hitFlash = 0.12;
+          ctx.vfx.spawnDamageText(other.x, other.y - 10, `${novaDmg}`, { color: "#ff9933" });
+          if (other.hp <= 0) this._killEnemy(ctx, other);
         }
       }
     }
@@ -867,7 +1093,7 @@ export class CombatSystem {
     }
   }
 
-  /** Applies damage to player, handling i-frames and Prism Knight E Shield counter-laser. */
+  /** Applies damage to player, handling i-frames, smooth armor mitigation, Thorns & Prism Shield parry. */
   damagePlayer(ctx: CombatContext, rawAmount: number, srcX: number, srcY: number) {
     const { player, vfx } = ctx;
     if (player.invuln > 0 || ctx.world.isInSafeTown(player.x, player.y)) return;
@@ -882,7 +1108,7 @@ export class CombatSystem {
       return;
     }
 
-    const dmg = Math.max(2, Math.round(rawAmount - player.def * 0.6));
+    const dmg = Math.max(2, Math.round(rawAmount * (100 / (100 + player.def * 2.8))));
     player.hp = Math.max(0, player.hp - dmg);
     player.hitFlash = 0.22;
     player.invuln = 0.55;
@@ -890,6 +1116,18 @@ export class CombatSystem {
     ctx.addShake(3.8);
     vfx.spawnPooled("hit-fire", { x: player.x, y: player.y - 6 });
     vfx.spawnDamageText(player.x, player.y - 12, `-${dmg}`, { color: "#ff4466" });
+
+    // Knight Armor Thorns Reflection passive
+    if (ctx.inv.hasPassive("thorns_reflect")) {
+      const attacker = this._findNearestEnemy(ctx.spawner.enemies, srcX, srcY, 26);
+      if (attacker && Math.hypot(attacker.x - player.x, attacker.y - player.y) <= 44) {
+        const thorns = Math.max(2, Math.round(rawAmount * 0.25));
+        attacker.hp -= thorns;
+        attacker.hitFlash = 0.1;
+        vfx.spawnDamageText(attacker.x, attacker.y - 12, `THORNS ${thorns}`, { color: "#5ef2ff" });
+        if (attacker.hp <= 0) this._killEnemy(ctx, attacker);
+      }
+    }
 
     if (player.hp <= 0) {
       ctx.onPlayerDefeated();
@@ -910,6 +1148,11 @@ export class CombatSystem {
     if (player.speedBuffTime > 0) player.speedBuffTime = Math.max(0, player.speedBuffTime - dt);
     if (player.atkBuffTime > 0) player.atkBuffTime = Math.max(0, player.atkBuffTime - dt);
 
+    // Pixel Tinker Nano-Repair armor passive HP regen
+    if (ctx.inv.hasPassive("nano_repair") && player.hitFlash <= 0 && player.hp < player.maxHp) {
+      player.hp = Math.min(player.maxHp, player.hp + player.maxHp * 0.015 * dt);
+    }
+
     // Prism Knight Q Storm ticks
     if (player.stormTime > 0) {
       player.stormTime -= dt;
@@ -921,7 +1164,7 @@ export class CombatSystem {
           const dy = e.y - player.y;
           const d = Math.hypot(dx, dy);
           if (d <= 68 + e.radius) {
-            const { dmg, crit } = this._rollDamage(player, 0.85, 10);
+            const { dmg, crit } = this._rollDamage(player, 0.85 * this.activeUltMult, 10);
             this.damageEnemy(ctx, e, dmg, crit, "hit-cyan", undefined, dx / (d || 1), dy / (d || 1));
           }
         }
@@ -943,7 +1186,7 @@ export class CombatSystem {
         const target = this._findNearestEnemy(spawner.enemies, player.x, player.y, 175);
         if (target) {
           const ang = Math.atan2(target.y - player.y, target.x - player.x);
-          const { dmg, crit } = this._rollDamage(player, 0.72);
+          const { dmg, crit } = this._rollDamage(player, 0.72 * this.activeUltMult);
           sfx.playShoot(920);
           ctx.projectiles.push({
             uid: nextEntityUid(),
@@ -1229,14 +1472,15 @@ export class CombatSystem {
       // Skip far-away off-screen enemies beyond 460px for crisp 60 FPS!
       if (distToPlayer > 460 && e.state === "patrol") continue;
 
-      // State transitions: Patrol <-> Aggro <-> Leash
+      // State transitions: Patrol <-> Aggro <-> Leash (Boss never leashes while territory is locked!)
+      const lockedBoss = ctx.getBossLock()?.bossUid === e.uid;
       if (e.state === "patrol") {
         if (!playerInTown && distToPlayer <= edef.aggroRadius) {
           e.state = "aggro";
           if (e.isBoss) sfx.playBossRoar();
         }
       } else if (e.state === "aggro") {
-        if (playerInTown || distToHome > edef.leashRadius || distToPlayer > edef.leashRadius + 60) {
+        if (!lockedBoss && (playerInTown || distToHome > edef.leashRadius || distToPlayer > edef.leashRadius + 60)) {
           e.state = "leash";
         }
       } else if (e.state === "leash") {
@@ -1337,26 +1581,53 @@ export class CombatSystem {
     dt: number
   ) {
     const { player, vfx, world } = ctx;
-    const enraged = b.hp < b.maxHp * 0.5;
+    const hpRatio = b.hp / b.maxHp;
+    const enraged = hpRatio < 0.5;
+    const desperate = ai === "boss_eraser" && hpRatio < 0.25;
+
     if (enraged && b.phase === 1) {
       b.phase = 2;
       sfx.playBossRoar();
       ctx.notify(`${ENEMIES[b.defId]?.name ?? "BOSS"} vào GIAI ĐOẠN 2!`, "warn");
+      if (ai === "boss_root" && !b.bossSummonedAdds) {
+        b.bossSummonedAdds = true;
+        ctx.spawner.spawnBossMinion("quartz_stalker", b.x - 28, b.y + 18, b.campId, b.biome, vfx);
+        ctx.spawner.spawnBossMinion("quartz_stalker", b.x + 28, b.y + 18, b.campId, b.biome, vfx);
+        ctx.notify("Blight Root triệu hồi Vệ Binh Thạch Anh!", "warn");
+      }
+    }
+    if (desperate && b.phase < 3) {
+      b.phase = 3;
+      sfx.playBossRoar();
+      ctx.notify("THE ERASER CUỒNG NỘ GIAI ĐOẠN CUỐI!", "warn");
     }
 
-    if (distToPlayer > 48) {
+    if (distToPlayer > 44) {
       world.moveWithCollision(
         b,
-        Math.cos(toPlayerAng) * moveSpd * (enraged ? 1.2 : 1.0) * dt,
-        Math.sin(toPlayerAng) * moveSpd * (enraged ? 1.2 : 1.0) * dt,
+        Math.cos(toPlayerAng) * moveSpd * (desperate ? 1.35 : enraged ? 1.22 : 1.0) * dt,
+        Math.sin(toPlayerAng) * moveSpd * (desperate ? 1.35 : enraged ? 1.22 : 1.0) * dt,
         b.radius * 0.7
       );
     }
 
+    // Clamp locked boss cleanly inside its territory arena
+    const arena = BOSS_ARENAS[b.defId];
+    if (arena) {
+      const dx = b.x - arena.cx;
+      const dy = b.y - arena.cy;
+      const d = Math.hypot(dx, dy);
+      const maxD = arena.radius - b.radius - 4;
+      if (d > maxD && d > 0) {
+        b.x = arena.cx + (dx / d) * maxD;
+        b.y = arena.cy + (dy / d) * maxD;
+      }
+    }
+
     // Radial bullet burst
     if (b.aiTimer <= 0) {
-      b.aiTimer = enraged ? 2.2 : 3.0;
-      const count = ai === "boss_eraser" ? 10 : enraged ? 8 : 6;
+      b.aiTimer = desperate ? 1.65 : enraged ? 2.0 : 2.7;
+      const count = ai === "boss_eraser" ? (desperate ? 14 : enraged ? 12 : 9) : enraged ? 10 : 7;
       const preset = ai === "boss_amber" ? "proj-amber" : "proj-void";
       for (let i = 0; i < count; i++) {
         const a = toPlayerAng + (i * Math.PI * 2) / count;
@@ -1365,8 +1636,8 @@ export class CombatSystem {
           owner: "enemy",
           x: b.x,
           y: b.y - 6,
-          vx: Math.cos(a) * 135,
-          vy: Math.sin(a) * 135,
+          vx: Math.cos(a) * (enraged ? 155 : 138),
+          vy: Math.sin(a) * (enraged ? 155 : 138),
           angle: a,
           radius: 5,
           damage: Math.round(b.atk * 0.85),
@@ -1382,18 +1653,18 @@ export class CombatSystem {
 
     // Telegraphed Signature Special
     if (b.specialTimer <= 0) {
-      b.specialTimer = enraged ? 3.2 : 4.4;
+      b.specialTimer = desperate ? 2.4 : enraged ? 3.0 : 4.0;
       if (ai === "boss_root") {
-        // 3 Root Thorn telegraphs around player
-        for (let k = 0; k < 3; k++) {
-          const tx = player.x + (k === 0 ? 0 : (Math.random() - 0.5) * 68);
-          const ty = player.y + (k === 0 ? 0 : (Math.random() - 0.5) * 68);
+        const thorns = enraged ? 4 : 3;
+        for (let k = 0; k < thorns; k++) {
+          const tx = player.x + (k === 0 ? 0 : (Math.random() - 0.5) * 72);
+          const ty = player.y + (k === 0 ? 0 : (Math.random() - 0.5) * 72);
           vfx.spawnLive("pixtel/boss-telegraph", {
             x: tx,
             y: ty,
             options: { radius: 28, shape: "circle", palette: PAL.blood },
             priority: 5,
-            maxLife: 0.95,
+            maxLife: 0.9,
           });
           ctx.hazards.push({
             uid: nextEntityUid(),
@@ -1402,7 +1673,7 @@ export class CombatSystem {
             x: tx,
             y: ty,
             radius: 30,
-            delay: 0.9,
+            delay: 0.85,
             age: 0,
             maxLife: 1.15,
             tickTimer: 0,
@@ -1411,13 +1682,13 @@ export class CombatSystem {
           });
         }
       } else if (ai === "boss_amber") {
-        // Ground Slam + Lava Meteor telegraphs
+        // Ground Slam + extra player-targeted molten meteor when enraged
         vfx.spawnLive("pixtel/boss-telegraph", {
           x: b.x,
           y: b.y,
-          options: { radius: 52, shape: "circle", palette: PAL.fire },
+          options: { radius: 54, shape: "circle", palette: PAL.fire },
           priority: 5,
-          maxLife: 0.9,
+          maxLife: 0.85,
         });
         ctx.hazards.push({
           uid: nextEntityUid(),
@@ -1425,25 +1696,49 @@ export class CombatSystem {
           kind: "boss_slam",
           x: b.x,
           y: b.y,
-          radius: 56,
-          delay: 0.85,
+          radius: 58,
+          delay: 0.8,
           age: 0,
           maxLife: 1.1,
           tickTimer: 0,
           damage: Math.round(b.atk * 1.35),
           triggered: false,
         });
+        if (enraged) {
+          vfx.spawnLive("pixtel/boss-telegraph", {
+            x: player.x,
+            y: player.y,
+            options: { radius: 34, shape: "circle", palette: PAL.lava },
+            priority: 5,
+            maxLife: 0.85,
+          });
+          ctx.hazards.push({
+            uid: nextEntityUid(),
+            owner: "enemy",
+            kind: "boss_slam",
+            x: player.x,
+            y: player.y,
+            radius: 36,
+            delay: 0.8,
+            age: 0,
+            maxLife: 1.05,
+            tickTimer: 0,
+            damage: Math.round(b.atk * 1.2),
+            triggered: false,
+          });
+        }
       } else {
         // World Boss THE ERASER: Floor Erase Zones + Cross Laser Beam!
-        for (let k = 0; k < (enraged ? 4 : 3); k++) {
-          const tx = player.x + (k === 0 ? 0 : (Math.random() - 0.5) * 90);
-          const ty = player.y + (k === 0 ? 0 : (Math.random() - 0.5) * 90);
+        const zones = desperate ? 5 : enraged ? 4 : 3;
+        for (let k = 0; k < zones; k++) {
+          const tx = player.x + (k === 0 ? 0 : (Math.random() - 0.5) * 95);
+          const ty = player.y + (k === 0 ? 0 : (Math.random() - 0.5) * 95);
           vfx.spawnLive("pixtel/boss-telegraph", {
             x: tx,
             y: ty,
             options: { radius: 32, shape: "circle", palette: PAL.neon },
             priority: 5,
-            maxLife: 1.0,
+            maxLife: 0.95,
           });
           ctx.hazards.push({
             uid: nextEntityUid(),
@@ -1452,9 +1747,9 @@ export class CombatSystem {
             x: tx,
             y: ty,
             radius: 34,
-            delay: 0.95,
+            delay: 0.9,
             age: 0,
-            maxLife: 1.2,
+            maxLife: 1.15,
             tickTimer: 0,
             damage: Math.round(b.atk * 1.45),
             triggered: false,
@@ -1467,7 +1762,7 @@ export class CombatSystem {
             y: b.y,
             options: { radius: 38, shape: "cross", palette: PAL.neon },
             priority: 5,
-            maxLife: 1.05,
+            maxLife: 0.95,
           });
           ctx.hazards.push({
             uid: nextEntityUid(),
@@ -1475,10 +1770,10 @@ export class CombatSystem {
             kind: "boss_cross",
             x: b.x,
             y: b.y,
-            radius: 95,
-            delay: 1.0,
+            radius: 105,
+            delay: 0.9,
             age: 0,
-            maxLife: 1.25,
+            maxLife: 1.15,
             tickTimer: 0,
             damage: Math.round(b.atk * 1.5),
             triggered: false,

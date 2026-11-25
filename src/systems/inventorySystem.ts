@@ -1,5 +1,19 @@
-import { ITEMS, createItemInstance, getItemEffectiveStats } from "../data/items";
-import type { EquipSlot, ItemInstance, StatBonus } from "../data/types";
+import {
+  CLASS_DISPLAY_NAMES,
+  ITEMS,
+  canClassEquip,
+  createItemInstance,
+  getItemEffectiveStats,
+} from "../data/items";
+import type {
+  ClassId,
+  EquipSlot,
+  GearVisualTier,
+  HeroVisualLoadout,
+  ItemDef,
+  ItemInstance,
+  StatBonus,
+} from "../data/types";
 
 export const MAX_BAG_SLOTS = 32;
 
@@ -10,29 +24,19 @@ export const HOTKEY_CONSUMABLES: readonly string[] = [
 ];
 
 /**
- * Manages player gold, 4 equipment slots, 32-slot bag, stat calculations,
- * stat comparison diffs, and 1-3 quick consumables.
+ * Manages player gold, 4 equipment slots, 32-slot bag, class-restriction rules,
+ * stat calculations, visual hero loadout, and 1-3 quick consumables.
  */
 export class InventorySystem {
-  gold = 120;
+  gold = 30;
   equipment: Partial<Record<EquipSlot, ItemInstance>> = {};
   bag: ItemInstance[] = [];
 
+  /** Fresh adventurers start bare-handed & unarmored with only 2 HP potions and 30G! */
   resetStarterKit() {
-    this.gold = 120;
-    this.equipment = {
-      weapon: createItemInstance("wpn_starter", 1, 0),
-      armor: createItemInstance("arm_cloth", 1, 0),
-      ring: createItemInstance("rng_copper", 1, 0),
-      chip: createItemInstance("chp_basic", 1, 0),
-    };
-    this.bag = [
-      createItemInstance("pot_hp", 4, 0),
-      createItemInstance("pot_stamina", 2, 0),
-      createItemInstance("pot_tonic", 1, 0),
-      createItemInstance("mat_iron_ore", 3, 0),
-      createItemInstance("mat_glitch_core", 2, 0),
-    ];
+    this.gold = 30;
+    this.equipment = {};
+    this.bag = [createItemInstance("pot_hp", 2, 0)];
   }
 
   loadState(
@@ -45,10 +49,18 @@ export class InventorySystem {
     for (const slot of ["weapon", "armor", "ring", "chip"] as EquipSlot[]) {
       const it = equipment[slot];
       if (it && ITEMS[it.defId]) {
-        this.equipment[slot] = { ...it };
+        this.equipment[slot] = {
+          ...it,
+          bonusStats: it.bonusStats ? { ...it.bonusStats } : undefined,
+        };
       }
     }
-    this.bag = bag.filter((b) => ITEMS[b.defId]).map((b) => ({ ...b }));
+    this.bag = bag
+      .filter((b) => ITEMS[b.defId])
+      .map((b) => ({
+        ...b,
+        bonusStats: b.bonusStats ? { ...b.bonusStats } : undefined,
+      }));
   }
 
   addItem(defId: string, qty = 1, enhanceLevel = 0): boolean {
@@ -80,7 +92,10 @@ export class InventorySystem {
       return this.addItem(inst.defId, inst.qty, 0);
     }
     if (this.bag.length >= MAX_BAG_SLOTS) return false;
-    this.bag.push({ ...inst });
+    this.bag.push({
+      ...inst,
+      bonusStats: inst.bonusStats ? { ...inst.bonusStats } : undefined,
+    });
     return true;
   }
 
@@ -115,12 +130,29 @@ export class InventorySystem {
     return null;
   }
 
-  equipFromBag(uid: string): boolean {
-    const idx = this.bag.findIndex((b) => b.uid === uid);
-    if (idx < 0) return false;
-    const item = this.bag[idx];
+  canEquip(item: ItemInstance, classId: ClassId): { ok: boolean; reason?: string } {
     const def = ITEMS[item.defId];
-    if (!def || def.category !== "equipment" || !def.slot) return false;
+    if (!def || def.category !== "equipment" || !def.slot) {
+      return { ok: false, reason: "Vật phẩm này không thể trang bị." };
+    }
+    if (!canClassEquip(def, classId)) {
+      const reqNames = (def.allowedClasses ?? [])
+        .map((c) => CLASS_DISPLAY_NAMES[c] ?? c)
+        .join(", ");
+      return { ok: false, reason: `Chỉ dành cho Class: ${reqNames}!` };
+    }
+    return { ok: true };
+  }
+
+  equipFromBag(uid: string, classId: ClassId): { ok: boolean; reason?: string } {
+    const idx = this.bag.findIndex((b) => b.uid === uid);
+    if (idx < 0) return { ok: false, reason: "Không tìm thấy vật phẩm trong túi." };
+    const item = this.bag[idx];
+    const check = this.canEquip(item, classId);
+    if (!check.ok) return check;
+
+    const def = ITEMS[item.defId];
+    if (!def.slot) return { ok: false, reason: "Không rõ vị trí trang bị." };
 
     const prev = this.equipment[def.slot];
     this.equipment[def.slot] = item;
@@ -129,7 +161,7 @@ export class InventorySystem {
     } else {
       this.bag.splice(idx, 1);
     }
-    return true;
+    return { ok: true };
   }
 
   unequipSlot(slot: EquipSlot): boolean {
@@ -141,13 +173,29 @@ export class InventorySystem {
     return true;
   }
 
+  /** Moves any equipped items incompatible with `classId` safely back into the bag on class switch. */
+  unequipIncompatibleForClass(classId: ClassId): string[] {
+    const removed: string[] = [];
+    for (const slot of ["weapon", "armor", "ring", "chip"] as EquipSlot[]) {
+      const eq = this.equipment[slot];
+      if (!eq) continue;
+      const def = ITEMS[eq.defId];
+      if (!def || !canClassEquip(def, classId)) {
+        this.bag.push(eq);
+        delete this.equipment[slot];
+        removed.push(def?.name ?? eq.defId);
+      }
+    }
+    return removed;
+  }
+
   sellBagItem(uid: string): number {
     const idx = this.bag.findIndex((b) => b.uid === uid);
     if (idx < 0) return 0;
     const item = this.bag[idx];
     const def = ITEMS[item.defId];
     if (!def) return 0;
-    const unitVal = def.sellPrice + item.enhanceLevel * 12;
+    const unitVal = def.sellPrice + item.enhanceLevel * 14;
     this.gold += unitVal;
     if (item.qty > 1) {
       item.qty -= 1;
@@ -209,5 +257,33 @@ export class InventorySystem {
 
   getWeaponEnhanceLevel(): number {
     return this.equipment.weapon?.enhanceLevel ?? 0;
+  }
+
+  getEquippedDef(slot: EquipSlot): ItemDef | null {
+    const it = this.equipment[slot];
+    return it ? (ITEMS[it.defId] ?? null) : null;
+  }
+
+  hasPassive(passiveId: string): boolean {
+    for (const slot of ["weapon", "armor", "ring", "chip"] as EquipSlot[]) {
+      const def = this.getEquippedDef(slot);
+      if (def?.passiveSkill?.id === passiveId) return true;
+    }
+    return false;
+  }
+
+  getVisualLoadout(): HeroVisualLoadout {
+    const tierOf = (slot: EquipSlot): GearVisualTier => {
+      const def = this.getEquippedDef(slot);
+      if (!def) return "none";
+      return def.visualTier ?? def.rarity;
+    };
+    return {
+      weaponTier: tierOf("weapon"),
+      armorTier: tierOf("armor"),
+      ringTier: tierOf("ring"),
+      chipTier: tierOf("chip"),
+      weaponEnhance: this.getWeaponEnhanceLevel(),
+    };
   }
 }

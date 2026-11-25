@@ -539,3 +539,24 @@ export function getBiomeAtTile(tx: number, ty: number): BiomeId {
   if (tx < 80 && ty >= 80) return "amber";
   return "ruins";
 }
+
+export const BOSS_ARENAS: Record<string, { cx: number; cy: number; radius: number; label: string }> = {
+  boss_blight_root: {
+    cx: 138 * TILE_SIZE + 8,
+    cy: 20 * TILE_SIZE + 8,
+    radius: 9.5 * TILE_SIZE,
+    label: "LÃNH ĐỊA BLIGHT ROOT",
+  },
+  boss_gilded_null: {
+    cx: 20 * TILE_SIZE + 8,
+    cy: 140 * TILE_SIZE + 8,
+    radius: 9.5 * TILE_SIZE,
+    label: "LÃNH ĐỊA GILDED NULL",
+  },
+  boss_the_eraser: {
+    cx: 140 * TILE_SIZE + 8,
+    cy: 140 * TILE_SIZE + 8,
+    radius: 11.5 * TILE_SIZE,
+    label: "THÁNH ĐỊA THE ERASER",
+  },
+};

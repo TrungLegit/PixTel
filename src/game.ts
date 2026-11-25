@@ -3,6 +3,7 @@ import { ENEMIES } from "./data/enemies";
 import { ITEMS, RARITY_INFO } from "./data/items";
 import {
   BIOME_CONFIGS,
+  BOSS_ARENAS,
   CHROMA_RAINBOW,
   CLASS_ALTAR_POS,
   TILE_SIZE,
@@ -11,7 +12,7 @@ import {
   WORLD_H,
   WORLD_W,
 } from "./data/worldConfig";
-import type { BiomeId, ClassId, SaveDataV2, WaypointDef } from "./data/types";
+import type { ActiveBossLock, BiomeId, ClassId, SaveDataV2, StatAllocKey, WaypointDef } from "./data/types";
 import { ColorRestorationSystem } from "./graphics/colorRestoration";
 import { sprites } from "./graphics/pixelSprites";
 import { TileRenderer } from "./graphics/tileRenderer";
@@ -98,8 +99,12 @@ export class PixTelOpenWorldGame {
   private autoSaveTimer = 0;
   private hudSyncTimer = 0;
   private weaponGlowTimer = 0;
+  private ambientTimer = 0;
+  private lastBarrierWarn = 0;
   private lastRaf = 0;
   private ui: GameUiCallbacks;
+
+  activeBossLock: ActiveBossLock | null = null;
 
   constructor(canvas: HTMLCanvasElement, ui: GameUiCallbacks) {
     this.canvas = canvas;
@@ -144,7 +149,7 @@ export class PixTelOpenWorldGame {
       staminaRegenDelay: 0,
       exhausted: false,
       sprinting: false,
-      overdrive: 35,
+      overdrive: 0,
       atkCd: 0,
       skillCd: 0,
       dashCd: 0,
@@ -167,24 +172,27 @@ export class PixTelOpenWorldGame {
       walkTime: 0,
       speedBuffTime: 0,
       atkBuffTime: 0,
+      statPoints: 0,
+      allocatedStats: { str: 0, vit: 0, agi: 0, crt: 0 },
       respawnWaypointId: "wp_town",
     };
   }
 
-  /** Recomputes maxHp, atk, def, spd, crit from Class + Level + Equipped Items. */
+  /** Recomputes maxHp, atk, def, spd, crit from Class + Level + Stat Points + Equipped Items. */
   recalcPlayerStats(preserveHpRatio = true) {
     const prevMax = Math.max(1, this.player.maxHp);
     const ratio = this.player.hp / prevMax;
     const cdef = getClassDef(this.player.classId);
     const eq = this.inv.getTotalEquipBonuses();
     const lv = this.player.level - 1;
+    const alloc = this.player.allocatedStats ?? { str: 0, vit: 0, agi: 0, crt: 0 };
 
-    this.player.maxHp = cdef.baseStats.hp + lv * 16 + eq.maxHp;
-    this.player.atk = cdef.baseStats.atk + lv * 3 + eq.atk;
-    this.player.def = cdef.baseStats.def + Math.floor(lv * 1.2) + eq.def;
-    this.player.spd = cdef.baseStats.spd + eq.spd;
-    this.player.crit = Math.min(90, cdef.baseStats.crit + eq.crit);
-    this.player.critMult = cdef.baseStats.critMult;
+    this.player.maxHp = cdef.baseStats.hp + lv * 12 + alloc.vit * 18 + eq.maxHp;
+    this.player.atk = cdef.baseStats.atk + lv * 2 + alloc.str * 3 + eq.atk;
+    this.player.def = cdef.baseStats.def + lv * 1 + alloc.vit * 1 + eq.def;
+    this.player.spd = Math.round(cdef.baseStats.spd + alloc.agi * 2.5 + eq.spd);
+    this.player.crit = Math.min(90, Math.round((cdef.baseStats.crit + alloc.crt * 1.5 + eq.crit) * 10) / 10);
+    this.player.critMult = Number((cdef.baseStats.critMult + alloc.crt * 0.03).toFixed(2));
 
     if (preserveHpRatio) {
       this.player.hp = Math.min(this.player.maxHp, Math.max(1, Math.round(ratio * this.player.maxHp)));
@@ -193,11 +201,48 @@ export class PixTelOpenWorldGame {
     }
   }
 
+  allocateStat(key: StatAllocKey): boolean {
+    if (this.player.statPoints <= 0) return false;
+    this.player.statPoints -= 1;
+    this.player.allocatedStats[key] += 1;
+    this.recalcPlayerStats(true);
+    sfx.playUiClick();
+    this.saveGame(false);
+    this.ui.onHudUpdate();
+    return true;
+  }
+
+  respecStats(): boolean {
+    const alloc = this.player.allocatedStats;
+    const total = alloc.str + alloc.vit + alloc.agi + alloc.crt;
+    if (total <= 0) {
+      this.ui.onToast("Chưa có điểm chỉ số nào được cộng để tẩy!", "info");
+      return false;
+    }
+    const cost = 100;
+    if (this.inv.gold < cost) {
+      sfx.playForgeFail();
+      this.ui.onToast(`Cần ${cost} G để tẩy điểm chỉ số!`, "warn");
+      return false;
+    }
+    this.inv.gold -= cost;
+    this.player.statPoints += total;
+    this.player.allocatedStats = { str: 0, vit: 0, agi: 0, crt: 0 };
+    this.recalcPlayerStats(true);
+    sfx.playForgeSuccess();
+    this.ui.onToast(`Đã tẩy ${total} điểm tiềm năng! Bạn có ${this.player.statPoints} điểm để cộng lại.`, "good");
+    this.saveGame(false);
+    this.ui.onHudUpdate();
+    return true;
+  }
+
   startNewGame(classId: ClassId) {
     sfx.unlock();
     this.projectiles.length = 0;
     this.turrets.length = 0;
     this.hazards.length = 0;
+    this.activeBossLock = null;
+    this.lastBarrierWarn = 0;
     this.vfx.clearAll();
 
     this.inv.resetStarterKit();
@@ -230,6 +275,8 @@ export class PixTelOpenWorldGame {
     this.projectiles.length = 0;
     this.turrets.length = 0;
     this.hazards.length = 0;
+    this.activeBossLock = null;
+    this.lastBarrierWarn = 0;
     this.vfx.clearAll();
 
     this.inv.loadState(data.player.gold, data.equipment, data.bag);
@@ -245,6 +292,13 @@ export class PixTelOpenWorldGame {
     this.player.xp = data.player.xp;
     this.player.xpNext = data.player.xpNext;
     this.player.overdrive = data.player.overdrive;
+    this.player.statPoints = data.player.statPoints ?? 0;
+    this.player.allocatedStats = {
+      str: data.player.allocatedStats?.str ?? 0,
+      vit: data.player.allocatedStats?.vit ?? 0,
+      agi: data.player.allocatedStats?.agi ?? 0,
+      crt: data.player.allocatedStats?.crt ?? 0,
+    };
     this.player.respawnWaypointId = data.player.respawnWaypointId || "wp_town";
     this.recalcPlayerStats(false);
     this.player.hp = Math.min(this.player.maxHp, Math.max(10, data.player.hp));
@@ -267,6 +321,7 @@ export class PixTelOpenWorldGame {
       return;
     }
     this.player.classId = classId;
+    const unequipped = this.inv.unequipIncompatibleForClass(classId);
     this.turrets.length = 0;
     this.player.stormTime = 0;
     this.player.cloneTime = 0;
@@ -276,6 +331,9 @@ export class PixTelOpenWorldGame {
     sfx.playWaypoint();
     this.vfx.spawnPooled("waypoint-pillar", { x: this.player.x, y: this.player.y });
     this.ui.onToast(`Đã chuyển đổi Class thành ${getClassDef(classId).vnName}!`, "epic");
+    if (unequipped.length > 0) {
+      this.ui.onToast(`Đã cất ${unequipped.length} trang bị khác Class vào túi đồ: ${unequipped.join(", ")}`, "warn");
+    }
     this.saveGame(false);
     this.ui.onHudUpdate();
   }
@@ -283,7 +341,7 @@ export class PixTelOpenWorldGame {
   saveGame(showToast = true): boolean {
     if (!this.running) return false;
     const data: SaveDataV2 = {
-      version: 2,
+      version: 3,
       savedAt: Date.now(),
       classId: this.player.classId,
       player: {
@@ -295,6 +353,8 @@ export class PixTelOpenWorldGame {
         xpNext: this.player.xpNext,
         gold: this.inv.gold,
         overdrive: Math.round(this.player.overdrive),
+        statPoints: this.player.statPoints,
+        allocatedStats: { ...this.player.allocatedStats },
         respawnWaypointId: this.player.respawnWaypointId,
       },
       equipment: this.inv.equipment,
@@ -328,6 +388,10 @@ export class PixTelOpenWorldGame {
     this.ui.onToast(msg, tone);
   }
 
+  refreshHud() {
+    this.ui.onHudUpdate();
+  }
+
   toggleModal(modal: Exclude<ModalId, null>) {
     if (!this.running) return;
     if (this.activeModal === modal) {
@@ -340,6 +404,11 @@ export class PixTelOpenWorldGame {
 
   /** Fast Travel from World Map [M] to any unlocked Chroma Waypoint. */
   fastTravelTo(wpId: string) {
+    if (this.activeBossLock) {
+      sfx.playForgeFail();
+      this.ui.onToast(`🔒 Không thể Dịch Chuyển khi đang bị phong ấn trong lãnh địa ${this.activeBossLock.bossName}!`, "warn");
+      return;
+    }
     if (!this.colorSys.unlockedWaypoints.has(wpId)) return;
     const wp = WAYPOINTS.find((w) => w.id === wpId);
     if (!wp) return;
@@ -430,7 +499,7 @@ export class PixTelOpenWorldGame {
         return;
       }
       if (t.chest.state === "unlocked") {
-        this.spawner.openChest(t.chest, this.vfx);
+        this.spawner.openChest(t.chest, this.vfx, this.player.classId);
         sfx.playChestOpen();
         this.stats.chestsOpened += 1;
         const done = this.quests.recordEvent("open_chest", undefined, 1);
@@ -534,9 +603,12 @@ export class PixTelOpenWorldGame {
   gainXp(amount: number) {
     this.player.xp += amount;
     let leveled = false;
+    let gainedPts = 0;
     while (this.player.xp >= this.player.xpNext) {
       this.player.xp -= this.player.xpNext;
       this.player.level += 1;
+      this.player.statPoints += 3;
+      gainedPts += 3;
       this.player.xpNext = Math.round(this.player.xpNext * 1.32 + 35);
       this.recalcPlayerStats(false);
       this.player.stamina = this.player.maxStamina;
@@ -550,18 +622,65 @@ export class PixTelOpenWorldGame {
         follow: this.player,
         priority: 5,
       });
-      this.vfx.spawnDamageText(this.player.x, this.player.y - 18, `LEVEL ${this.player.level}!`, {
+      this.vfx.spawnDamageText(this.player.x, this.player.y - 18, `LEVEL ${this.player.level}! +${gainedPts} PT`, {
         crit: true,
         color: "#ffe066",
       });
-      this.ui.onToast(`THĂNG CẤP LV.${this.player.level}! HP, ATK, DEF tăng mạnh & hồi đầy máu!`, "epic");
+      this.ui.onToast(`THĂNG CẤP LV.${this.player.level}! +${gainedPts} Điểm Tiềm Năng (Nhấn [I] để cộng)!`, "epic");
       this.saveGame(false);
     }
     this.ui.onHudUpdate();
   }
 
-  /** Gets nearest aggro Boss for Boss HP Bar display. */
+  triggerBossLock(boss: EnemyEntity) {
+    const arena = BOSS_ARENAS[boss.defId];
+    if (!arena) return;
+    if (this.activeBossLock?.bossUid === boss.uid) return;
+    const bossName = ENEMIES[boss.defId]?.name ?? "BOSS";
+    this.activeBossLock = {
+      bossUid: boss.uid,
+      bossDefId: boss.defId,
+      bossName,
+      cx: arena.cx,
+      cy: arena.cy,
+      radius: arena.radius,
+    };
+    // Snap player cleanly inside the perimeter if struck from outside edge
+    const p = this.player;
+    const dx = p.x - arena.cx;
+    const dy = p.y - arena.cy;
+    const dist = Math.hypot(dx, dy);
+    const safeR = arena.radius - p.radius - 10;
+    if (dist > safeR && dist > 0.01) {
+      p.x = arena.cx + (dx / dist) * safeR;
+      p.y = arena.cy + (dy / dist) * safeR;
+      this.vfx.spawnPooled("waypoint-pillar", { x: p.x, y: p.y });
+    }
+    // Perimeter seal visual ring
+    for (let i = 0; i < 24; i++) {
+      const a = (Math.PI * 2 * i) / 24;
+      this.vfx.spawnPixelDot(
+        arena.cx + Math.cos(a) * arena.radius,
+        arena.cy + Math.sin(a) * arena.radius,
+        0,
+        -12,
+        i % 2 === 0 ? "#ff3355" : "#ff8822",
+        0.55,
+        2
+      );
+    }
+    sfx.playWaypoint();
+    this.shake = Math.max(this.shake, 5.5);
+    this.ui.onToast(`⚔ PHONG ẤN LÃNH ĐỊA [${bossName}]! Không thể thoát ra cho tới khi hạ Boss hoặc tử trận!`, "warn");
+    this.ui.onHudUpdate();
+  }
+
+  /** Gets nearest aggro Boss (or locked Arena Boss) for Boss HP Bar display. */
   getActiveBoss(): EnemyEntity | null {
+    if (this.activeBossLock) {
+      const locked = this.spawner.enemies.find((e) => e.uid === this.activeBossLock!.bossUid && e.hp > 0);
+      if (locked) return locked;
+    }
     let best: EnemyEntity | null = null;
     let bestD = 260;
     for (const e of this.spawner.enemies) {
@@ -607,8 +726,14 @@ export class PixTelOpenWorldGame {
       },
       notify: (msg, tone = "info") => this.ui.onToast(msg, tone),
       onGainXp: (amt) => this.gainXp(amt),
+      getBossLock: () => this.activeBossLock,
+      onBossLockTrigger: (boss) => this.triggerBossLock(boss),
       onBossDefeated: (enemy) => {
         const name = ENEMIES[enemy.defId]?.name ?? "BOSS";
+        if (this.activeBossLock?.bossUid === enemy.uid) {
+          this.activeBossLock = null;
+          this.ui.onToast(`🔓 Phong ấn Lãnh Địa [${name}] đã được giải trừ!`, "good");
+        }
         sfx.playWaypoint();
         this.shake = 7;
         if (enemy.isWorldBoss) {
@@ -619,8 +744,14 @@ export class PixTelOpenWorldGame {
           this.ui.onBossVictory(false, name);
         }
         this.saveGame(false);
+        this.ui.onHudUpdate();
       },
       onPlayerDefeated: () => {
+        // Release Boss Territory Lock & reset Boss back to full HP/Phase 1
+        if (this.activeBossLock) {
+          this.spawner.resetBossOnPlayerDeath(this.activeBossLock.bossUid);
+          this.activeBossLock = null;
+        }
         // Respawn cleanly at last activated Chroma Waypoint with full HP (zero item loss!)
         const wp = WAYPOINTS.find((w) => w.id === this.player.respawnWaypointId) ?? WAYPOINTS[0];
         this.player.x = wp.tx * TILE_SIZE + 8;
@@ -724,6 +855,41 @@ export class PixTelOpenWorldGame {
       p.walkTime += dt * (p.sprinting ? 11 : 7.5);
     }
 
+    // Enforce Boss Territory Lock perimeter barrier
+    if (this.activeBossLock) {
+      const lock = this.activeBossLock;
+      const bossAlive = this.spawner.enemies.some((e) => e.uid === lock.bossUid && e.hp > 0);
+      if (!bossAlive) {
+        this.activeBossLock = null;
+        this.ui.onHudUpdate();
+      } else {
+        const dx = p.x - lock.cx;
+        const dy = p.y - lock.cy;
+        const d = Math.hypot(dx, dy);
+        const maxR = lock.radius - p.radius - 2;
+        if (d > maxR && d > 0.01) {
+          p.x = lock.cx + (dx / d) * maxR;
+          p.y = lock.cy + (dy / d) * maxR;
+          p.dashing = 0;
+          const bAng = Math.atan2(dy, dx);
+          this.vfx.spawnPixelDot(
+            lock.cx + Math.cos(bAng) * lock.radius,
+            lock.cy + Math.sin(bAng) * lock.radius,
+            -Math.cos(bAng) * 24,
+            -Math.sin(bAng) * 24 - 10,
+            "#ff3355",
+            0.24,
+            2
+          );
+          if (this.time - this.lastBarrierWarn > 2.0) {
+            this.lastBarrierWarn = this.time;
+            sfx.playForgeFail();
+            this.ui.onToast(`🔒 Lãnh Địa ${lock.bossName}: Không thể rút lui khỏi phong ấn!`, "warn");
+          }
+        }
+      }
+    }
+
     // Hold LMB Charge Attack logic (quick tap or continuous hold)
     if (this.mouseDown) {
       p.charging = true;
@@ -771,6 +937,44 @@ export class PixTelOpenWorldGame {
     // Combat, Enemies, Spawners, VFX
     this.combat.update(combatCtx, dt);
     this.spawner.update(dt, p.x, p.y, this.vfx);
+
+    // Subtle biome ambient motes + Forge chimney smoke/embers (calm Codixel pacing)
+    this.ambientTimer -= dt;
+    if (this.ambientTimer <= 0) {
+      this.ambientTimer = 0.22;
+      const ax = this.camX + Math.random() * VIEW_W;
+      const ay = this.camY + Math.random() * VIEW_H;
+      const aBiome = this.world.getBiomeAtWorld(ax, ay);
+      const aRestored = this.colorSys.isWorldPosRestored(ax, ay);
+      const moteCol = !aRestored
+        ? "#a6acb8"
+        : aBiome === "quartz"
+          ? "#66f7ff"
+          : aBiome === "amber"
+            ? "#ffaa33"
+            : aBiome === "ruins"
+              ? "#ff77ee"
+              : "#fff099";
+      this.vfx.spawnPixelDot(ax, ay, (Math.random() - 0.5) * 8, -6 - Math.random() * 6, moteCol, 1.4, 1);
+
+      // Town Forge chimney wisps & embers when near Origin Town
+      const forgeB = this.world.buildings[0];
+      if (forgeB && Math.hypot(forgeB.x - p.x, forgeB.y - p.y) < 320) {
+        const cx = forgeB.x - 18;
+        const cy = forgeB.y - 46;
+        const ember = Math.random() < 0.35;
+        this.vfx.spawnPixelDot(
+          cx + (Math.random() - 0.5) * 4,
+          cy,
+          (Math.random() - 0.5) * 6,
+          ember ? -18 : -11,
+          ember ? "#ffaa33" : "#787d8c",
+          ember ? 0.55 : 0.95,
+          ember ? 1 : 2
+        );
+      }
+    }
+
     this.vfx.update(dt);
 
     // Auto-pickup Gold, Materials & Consumables when walking close
@@ -883,43 +1087,96 @@ export class PixTelOpenWorldGame {
       }
     }
 
+    // 4.5 Boss Arena Territory Seal Perimeter (drawn below entities so hero/boss stand crisply inside)
+    if (this.activeBossLock) {
+      const lock = this.activeBossLock;
+      const bcx = Math.round(lock.cx - camX);
+      const bcy = Math.round(lock.cy - camY);
+      const r = lock.radius;
+      // Pulsing crimson rune circle perimeter
+      ctx.save();
+      ctx.strokeStyle = "rgba(255, 51, 85, 0.35)";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(bcx, bcy, r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = (Math.floor(this.time * 8) & 1) === 0 ? "#ff3355" : "#ff8822";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.lineDashOffset = -this.time * 24;
+      ctx.beginPath();
+      ctx.arc(bcx, bcy, r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+      // Orbiting pixel barrier pylons
+      for (let i = 0; i < 16; i++) {
+        const a = (Math.PI * 2 * i) / 16 + this.time * 0.45;
+        const px = Math.round(bcx + Math.cos(a) * r);
+        const py = Math.round(bcy + Math.sin(a) * r);
+        if (px < -10 || py < -10 || px > VIEW_W + 10 || py > VIEW_H + 10) continue;
+        ctx.fillStyle = "#140814";
+        ctx.fillRect(px - 2, py - 3, 4, 5);
+        ctx.fillStyle = i % 2 === 0 ? "#ff3355" : "#ffbb44";
+        ctx.fillRect(px - 1, py - 2, 2, 3);
+      }
+    }
+
     // 5. Y-Sorted World Drawables (Buildings, Props, Waypoints, Chests, Ores, NPCs, Turrets, Enemies, Player)
     const drawList: { y: number; draw: () => void }[] = [];
 
-    // Town Buildings
+    // Town Buildings (with grounded shadow + animated floating Class Altar crystal)
     for (const b of this.world.buildings) {
       const sx = Math.round(b.x - camX);
       const sy = Math.round(b.y - camY);
-      if (sx < -64 || sy < -64 || sx > VIEW_W + 64 || sy > VIEW_H + 64) continue;
+      if (sx < -72 || sy < -72 || sx > VIEW_W + 72 || sy > VIEW_H + 72) continue;
       drawList.push({
         y: b.y,
         draw: () => {
           const img = sprites.buildings[b.kind];
-          ctx.drawImage(img, Math.round(sx - img.width / 2), Math.round(sy - img.height + 6));
           if (b.kind === "classAltar") {
+            ctx.fillStyle = "rgba(8, 10, 20, 0.34)";
+            ctx.fillRect(sx - 16, sy - 2, 32, 6);
+            ctx.drawImage(img, Math.round(sx - img.width / 2), Math.round(sy - img.height + 7));
+            const crys = sprites.buildings.classAltarCrystal;
+            const bob = Math.round(Math.sin(this.time * 3.2) * 2);
+            ctx.drawImage(crys, Math.round(sx - crys.width / 2), Math.round(sy - 33 + bob));
+
             const tw = textWidth("CLASS ALTAR", "mini");
             const lx = Math.round(sx - tw / 2);
-            const ly = Math.round(sy - 30);
+            const ly = Math.round(sy - 41);
             ctx.fillStyle = "#100c1c";
             ctx.fillRect(lx - 2, ly - 1, tw + 4, 8);
             ctx.fillStyle = "#4be8ff";
             rasterText("CLASS ALTAR", "mini", (gx: number, gy: number) => ctx.fillRect(lx + gx, ly + gy, 1, 1));
+          } else {
+            ctx.fillStyle = "rgba(8, 10, 20, 0.3)";
+            ctx.fillRect(sx - 27, sy - 1, 54, 7);
+            ctx.drawImage(img, Math.round(sx - img.width / 2), Math.round(sy - img.height + 6));
           }
         },
       });
     }
 
-    // Viewport-culled Props (trees, rocks, pillars)
+    // Viewport-culled Props (multi-variant biome trees, height-field rocks, intact/broken pillars + grounded shadows)
     const visProps = this.world.getVisibleProps(camX, camY, VIEW_W, VIEW_H);
     for (const pr of visProps) {
       const sx = Math.round(pr.x - camX);
       const sy = Math.round(pr.y - camY);
       const restored = this.colorSys.isWorldPosRestored(pr.x, pr.y);
       const tset = restored ? sprites.tilesRestored[pr.biome] : sprites.tilesBleached[pr.biome];
-      const img = pr.kind === "tree" ? tset.tree : pr.kind === "rock" ? tset.rock : tset.pillar;
+      const variant = pr.id & 1;
+      const img =
+        pr.kind === "tree"
+          ? tset.trees[variant]
+          : pr.kind === "rock"
+            ? tset.rocks[variant]
+            : tset.pillars[variant];
       drawList.push({
         y: pr.y,
         draw: () => {
+          const shW = pr.kind === "tree" ? 24 : pr.kind === "rock" ? 18 : 14;
+          ctx.fillStyle = "rgba(8, 10, 20, 0.32)";
+          ctx.fillRect(Math.round(sx - shW / 2), sy - 2, shW, 4);
           ctx.drawImage(img, Math.round(sx - img.width / 2), Math.round(sy - img.height + 4));
         },
       });
@@ -931,13 +1188,15 @@ export class PixTelOpenWorldGame {
       const wy = wp.ty * TILE_SIZE + 10;
       const sx = Math.round(wx - camX);
       const sy = Math.round(wy - camY);
-      if (sx < -32 || sy < -40 || sx > VIEW_W + 32 || sy > VIEW_H + 40) continue;
+      if (sx < -36 || sy < -52 || sx > VIEW_W + 36 || sy > VIEW_H + 52) continue;
       const unlocked = this.colorSys.unlockedWaypoints.has(wp.id);
       drawList.push({
         y: wy,
         draw: () => {
+          ctx.fillStyle = "rgba(8, 10, 20, 0.34)";
+          ctx.fillRect(sx - 11, sy - 2, 22, 5);
           const img = unlocked ? sprites.interactables.waypointOn : sprites.interactables.waypointOff;
-          ctx.drawImage(img, Math.round(sx - img.width / 2), Math.round(sy - img.height + 4));
+          ctx.drawImage(img, Math.round(sx - img.width / 2), Math.round(sy - img.height + 5));
         },
       });
     }
@@ -950,58 +1209,62 @@ export class PixTelOpenWorldGame {
       drawList.push({
         y: ch.y,
         draw: () => {
+          ctx.fillStyle = "rgba(8, 10, 20, 0.34)";
+          ctx.fillRect(sx - 8, sy - 1, 16, 4);
           const img =
             ch.state === "opened"
               ? sprites.interactables.chestOpened
               : ch.state === "unlocked"
                 ? sprites.interactables.chestUnlocked
                 : sprites.interactables.chestLocked;
-          ctx.drawImage(img, sx - 8, sy - 12);
+          ctx.drawImage(img, Math.round(sx - img.width / 2), Math.round(sy - img.height + 3));
         },
       });
     }
 
-    // Resource Nodes (Ores & Crystals)
+    // Resource Nodes (Faceted Ores & Crystals)
     for (const res of this.spawner.resources) {
       if (!res.alive) continue;
       const sx = Math.round(res.x - camX);
       const sy = Math.round(res.y - camY);
-      if (sx < -24 || sy < -24 || sx > VIEW_W + 24 || sy > VIEW_H + 24) continue;
+      if (sx < -28 || sy < -28 || sx > VIEW_W + 28 || sy > VIEW_H + 28) continue;
       drawList.push({
         y: res.y,
         draw: () => {
+          ctx.fillStyle = "rgba(8, 10, 20, 0.32)";
+          ctx.fillRect(sx - 9, sy - 1, 18, 4);
           const img = sprites.interactables[res.def.kind];
           const jx = res.hitFlash > 0 ? Math.round((Math.random() - 0.5) * 2) : 0;
-          ctx.drawImage(img, sx - 9 + jx, sy - 14);
+          ctx.drawImage(img, Math.round(sx - img.width / 2 + jx), Math.round(sy - img.height + 4));
           if (res.hp < res.maxHp) {
             ctx.fillStyle = "#100c18";
-            ctx.fillRect(sx - 8, sy - 17, 16, 3);
+            ctx.fillRect(sx - 8, sy - img.height, 16, 3);
             ctx.fillStyle = "#ffe066";
-            ctx.fillRect(sx - 7, sy - 16, Math.max(1, Math.round((res.hp / res.maxHp) * 14)), 1);
+            ctx.fillRect(sx - 7, sy - img.height + 1, Math.max(1, Math.round((res.hp / res.maxHp) * 14)), 1);
           }
         },
       });
     }
 
-    // Town NPCs with overhead ! / ? Quest Badges
+    // Town NPCs (24x24 high-craft) with overhead ! / ? Quest Badges
     for (const npc of TOWN_NPCS) {
       const nx = npc.tx * TILE_SIZE + 8;
       const ny = npc.ty * TILE_SIZE + 8;
       const sx = Math.round(nx - camX);
       const sy = Math.round(ny - camY);
-      if (sx < -24 || sy < -24 || sx > VIEW_W + 24 || sy > VIEW_H + 24) continue;
+      if (sx < -28 || sy < -32 || sx > VIEW_W + 28 || sy > VIEW_H + 32) continue;
       const marker = this.quests.getNpcMarker(npc.id);
       drawList.push({
         y: ny,
         draw: () => {
-          ctx.fillStyle = "rgba(0,0,0,0.35)";
-          ctx.fillRect(sx - 5, sy - 1, 10, 3);
+          ctx.fillStyle = "rgba(8, 10, 20, 0.36)";
+          ctx.fillRect(sx - 6, sy - 1, 12, 3);
           const sp = sprites.npcs[npc.kind];
           const bob = Math.floor(this.time * 2) & 1;
-          ctx.drawImage(sp.right, sx - 8, sy - 16 + bob);
+          ctx.drawImage(sp.right, Math.round(sx - sp.w / 2), Math.round(sy - sp.h + 2 + bob));
 
           if (marker) {
-            const by = sy - 26 + Math.round(Math.sin(this.time * 6) * 2);
+            const by = sy - sp.h - 7 + Math.round(Math.sin(this.time * 6) * 2);
             ctx.fillStyle = "#100c18";
             ctx.fillRect(sx - 5, by - 1, 10, 10);
             ctx.fillStyle = marker === "?" ? "#44ee88" : "#ffe066";
@@ -1062,13 +1325,22 @@ export class PixTelOpenWorldGame {
             ctx.fillRect(sx - 2, sy - sp.h - 7, 4, 3);
           }
 
-          // Compact pixel HP bar (non-bosses when damaged)
+          // Compact pixel HP bar & Level danger tag
           if (!e.isBoss && e.hp < e.maxHp) {
             ctx.fillStyle = "#100c18";
             ctx.fillRect(sx - 8, sy - sp.h - 4, 16, 3);
             ctx.fillStyle = "#ff3355";
             ctx.fillRect(sx - 7, sy - sp.h - 3, Math.max(1, Math.round((e.hp / e.maxHp) * 14)), 1);
           }
+          const lvDiff = e.level - this.player.level;
+          const lvTag = `LV.${e.level}`;
+          const tw = textWidth(lvTag, "mini");
+          const lx = Math.round(sx - tw / 2);
+          const ly = sy - sp.h - (e.hp < e.maxHp && !e.isBoss ? 11 : 8);
+          ctx.fillStyle = "rgba(10, 8, 18, 0.72)";
+          ctx.fillRect(lx - 1, ly - 1, tw + 2, 6);
+          ctx.fillStyle = lvDiff >= 5 ? "#ff4466" : lvDiff >= 2 ? "#ffaa33" : "#b8f2a6";
+          rasterText(lvTag, "mini", (gx: number, gy: number) => ctx.fillRect(lx + gx, ly + gy, 1, 1));
         },
       });
     }
@@ -1078,19 +1350,20 @@ export class PixTelOpenWorldGame {
       const p = this.player;
       const sx = Math.round(p.x - camX);
       const sy = Math.round(p.y - camY);
+      const loadout = this.inv.getVisualLoadout();
       drawList.push({
         y: p.y,
         draw: () => {
           const frame = Math.floor(p.walkTime) % 4;
-          const sp = sprites.getHero(p.classId, frame);
+          const sp = sprites.getHeroDynamic(p.classId, loadout, frame);
 
           // Phantom Clone ghost beside Bit Rogue
           if (p.cloneTime > 0) {
             ctx.save();
             ctx.globalAlpha = 0.6;
-            const cx = sx - p.facing * 12;
+            const cx = sx - p.facing * 14;
             const cy = sy - 2 + Math.round(Math.sin(this.time * 12) * 2);
-            ctx.drawImage(p.facing < 0 ? sp.left : sp.right, cx - 8, cy - 16);
+            ctx.drawImage(p.facing < 0 ? sp.left : sp.right, Math.round(cx - sp.w / 2), Math.round(cy - sp.h + 2));
             ctx.restore();
           }
 
@@ -1098,12 +1371,12 @@ export class PixTelOpenWorldGame {
           const wpnLv = this.inv.getWeaponEnhanceLevel();
           if (wpnLv >= 5) {
             ctx.fillStyle = wpnLv >= 8 ? "#ff9922" : "#ffe066";
-            ctx.fillRect(sx - 6, sy, 12, 1);
-            ctx.fillRect(sx - 4, sy + 1, 8, 1);
+            ctx.fillRect(sx - 7, sy, 14, 1);
+            ctx.fillRect(sx - 5, sy + 1, 10, 1);
           }
 
-          ctx.fillStyle = "rgba(0,0,0,0.4)";
-          ctx.fillRect(sx - 5, sy - 1, 10, 3);
+          ctx.fillStyle = "rgba(8, 10, 20, 0.38)";
+          ctx.fillRect(sx - 6, sy - 1, 12, 3);
 
           const blink = p.invuln > 0 && ((Math.floor(this.time * 24) & 1) === 1);
           if (!blink) {
@@ -1115,7 +1388,7 @@ export class PixTelOpenWorldGame {
                 : p.facing < 0
                   ? sp.left
                   : sp.right;
-            ctx.drawImage(img, sx - 8, sy - 16);
+            ctx.drawImage(img, Math.round(sx - sp.w / 2), Math.round(sy - sp.h + 2));
           }
 
           // Charge indicator bar underneath hero when holding LMB

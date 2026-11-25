@@ -1,3 +1,5 @@
 .brain/*.lock
 node_modules/
 dist/
+records/
+sheets/
