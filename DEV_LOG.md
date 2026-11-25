@@ -45,6 +45,19 @@
 
 ## Nhật Ký Cập Nhật (Newest First)
 
+### [2026-11-26 02:16] — Antigravity — Tạo thư mục `preview for devs/` trên GitHub & ghi nhớ quy tắc tự động commit/push mọi bản preview
+- **Commit / Branch:** `main` (tiếp nối `8931ded`)
+- **Giai đoạn / Version:** `PIXTEL v3.0+` — Team Preview Hub & Persistent Dev Workflow Rule
+- **Đã làm (Done):**
+  - Tạo thư mục **`preview for devs/`** kèm mục lục [preview for devs/README.md](preview%20for%20devs/README.md) (newest-first) và đăng tải 2 bộ báo cáo trực quan đầu tiên chuẩn GitHub Markdown (ảnh lưu tại `preview for devs/assets/` với đường dẫn tương đối):
+    - [2026-11-26-v3.0-gameplay-ui-preview.md](preview%20for%20devs/2026-11-26-v3.0-gameplay-ui-preview.md) (6 ảnh live Chrome: Spawn Stash Chest + Gacha Altar + HUD Weapon Skills, Auto-Bán, Quầy Balo Mira, Rương Cá Nhân 80 ô, Sân khấu Gacha ×5, Quái HD 306 frame & Font số mới).
+    - [2026-11-26-v3.0-new-items-preview.md](preview%20for%20devs/2026-11-26-v3.0-new-items-preview.md) (3 bảng ảnh độ phân giải cao giới thiệu toàn bộ 33 vật phẩm/nâng cấp mới của v3.0+).
+  - Ghi nhớ vĩnh viễn quy tắc **`PREVIEW_FOR_DEVS_RULE`** vào cả [AGENTS.md](AGENTS.md), [GEMINI.md](GEMINI.md) và Project Brain: từ nay về sau, mỗi khi người dùng yêu cầu tạo bản preview sẽ tự động xuất Markdown + ảnh vào `preview for devs/`, cập nhật mục lục, ghi `DEV_LOG.md`, commit và push lên `origin/main` để các dev khác nắm tình hình ngay trên GitHub.
+- **File chính đã sửa / thêm:** `preview for devs/README.md`, `preview for devs/2026-11-26-v3.0-gameplay-ui-preview.md`, `preview for devs/2026-11-26-v3.0-new-items-preview.md`, `preview for devs/assets/*.png` (9 ảnh), `AGENTS.md`, `GEMINI.md`, `DEV_LOG.md`
+- **Kiểm tra (Verified):** Kiểm tra đủ 9 ảnh PNG + đường dẫn tương đối chuẩn GitHub, Project Brain `lint` & `digest` sạch, commit & push thẳng lên `origin/main`.
+- **Lưu ý / Handoff (Breaking changes / Đang dở):** Không có thay đổi code runtime.
+- **Gợi ý bước tiếp theo (Next Steps):** Các thành viên mở trực tiếp thư mục `preview for devs` trên GitHub để xem tình hình bản `PIXTEL v3.0+`.
+
 ### [2026-11-26 02:06] — Antigravity — Sửa font chữ số `5` (và bộ số `0–9`) sắc nét không còn nhầm với số `8`
 - **Commit / Branch:** `main` (working tree trên `2297954`)
 - **Giai đoạn / Version:** `PIXTEL v3.0+` — Typography & Pixel Digit Readability Fix

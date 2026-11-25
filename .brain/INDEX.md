@@ -1,5 +1,5 @@
 # Project Brain Index
-*Generated: 2026-11-25T19:13:49.437061+00:00*
+*Generated: 2026-11-25T19:17:23.576445+00:00*
 
 ## Description
 > **Thế giới mở 16-Bit Action RPG trên trình duyệt (PC · Mobile PWA · Co-op 2–4 Người)** — Khởi đầu tay không tại **Thị Trấn Khởi Nguyên**, săn trang bị **khóa chặt theo Class**, luyện **Ma Trận Luyện
@@ -24,11 +24,11 @@
 - `file:src/main.ts` (file, 25 links): Instantiated and wired StorageChestModalUI into onModalChange for modal === 'stash'.
 
 ## Recent Decisions
+- **Team Rule: Always save, commit & push previews to preview for devs/** (`decision:20261125191722-team-rule-always-save`): Whenever the user requests a visual preview, save GitHub-native Markdown + verified PNGs in preview for devs/ (with ./assets/ relative links and newest-first preview for devs/README.md), update DEV_LOG.md & Project Brain, and automatically commit and push to origin/main so teamma
 - **Inventory QoL: Auto-Sell Low-Rarity Guards, 4-Tier Backpack Upgrades & Spawn Stash Chest** (`decision:20261125185843-inventory-qol-autosell-lowrarity`): Auto-Sell converts eligible unenhanced normal equipment straight to Gold on pickup while strictly protecting Hidden, Exotic dropOnly, Seasonal Gacha and +N enhanced gear; 4 purchasable Backpacks expand bagCapacity from 40 to 80; Personal Stash Chest at Origin Town Spawn ({tx:77,t
 - **PIXTEL v3.0 Weapon-Driven Skills, Exotic Drop-Only Gear & Seasonal Gacha Architecture** (`decision:20261125183922-pixtel-v30-weapondriven-skills`): Separated character combat into 1 Basic/Charge Attack (LMB), 1 Fixed Class Skill ([Q], always unlocked at 100% Overdrive) and 41 dynamic Weapon-Specific [E] skills; gated 16 skill-altering Exotics strictly to mob/boss drops; removed all 25 farm/waypoint chests leaving only 4 Boss
 - **Complete 19-Monster 4-Biome Sprite Atlas (+9 Amber/Ruins Models)** (`decision:20261125172509-complete-19monster-4biome-sprite`): Completed codixel-enemies.png/json to 19 monsters/bosses (230 frames) by extracting 9 new Amber Mines & Blank Ruins reference sheets, preserving existing IDs for Save/Quest compatibility while adding amber_warrior, null_knight, and void_gatekeeper with biome-native WORLD_CAMPS an
 - **Pixel Backpack & Skill Icon Hotbar + 29 Farm Zones + Bespoke 3D Gear** (`decision:20261125170423-pixel-backpack-skill`): Moved Inventory access to a pixel Backpack button at front of bottom bar, converted LMB/E/Q/SPC to codixel pixel icons with hover-only tooltips, added 16 fast-respawn farm camps (29 total), and designed bespoke codixel + 3D pixelfx special equipment models.
-- **Phase 1 Mobile PWA + Twin-Stick & Phase 2 Dual-Transport 2-4P Co-op + GitHub Pages** (`decision:20261125154018-phase-1-mobile-pwa`): Shipped public GitHub Pages CI/CD + fullscreen landscape PWA, Phase 1 Mobile Twin-Stick controls with Smart Auto-Aim and Tap-to-Inspect tooltips, and Phase 2 2-4 Player Co-op (PeerJS WebRTC P2P + Dedicated Node.js WebSocket Room Server) with cross-player 9-element reactions, shar
 
 ## Stale Files (Need Re-reading)
 - `file:.brain/INDEX.md` (.brain/INDEX.md)
