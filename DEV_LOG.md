@@ -45,6 +45,17 @@
 
 ## Nhật Ký Cập Nhật (Newest First)
 
+### [2026-11-26 02:19] — Antigravity — Bổ sung đủ bản Preview 97 vật phẩm cơ bản & Cổ Vật Ẩn (5 ảnh) vào `preview for devs/`
+- **Commit / Branch:** `main` (tiếp nối `c463689`)
+- **Giai đoạn / Version:** `PIXTEL v3.0+` — Complete Team Preview Hub (`3` báo cáo · `14` ảnh PNG)
+- **Đã làm (Done):**
+  - Chuyển đổi bản preview 97 vật phẩm cơ bản + 11 Cổ Vật Ẩn + Model 3D 4 Class sang chuẩn GitHub Markdown (`preview for devs/2026-11-26-v2.7-all-97-base-items-preview.md`) và copy đủ 5 ảnh PNG (`preview_1..5`) vào `preview for devs/assets/`.
+  - Cập nhật mục lục [preview for devs/README.md](preview%20for%20devs/README.md) để toàn bộ 3 bản preview (14 ảnh) đều xem được trực tiếp trên GitHub.
+- **File chính đã sửa / thêm:** `preview for devs/2026-11-26-v2.7-all-97-base-items-preview.md`, `preview for devs/assets/preview_1..5*.png`, `preview for devs/README.md`, `DEV_LOG.md`
+- **Kiểm tra (Verified):** Đủ `14` ảnh PNG trong `preview for devs/assets/`, Project Brain `lint` & `digest` sạch, commit & push lên `origin/main`.
+- **Lưu ý / Handoff (Breaking changes / Đang dở):** Không có.
+- **Gợi ý bước tiếp theo (Next Steps):** Các dev mở `preview for devs/` trên GitHub để xem toàn bộ báo cáo trực quan.
+
 ### [2026-11-26 02:16] — Antigravity — Tạo thư mục `preview for devs/` trên GitHub & ghi nhớ quy tắc tự động commit/push mọi bản preview
 - **Commit / Branch:** `main` (tiếp nối `8931ded`)
 - **Giai đoạn / Version:** `PIXTEL v3.0+` — Team Preview Hub & Persistent Dev Workflow Rule

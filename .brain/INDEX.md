@@ -1,5 +1,5 @@
 # Project Brain Index
-*Generated: 2026-11-25T19:17:23.576445+00:00*
+*Generated: 2026-11-25T19:19:46.194772+00:00*
 
 ## Description
 > **Thế giới mở 16-Bit Action RPG trên trình duyệt (PC · Mobile PWA · Co-op 2–4 Người)** — Khởi đầu tay không tại **Thị Trấn Khởi Nguyên**, săn trang bị **khóa chặt theo Class**, luyện **Ma Trận Luyện
@@ -8,8 +8,8 @@
 - **src/** (171 files)
 - **.agents/** (38 files)
 - **(root)/** (14 files)
+- **preview for devs/** (4 files)
 - **public/** (4 files)
-- **.brain/** (3 files)
 
 ## Central Nodes
 - `file:src/game.ts` (file, 78 links): Rendered Town STASH CHEST beside Spawn, wired [F] stash modal, integrated live ground-loot Auto-Sell and dynamic bagCapacity magnet + SaveDataV2 persistence.

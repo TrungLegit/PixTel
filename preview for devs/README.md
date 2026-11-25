@@ -12,3 +12,4 @@ Thư mục lưu trữ toàn bộ **bản Preview trực quan** (ảnh chụp th�
 |---|---|---|---|
 | `2026-11-26` | `PIXTEL v3.0+` | [Bảng 33 Vật Phẩm & Nâng Cấp Mới](2026-11-26-v3.0-new-items-preview.md) | 8 Vũ Khí Độc Lạ (`[E]` riêng), 8 Mũ/Giáp/Giày/Phụ Kiện Độc Lạ (Drop-Only), 8 Đồ Mùa Gacha, 4 Chìa Biome, 4 Cấp Balo (`40 → 80` ô) & Rương Cá Nhân (`80` ô) |
 | `2026-11-26` | `PIXTEL v3.0+` | [Preview Gameplay, UI/UX, Gacha, Auto-Bán, Balo & Rương Spawn](2026-11-26-v3.0-gameplay-ui-preview.md) | Quảng trường Spawn (`STASH CHEST` + `GACHA ALTAR`), Thanh kỹ năng vũ khí động `[E]`, Auto-Bán phẩm thấp, Quầy Balo Mira, Rương Cá Nhân 80 ô, Sân khấu Gacha ×5, Quái HD 306 frame & Font số `PixTel Digits` sắc nét |
+| `2026-11-26` | `PIXTEL v2.7+` | [Thư Viện 97 Vật Phẩm Cơ Bản, 11 Cổ Vật Ẩn & Model 3D](2026-11-26-v2.7-all-97-base-items-preview.md) | Toàn bộ 11 Cổ Vật Ẩn, 24 Vũ Khí khóa Class, 30 Giáp/Phụ Kiện, 32 Dược Phẩm/Sắc Tố/Nguyên Liệu & 4 bộ Model 3D `pixelfx` |
