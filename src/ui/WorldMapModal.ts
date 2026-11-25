@@ -66,7 +66,7 @@ export class WorldMapModalUI {
     ctx.drawImage(this.game.tileRenderer.overviewCanvas, 0, 0, w, h);
 
     // Biome labels
-    ctx.font = "bold 10px 'Pixelify Sans', monospace";
+    ctx.font = "bold 10px 'Pixelify Sans Variable', monospace";
     ctx.textAlign = "center";
     const drawLbl = (text: string, tx: number, ty: number, col: string) => {
       const x = Math.round(tx * scale);

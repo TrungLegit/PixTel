@@ -40,6 +40,17 @@
 
 ## Nhật Ký Cập Nhật (Newest First)
 
+### [2026-11-25 14:50] — GitHub Copilot — Tự lưu trữ font Pixelify hỗ trợ tiếng Việt
+- **Commit / Branch:** `feat/vietnamese-pixel-game-font`
+- **Giai đoạn / Version:** `PIXTEL v2.6+` — Font & Typography
+- **Đã làm (Done):**
+  - Chuyển toàn bộ giao diện và nhãn canvas Bản Đồ sang Pixelify Sans Variable theo phong cách pixel/Minecraft, hỗ trợ dấu tiếng Việt qua Latin Extended.
+  - Đóng gói font từ npm theo SIL OFL 1.1, bỏ phụ thuộc Google Fonts bên ngoài và thêm bản quyền/giấy phép vào tài nguyên public.
+- **File chính đã sửa / thêm:** `package.json`, `package-lock.json`, `index.html`, `src/main.ts`, `style.css`, `src/ui/WorldMapModal.ts`, `public/licenses/Pixelify-Sans-OFL.txt`
+- **Kiểm tra (Verified):** `npm ci`, `npm run build`, `npm run test` (10/10 suites), `git diff --check`; Playwright xác nhận font Vietnamese Latin Extended tải từ local và giao diện hiển thị trên desktop/mobile.
+- **Lưu ý / Handoff (Breaking changes / Đang dở):** Không còn yêu cầu mạng Google Fonts để hiển thị chữ.
+- **Gợi ý bước tiếp theo (Next Steps):** Mở draft PR riêng cho phần font; PR màn hình khởi đầu đã được merge.
+
 ### [2026-11-25 14:38] — GitHub Copilot — Tinh chỉnh chữ PIXTEL theo font pixel khối
 - **Commit / Branch:** `feat/epic-pixel-grid-title-screen`
 - **Giai đoạn / Version:** `PIXTEL v2.6+` — Title Screen Polish

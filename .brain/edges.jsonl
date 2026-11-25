@@ -1,6 +1,7 @@
 {"created": "2026-11-25T04:21:45.750293+00:00", "dst": "file:src/graphics/pixelSprites.ts", "note": "", "schema_version": 1, "src": "bug:20261125042129-classselect-firstframe-negative-dt", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T04:21:45.464715+00:00", "dst": "file:src/ui/ClassSelect.ts", "note": "", "schema_version": 1, "src": "bug:20261125042129-classselect-firstframe-negative-dt", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:29:41.846066+00:00", "dst": "file:style.css", "note": "", "schema_version": 1, "src": "bug:20261125142941-narrow-titlescreen-class-cards", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-25T14:47:12.129230+00:00", "dst": "file:style.css", "note": "", "schema_version": 1, "src": "bug:20261125144712-matching-bundled-font-family", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T03:24:49.304532+00:00", "dst": "file:src/engine/game.js", "note": "", "schema_version": 1, "src": "decision:20261125032449-hybrid-pixelfx-rendering", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T03:24:49.304532+00:00", "dst": "file:src/vfx/vfxManager.js", "note": "", "schema_version": 1, "src": "decision:20261125032449-hybrid-pixelfx-rendering", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T04:21:28.826831+00:00", "dst": "decision:20261125032449-hybrid-pixelfx-rendering", "note": "", "schema_version": 1, "src": "decision:20261125042128-pixtel-v2-openworld-vite", "type": "supersedes", "weight": 1.0}
@@ -38,6 +39,7 @@
 {"created": "2026-11-25T14:07:11.483575+00:00", "dst": "file:DEV_LOG.md", "note": "", "schema_version": 1, "src": "decision:20261125140711-mandatory-team-vibecode-devlog", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:28:12.513611+00:00", "dst": "file:src/ui/ClassSelect.ts", "note": "", "schema_version": 1, "src": "decision:20261125142812-epic-pixelgrid-title-screen", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:37:34.006437+00:00", "dst": "file:src/ui/ClassSelect.ts", "note": "", "schema_version": 1, "src": "decision:20261125143734-blockpixel-logo-lettering", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-25T14:46:03.447853+00:00", "dst": "file:style.css", "note": "", "schema_version": 1, "src": "decision:20261125144603-selfhosted-vietnamese-pixel-ui", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T13:30:11.378545+00:00", "dst": "file:.agents/skills/codixel/SKILL.md", "note": "", "schema_version": 1, "src": "file:.agents/skills/codixel/package.json", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T13:30:11.809596+00:00", "dst": "file:src/vfx/vfxManager.ts", "note": "", "schema_version": 1, "src": "file:.agents/skills/pixelfx/SKILL.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:.agents/skills/spritecook-polish-sprites/scripts/compare_alpha.py", "note": "", "schema_version": 1, "src": "file:.agents/skills/spritecook-polish-sprites/scripts/test_compare_alpha.py", "type": "imports", "weight": 1.0}
@@ -46,6 +48,7 @@
 {"created": "2026-11-25T14:07:11.334098+00:00", "dst": "file:DEV_LOG.md", "note": "", "schema_version": 1, "src": "file:CLAUDE.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:30:13.212983+00:00", "dst": "decision:20261125142812-epic-pixelgrid-title-screen", "note": "", "schema_version": 1, "src": "file:DEV_LOG.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:38:31.739343+00:00", "dst": "decision:20261125143734-blockpixel-logo-lettering", "note": "", "schema_version": 1, "src": "file:DEV_LOG.md", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-25T14:50:03.210322+00:00", "dst": "decision:20261125144603-selfhosted-vietnamese-pixel-ui", "note": "", "schema_version": 1, "src": "file:DEV_LOG.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:07:10.739244+00:00", "dst": "file:AGENTS.md", "note": "", "schema_version": 1, "src": "file:DEV_LOG.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:07:11.036763+00:00", "dst": "file:DEV_LOG.md", "note": "", "schema_version": 1, "src": "file:GEMINI.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T05:02:37.739271+00:00", "dst": "file:src/game.ts", "note": "", "schema_version": 1, "src": "file:README.md", "type": "relates_to", "weight": 1.0}
@@ -57,7 +60,11 @@
 {"created": "2026-11-25T14:28:12.596770+00:00", "dst": "file:src/ui/ClassSelect.ts", "note": "", "schema_version": 1, "src": "file:index.html", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T08:04:58.822440+00:00", "dst": "file:src/ui/ItemReviewTooltip.ts", "note": "", "schema_version": 1, "src": "file:index.html", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:style.css", "note": "", "schema_version": 1, "src": "file:index.html", "type": "imports", "weight": 1.0}
+{"created": "2026-11-25T14:46:03.708318+00:00", "dst": "file:style.css", "note": "", "schema_version": 1, "src": "file:index.html", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-25T14:47:12.216299+00:00", "dst": "decision:20261125144603-selfhosted-vietnamese-pixel-ui", "note": "", "schema_version": 1, "src": "file:package-lock.json", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T03:25:02.669635+00:00", "dst": "file:server.mjs", "note": "", "schema_version": 1, "src": "file:package.json", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-25T14:46:03.576500+00:00", "dst": "file:style.css", "note": "", "schema_version": 1, "src": "file:package.json", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-25T14:47:12.489449+00:00", "dst": "decision:20261125144603-selfhosted-vietnamese-pixel-ui", "note": "", "schema_version": 1, "src": "file:public/licenses/Pixelify-Sans-OFL.txt", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T12:37:39.667899+00:00", "dst": "file:src/graphics/enemyAtlas.ts", "note": "", "schema_version": 1, "src": "file:scripts/extract_enemy_sprites.py", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T07:19:21.978026+00:00", "dst": "file:src/assets/codixel-icons.json", "note": "", "schema_version": 1, "src": "file:scripts/generate_codixel_assets.mjs", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T07:19:22.487225+00:00", "dst": "file:src/assets/codixel-paperdoll.json", "note": "", "schema_version": 1, "src": "file:scripts/generate_codixel_assets.mjs", "type": "relates_to", "weight": 1.0}
@@ -227,6 +234,7 @@
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/ui/QuestJournalModal.ts", "note": "", "schema_version": 1, "src": "file:src/main.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/ui/TutorialModal.ts", "note": "", "schema_version": 1, "src": "file:src/main.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/ui/WorldMapModal.ts", "note": "", "schema_version": 1, "src": "file:src/main.ts", "type": "imports", "weight": 1.0}
+{"created": "2026-11-25T14:46:03.824453+00:00", "dst": "file:style.css", "note": "", "schema_version": 1, "src": "file:src/main.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T03:24:13.086846+00:00", "dst": "file:src/vfx/pixelfx/core/math.js", "note": "", "schema_version": 1, "src": "file:src/sprites/mapGen.js", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T03:24:13.086846+00:00", "dst": "file:src/vfx/pixelfx/core/color.js", "note": "", "schema_version": 1, "src": "file:src/sprites/spriteGen.js", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/audio/chiptuneSynth.ts", "note": "", "schema_version": 1, "src": "file:src/systems/combat.ts", "type": "imports", "weight": 1.0}
@@ -384,6 +392,7 @@
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/equipments.ts", "note": "", "schema_version": 1, "src": "file:src/ui/TutorialModal.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/types.ts", "note": "", "schema_version": 1, "src": "file:src/ui/TutorialModal.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/game.ts", "note": "", "schema_version": 1, "src": "file:src/ui/TutorialModal.ts", "type": "imports", "weight": 1.0}
+{"created": "2026-11-25T14:47:12.302457+00:00", "dst": "decision:20261125144603-selfhosted-vietnamese-pixel-ui", "note": "", "schema_version": 1, "src": "file:src/ui/WorldMapModal.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/audio/chiptuneSynth.ts", "note": "", "schema_version": 1, "src": "file:src/ui/WorldMapModal.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/worldConfig.ts", "note": "", "schema_version": 1, "src": "file:src/ui/WorldMapModal.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T04:21:28.082906+00:00", "dst": "file:src/game.ts", "note": "", "schema_version": 1, "src": "file:src/ui/WorldMapModal.ts", "type": "depends_on", "weight": 1.0}
@@ -720,6 +729,8 @@
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/worldConfig.ts", "note": "", "schema_version": 1, "src": "file:src/world/worldMap.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T09:24:44.984836+00:00", "dst": "file:src/data/worldConfig.ts", "note": "", "schema_version": 1, "src": "file:src/world/worldMap.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:29:41.950237+00:00", "dst": "decision:20261125142812-epic-pixelgrid-title-screen", "note": "", "schema_version": 1, "src": "file:style.css", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-25T14:46:03.935161+00:00", "dst": "decision:20261125143734-blockpixel-logo-lettering", "note": "", "schema_version": 1, "src": "file:style.css", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-25T14:47:12.390543+00:00", "dst": "decision:20261125144603-selfhosted-vietnamese-pixel-ui", "note": "", "schema_version": 1, "src": "file:style.css", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:28:12.768968+00:00", "dst": "file:index.html", "note": "", "schema_version": 1, "src": "file:style.css", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T08:04:59.313321+00:00", "dst": "file:src/graphics/ropeFrame.ts", "note": "", "schema_version": 1, "src": "file:style.css", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T08:04:59.313321+00:00", "dst": "file:src/ui/ItemReviewTooltip.ts", "note": "", "schema_version": 1, "src": "file:style.css", "type": "relates_to", "weight": 1.0}
