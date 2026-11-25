@@ -43,6 +43,10 @@ import { WorldSpawner } from "../src/world/spawner";
 import { WorldMap } from "../src/world/worldMap";
 import { ATLAS_PRESETS, PIXELFX_MODS } from "../src/vfx/vfxManager";
 import { createFrame, createFx } from "../src/vfx/pixelfx/core/index.js";
+import WebSocket from "ws";
+import { PixTelOpenWorldGame } from "../src/game";
+import { startCoopServer } from "../server/coopServer";
+import type { WebSocketLike } from "../src/net/coopClient";
 
 // Lightweight headless mocks for browser globals so all systems run at pure logic speed in Node
 (globalThis as unknown as { performance?: { now: () => number } }).performance ??= {
@@ -60,14 +64,17 @@ const memStore = new Map<string, string>();
   },
 };
 
-(globalThis as unknown as { document?: unknown }).document ??= {
-  createElement: () => ({
-    width: 32,
-    height: 32,
+function makeMockCanvas() {
+  return {
+    width: 480,
+    height: 270,
+    addEventListener: () => {},
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 480, height: 270 }),
     getContext: () => ({
       fillStyle: "",
       strokeStyle: "",
       globalAlpha: 1,
+      globalCompositeOperation: "source-over",
       imageSmoothingEnabled: false,
       fillRect: () => {},
       clearRect: () => {},
@@ -96,7 +103,28 @@ const memStore = new Map<string, string>();
       }),
       putImageData: () => {},
     }),
-  }),
+  };
+}
+
+(globalThis as unknown as { window?: unknown }).window ??= {
+  innerWidth: 960,
+  innerHeight: 540,
+  location: {
+    href: "https://trunglegit.github.io/PixTel/",
+    origin: "https://trunglegit.github.io",
+    pathname: "/PixTel/",
+    protocol: "https:",
+    search: "",
+  },
+  addEventListener: () => {},
+  setTimeout: globalThis.setTimeout.bind(globalThis),
+  clearTimeout: globalThis.clearTimeout.bind(globalThis),
+};
+
+(globalThis as unknown as { document?: unknown }).document ??= {
+  activeElement: null,
+  fullscreenElement: null,
+  createElement: () => makeMockCanvas(),
 };
 
 interface MockVfxCall {
@@ -1532,11 +1560,274 @@ runTest("10 Reference Monster Models, 4-Direction Atlas & Synchronized Enemy Ski
   }
 });
 
-console.log("\n========================================================");
-console.log("  PIXTEL v2.6 AUTOMATED FEATURE TEST SUITE (9 ELEMENTS)");
-console.log("========================================================");
-for (const line of results) {
-  console.log("  ✓", line);
+// ============================================================================
+// 11. PHASE 1: MOBILE TWIN-STICK TOUCH, OUTER-RING SPRINT & SMART AUTO-AIM
+// ============================================================================
+runTest("Phase 1 Mobile Twin-Stick Touch, Outer-Ring Sprint, Smart Auto-Aim & Hold Just-Charge", () => {
+  const uiStub = {
+    onHudUpdate: () => {},
+    onModalChange: () => {},
+    onToast: () => {},
+    onBossVictory: () => {},
+  };
+  const g = new PixTelOpenWorldGame(makeMockCanvas() as unknown as HTMLCanvasElement, uiStub);
+  g.startNewGame("prism_knight", false);
+  g.inv.addItem("wpn_starter", 1, 0);
+  g.inv.addItem("acc_wind_feather", 1, 0);
+  g.inv.equipBestForClass("prism_knight");
+  g.recalcPlayerStats(false);
+  g.mobileMode = true;
+
+  // 1. Virtual Analog Joystick + Outer-Ring Auto-Sprint
+  const startX = g.player.x;
+  const startStam = g.player.stamina;
+  g.touchMoveX = 0.92;
+  g.touchMoveY = 0;
+  g.touchSprint = true;
+  g.step(0.08);
+  assert.ok(g.player.x > startX + 3, "Mobile analog joystick moves hero smoothly along X");
+  assert.equal(g.player.sprinting, true, "Outer-ring joystick tilt activates Sprint");
+  assert.ok(g.player.stamina < startStam, "Mobile sprint consumes Stamina wheel");
+  g.touchMoveX = 0;
+  g.touchSprint = false;
+
+  // 2. Smart Auto-Aim Priority: Unlit Arena Totem > Boss/Enemy > Ore Node
+  g.spawner.enemies.length = 0;
+  g.spawner.arenaTotems.length = 0;
+  const mob = spawnDummyEnemy(g.spawner, g.player.x + 60, g.player.y + 60, "null_slime");
+  g.spawner.arenaTotems.push({
+    uid: 901,
+    element: "fire",
+    x: g.player.x,
+    y: g.player.y - 64,
+    lit: false,
+    hitFlash: 0,
+  });
+
+  const totemAim = g.computeAutoAimAngle();
+  assert.ok(totemAim !== null && Math.abs(totemAim - -Math.PI / 2) < 0.05, "Smart Auto-Aim prioritizes unlit Arena Totem");
+
+  g.spawner.arenaTotems[0].lit = true;
+  const mobAim = g.computeAutoAimAngle();
+  assert.ok(mobAim !== null && Math.abs(mobAim - Math.PI / 4) < 0.05, "Smart Auto-Aim locks onto nearest enemy when totems are lit");
+  assert.equal(g.autoAimTargetUid, mob.uid, "Smart Auto-Aim records target enemy UID for HUD reticle");
+
+  // 3. Mobile Tap Combo -> Hold & Release Golden Just-Charge -> Dash / [E] / [Q]
+  mob.x = g.player.x + 24;
+  mob.y = g.player.y;
+  const mobStartHp = mob.hp;
+  g.player.atkCd = 0;
+  g.mobileStartAttack();
+  g.mobileEndAttack();
+  assert.ok(mob.hp < mobStartHp, "Mobile tap attack auto-aims and deals combo damage");
+
+  g.player.atkCd = 0;
+  g.player.quickChargeTimer = 0;
+  g.player.stamina = 100;
+  g.mobileStartAttack();
+  // Step 0.56s into Golden Just-Charge Lv2 window ([0.50s .. 0.72s]) then release!
+  for (let i = 0; i < 14; i++) g.step(0.04);
+  g.mobileEndAttack();
+  g.step(0.02);
+  assert.equal(g.player.attackAnimKind, "thrust", "Releasing mobile hold attack inside Just-Charge window fires Charged Thrust");
+
+  g.player.dashCd = 0;
+  g.player.stamina = 100;
+  g.mobileDash();
+  assert.ok(g.player.dashing > 0, "Mobile Dash button triggers Chroma Dodge i-frames");
+
+  g.player.skillCd = 0;
+  g.mobileSkillE();
+  assert.ok(g.player.skillCd > 0, "Mobile [E] button casts Class Skill with Smart Auto-Aim");
+
+  g.player.overdrive = 100;
+  g.mobileUltQ();
+  assert.equal(g.player.overdrive, 0, "Mobile [Q] button unleashes Class Ultimate");
+});
+
+// ============================================================================
+// 12. PHASE 2: DEDICATED CO-OP SERVER, 6-CHAR ROOMS, CROSS-PLAYER REACTIONS & LOOT
+// ============================================================================
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+async function waitUntil(cond: () => boolean, timeoutMs = 1500) {
+  const deadline = Date.now() + timeoutMs;
+  while (!cond() && Date.now() < deadline) {
+    await sleep(10);
+  }
 }
-console.log(`========================================================`);
-console.log(`  ALL ${results.length}/${results.length} FEATURE SUITES PASSED CLEANLY!\n`);
+
+async function runAsyncSuitesAndPrint() {
+  const srv = await startCoopServer(0, "127.0.0.1");
+  const wsUrl = `ws://127.0.0.1:${srv.port}`;
+  try {
+    // 1. Verify /health endpoint on Dedicated Co-op WebSocket Server
+    const healthRes = await fetch(`http://127.0.0.1:${srv.port}/health`);
+    assert.equal(healthRes.status, 200, "Co-op server /health returns HTTP 200");
+    const healthJson = (await healthRes.json()) as { status: string; activeRooms: number; onlinePlayers: number };
+    assert.equal(healthJson.status, "ok", "Co-op server /health reports status=ok");
+
+    const uiStub = {
+      onHudUpdate: () => {},
+      onModalChange: () => {},
+      onToast: () => {},
+      onBossVictory: () => {},
+    };
+    const wsFactory = (url: string) => new WebSocket(url) as unknown as WebSocketLike;
+
+    const hostGame = new PixTelOpenWorldGame(makeMockCanvas() as unknown as HTMLCanvasElement, uiStub, wsFactory);
+    const guestGame = new PixTelOpenWorldGame(makeMockCanvas() as unknown as HTMLCanvasElement, uiStub, wsFactory);
+
+    hostGame.coop.playerName = "HostMage";
+    guestGame.coop.playerName = "GuestKnight";
+
+    hostGame.startNewGame("chroma_mage", false);
+    guestGame.startNewGame("prism_knight", false);
+
+    // Equip a +5 Void-infused weapon on Guest Knight to verify live Paper-Doll network sync
+    guestGame.inv.addItem("wpn_prism_halberd", 1, 5);
+    const guestWpn = guestGame.inv.bag.find((b) => b.defId === "wpn_prism_halberd")!;
+    guestWpn.infusedElement = "void";
+    guestGame.inv.equipFromBag(guestWpn.uid, "prism_knight");
+    guestGame.recalcPlayerStats(false);
+
+    // 2. Host creates 6-char Room & Guest joins via Room Code
+    const roomCode = await hostGame.hostCoopSession({ mode: "ws", wsUrl });
+    assert.equal(roomCode.length, 6, "Generated Room Code is 6 characters");
+    assert.ok(hostGame.coop.getInviteUrl().includes(`room=${roomCode}`), "Shareable Invite URL embeds ?room=CODE");
+
+    const joinedCode = await guestGame.joinCoopSession(roomCode, { mode: "ws", wsUrl });
+    assert.equal(joinedCode, roomCode, "Guest joins exact 6-char Room Code");
+
+    await waitUntil(() => hostGame.remotePlayers.size === 1 && guestGame.remotePlayers.size === 1);
+    hostGame.tickNetwork(0.1);
+    guestGame.tickNetwork(0.1);
+    await sleep(20);
+
+    assert.equal(hostGame.remotePlayers.size, 1, "Host sees Guest in remotePlayers");
+    assert.equal(guestGame.remotePlayers.size, 1, "Guest sees Host in remotePlayers");
+
+    const hostSeesGuest = hostGame.remotePlayers.get(guestGame.coop.localId)!;
+    assert.equal(hostSeesGuest.snap.name, "GuestKnight");
+    assert.equal(hostSeesGuest.snap.classId, "prism_knight");
+    assert.equal(
+      hostSeesGuest.cachedEquip.weapon?.infusedElement,
+      "void",
+      "Host reconstructs Guest's +5 Void-infused weapon on 5-slot Paper-Doll"
+    );
+
+    // 3. Multi-Player Enemy Aggro Priority (Prism Knight Shield Guard draws aggro!)
+    hostGame.spawner.enemies.length = 0;
+    guestGame.spawner.enemies.length = 0;
+    hostGame.player.x = 50 * TILE_SIZE;
+    hostGame.player.y = 50 * TILE_SIZE;
+    guestGame.player.x = 50 * TILE_SIZE;
+    guestGame.player.y = 50 * TILE_SIZE + 120;
+    guestGame.player.shieldTime = 3.0; // Active Prism Shield Guard (-40px threat bonus!)
+
+    guestGame.tickNetwork(0.1);
+    await waitUntil(() => Boolean(hostGame.remotePlayers.get(guestGame.coop.localId)?.snap.shieldGuard));
+
+    // Spawn shared enemy equidistant (60px) between Host (y=800) and Guest (y=920) -> at y=860
+    const sharedMob = spawnDummyEnemy(hostGame.spawner, 50 * TILE_SIZE, 50 * TILE_SIZE + 60, "ash_hopper");
+    sharedMob.hp = 1200;
+    sharedMob.maxHp = 1200;
+    sharedMob.aiTimer = 99;
+    const mobStartY = sharedMob.y;
+    hostGame.step(0.1);
+    assert.ok(sharedMob.y > mobStartY, "Enemy chases toward Shield-Guarding Prism Knight teammate due to tank threat priority");
+
+    // 4. Cross-Player 9-Element Pairwise Reaction (Host applies `void` Primer -> Guest detonates with `fire`!)
+    sharedMob.element = null;
+    sharedMob.reactionIcd = 0;
+    hostGame.stats.reactionsTriggered = 0;
+    guestGame.stats.reactionsTriggered = 0;
+
+    // Host applies Void Primer
+    hostGame.combat.damageEnemy(
+      (hostGame as unknown as { _makeCombatContext: () => CombatContext })._makeCombatContext(),
+      sharedMob,
+      25,
+      false,
+      "explode-plasma",
+      "void"
+    );
+    assert.equal(sharedMob.element, "void", "Host applies Void Primer to shared enemy");
+
+    // Sync enemy state from Host -> Guest
+    hostGame.tickNetwork(0.1);
+    await waitUntil(() => guestGame.spawner.enemies.find((e) => e.uid === sharedMob.uid)?.element === "void");
+    const guestMob = guestGame.spawner.enemies.find((e) => e.uid === sharedMob.uid)!;
+    assert.ok(guestMob, "Guest receives synced shared enemy from Host");
+    assert.equal(guestMob.element, "void", "Guest sees synced Void Primer aura on enemy");
+
+    // Guest strikes enemy with Fire Detonator -> forwards hit_enemy -> Host triggers Void Flare Burst & broadcasts reaction_vfx!
+    guestGame.combat.damageEnemy(
+      (guestGame as unknown as { _makeCombatContext: () => CombatContext })._makeCombatContext(),
+      guestMob,
+      35,
+      false,
+      "hit-fire",
+      "fire"
+    );
+    await waitUntil(() => hostGame.stats.reactionsTriggered === 1 && guestGame.stats.reactionsTriggered === 1);
+
+    assert.equal(hostGame.stats.reactionsTriggered, 1, "Cross-player Void + Fire triggers Void Flare Burst on Host");
+    assert.equal(guestGame.stats.reactionsTriggered, 1, "Guest receives synchronized reaction_vfx & quest credit");
+
+    // 5. Shared Chroma Waypoint Activation (Guest lights WAYPOINTS[1] -> Host unlocks it automatically!)
+    const wpTarget = WAYPOINTS[1]!;
+    assert.equal(hostGame.colorSys.unlockedWaypoints.has(wpTarget.id), false);
+    guestGame.player.x = wpTarget.tx * TILE_SIZE + 8;
+    guestGame.player.y = wpTarget.ty * TILE_SIZE + 8;
+    guestGame.step(0.02); // refreshes nearestInteractable
+    guestGame.interactNearest();
+    await waitUntil(() => hostGame.colorSys.unlockedWaypoints.has(wpTarget.id));
+    assert.equal(
+      hostGame.colorSys.unlockedWaypoints.has(wpTarget.id),
+      true,
+      "Unlocking Chroma Waypoint on Guest broadcasts and lights it on Host"
+    );
+
+    // 6. Instanced Kill Loot & 100% Shared XP when Host finishes off shared enemy
+    const guestKillsBefore = guestGame.stats.kills;
+    const guestXpBefore = guestGame.player.xp + guestGame.player.level * 1000;
+    const guestLootBefore = guestGame.spawner.groundLoot.length;
+
+    hostGame.combat.damageEnemy(
+      (hostGame as unknown as { _makeCombatContext: () => CombatContext })._makeCombatContext(),
+      sharedMob,
+      99999,
+      true,
+      "crit-gold",
+      "chroma"
+    );
+    await waitUntil(() => guestGame.stats.kills === guestKillsBefore + 1);
+
+    const guestXpAfter = guestGame.player.xp + guestGame.player.level * 1000;
+    assert.equal(guestGame.stats.kills, guestKillsBefore + 1, "Guest receives shared kill credit");
+    assert.ok(guestXpAfter > guestXpBefore, "Guest receives 100% shared XP from Co-op kill");
+    assert.ok(guestGame.spawner.groundLoot.length > guestLootBefore, "Guest receives personal instanced ground loot");
+
+    guestGame.leaveCoopSession();
+    hostGame.leaveCoopSession();
+    results.push(
+      "PASS · Phase 2 Dedicated WebSocket Co-op Server, 6-Char Room Join, Cross-Player 9-Element Reactions & Instanced Loot"
+    );
+  } finally {
+    await srv.close();
+  }
+
+  console.log("\n========================================================");
+  console.log("  PIXTEL AUTOMATED TEST SUITE (MOBILE + CO-OP + 9 ELEM)");
+  console.log("========================================================");
+  for (const line of results) {
+    console.log("  ✓", line);
+  }
+  console.log(`========================================================`);
+  console.log(`  ALL ${results.length}/${results.length} FEATURE SUITES PASSED CLEANLY!\n`);
+}
+
+runAsyncSuitesAndPrint().catch((err) => {
+  console.error("ASYNC TEST FAILURE:", err);
+  process.exit(1);
+});

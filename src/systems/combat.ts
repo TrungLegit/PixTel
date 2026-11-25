@@ -50,6 +50,35 @@ export interface CombatContext {
   onBossLockTrigger?: (enemy: EnemyEntity) => void;
   onBossDefeated: (enemy: EnemyEntity) => void;
   onPlayerDefeated: () => void;
+  isCoopGuest?: boolean;
+  coopTargets?: ReadonlyArray<{
+    id: string;
+    x: number;
+    y: number;
+    hp: number;
+    shieldGuard?: boolean;
+  }>;
+  onCoopClientHitEnemy?: (hit: {
+    enemyUid: number;
+    rawDamage: number;
+    crit: boolean;
+    hitPreset: string;
+    element?: ElementType;
+    kbX: number;
+    kbY: number;
+    poiseMult: number;
+  }) => void;
+  onCoopClientLightTotem?: (totemIdx: number, element?: ElementType) => void;
+  onCoopEnemyKilled?: (kill: {
+    enemyUid: number;
+    defId: string;
+    campId: string;
+    x: number;
+    y: number;
+    isBoss: boolean;
+    isWorldBoss: boolean;
+  }) => void;
+  onCoopReactionVfx?: (rx: { x: number; y: number; tag: string; color: string }) => void;
   stats: {
     kills: number;
     mined: number;
@@ -1254,12 +1283,29 @@ export class CombatSystem {
    * - If lit using a reacting element (or Phase 3 Primordial Totems), triggers SUPER CONVERGENCE:
    *   12% Max HP True Damage, 5.5s Stagger, and spawns a `chroma_bloom` Sanctuary Field!
    */
+  lightArenaTotemByIndex(ctx: CombatContext, totemIdx: number, hitElem?: ElementType) {
+    const t = ctx.spawner.arenaTotems[totemIdx];
+    if (t && !t.lit) {
+      this._lightArenaTotem(ctx, t, hitElem);
+    }
+  }
+
   private _lightArenaTotem(
     ctx: CombatContext,
     totem: { element: InfusableElement; x: number; y: number; lit: boolean; hitFlash: number },
     hitElem?: ElementType
   ) {
     if (totem.lit) return;
+    if (ctx.isCoopGuest) {
+      const idx = ctx.spawner.arenaTotems.indexOf(totem as never);
+      totem.hitFlash = 0.25;
+      sfx.playWaypoint();
+      ctx.vfx.spawnPooled("collect-burst", { x: totem.x, y: totem.y - 6 });
+      ctx.player.totemSurgeElement = totem.element;
+      ctx.player.totemSurgeTimer = 6.0;
+      if (idx >= 0) ctx.onCoopClientLightTotem?.(idx, hitElem);
+      return;
+    }
     totem.lit = true;
     totem.hitFlash = 0.25;
     const meta = ELEMENT_META[totem.element];
@@ -1401,6 +1447,28 @@ export class CombatSystem {
   ) {
     const idx = ctx.spawner.enemies.indexOf(e);
     if (idx < 0) return;
+
+    if (ctx.isCoopGuest) {
+      e.hitFlash = 0.13;
+      sfx.playHit(crit);
+      ctx.vfx.spawnPooled(crit ? "crit-gold" : hitPreset, { x: e.x, y: e.y - 6 });
+      ctx.vfx.spawnDamageText(e.x, e.y - 10, crit ? `CRIT!` : `HIT`, {
+        crit,
+        color: crit ? "#ffe25a" : "#ffffff",
+      });
+      ctx.player.overdrive = Math.min(100, ctx.player.overdrive + (e.isBoss ? 5.0 : 6.0));
+      ctx.onCoopClientHitEnemy?.({
+        enemyUid: e.uid,
+        rawDamage,
+        crit,
+        hitPreset,
+        element,
+        kbX,
+        kbY,
+        poiseMult,
+      });
+      return;
+    }
 
     // Trigger Boss Territory Lock-In on first hit against any Boss!
     if (e.isBoss && ctx.onBossLockTrigger && !ctx.getBossLock?.()) {
@@ -1713,6 +1781,7 @@ export class CombatSystem {
     const label = spec?.shortTag ?? "PHẢN ỨNG";
 
     e.hp -= dmg;
+    ctx.onCoopReactionVfx?.({ x: e.x, y: e.y, tag: `${label}!`, color });
 
     if (pair === "fire+ice") {
       // Sốc Nhiệt (Thermal Shatter): 1.85x ATK, -25% DEF 4s, 36px ice shard splash
@@ -2127,6 +2196,16 @@ export class CombatSystem {
       ctx.stats.bossesDefeated += 1;
       ctx.onBossDefeated(e);
     }
+
+    ctx.onCoopEnemyKilled?.({
+      enemyUid: e.uid,
+      defId: e.defId,
+      campId: e.campId,
+      x: e.x,
+      y: e.y,
+      isBoss: e.isBoss,
+      isWorldBoss: e.isWorldBoss,
+    });
   }
 
   /**
@@ -2821,7 +2900,41 @@ export class CombatSystem {
       const edef = ENEMIES[e.defId];
       if (!edef) continue;
 
-      const distToPlayer = Math.hypot(player.x - e.x, player.y - e.y);
+      if (ctx.isCoopGuest) {
+        // Authoritative enemy movement & AI runs on Room Host; Guest still checks local contact damage!
+        const localContact = Math.hypot(player.x - e.x, player.y - e.y);
+        const contactDist =
+          player.perfectDashWindow > 0 ? e.radius + player.radius + 5 : e.radius + player.radius;
+        if (e.state === "aggro" && e.stunTime <= 0 && localContact <= contactDist) {
+          this.damagePlayer(ctx, e.atk, e.x, e.y, false, e.level);
+        }
+        continue;
+      }
+
+      // Multi-player target selection (Host + up to 3 Co-op Guests, with Prism Knight shield threat pull!)
+      let tgtX = player.x;
+      let tgtY = player.y;
+      let tgtInTown = playerInTown;
+      let distToPlayer = Math.hypot(player.x - e.x, player.y - e.y);
+      let bestThreatScore = playerInTown ? 99999 : distToPlayer - (player.shieldTime > 0 ? 40 : 0);
+
+      if (ctx.coopTargets && ctx.coopTargets.length > 0) {
+        for (const ct of ctx.coopTargets) {
+          if (ct.hp <= 0) continue;
+          const inTown = world.isInSafeTown(ct.x, ct.y);
+          if (inTown) continue;
+          const d = Math.hypot(ct.x - e.x, ct.y - e.y);
+          const score = d - (ct.shieldGuard ? 40 : 0);
+          if (score < bestThreatScore) {
+            bestThreatScore = score;
+            tgtX = ct.x;
+            tgtY = ct.y;
+            tgtInTown = false;
+            distToPlayer = d;
+          }
+        }
+      }
+
       const distToHome = Math.hypot(e.homeX - e.x, e.homeY - e.y);
 
       if (distToPlayer > 460 && e.state === "patrol") continue;
@@ -2847,12 +2960,12 @@ export class CombatSystem {
       }
 
       if (e.state === "patrol") {
-        if (!playerInTown && distToPlayer <= edef.aggroRadius) {
+        if (!tgtInTown && distToPlayer <= edef.aggroRadius) {
           e.state = "aggro";
           if (e.isBoss) sfx.playBossRoar();
         }
       } else if (e.state === "aggro") {
-        if (playerInTown || distToHome > edef.leashRadius || distToPlayer > edef.leashRadius + 60) {
+        if (tgtInTown || distToHome > edef.leashRadius || distToPlayer > edef.leashRadius + 60) {
           e.state = "leash";
           if (e.defId === "boss_the_eraser") spawner.arenaTotems.length = 0;
         }
@@ -2899,7 +3012,7 @@ export class CombatSystem {
       }
 
       // === AGGRO COMBAT AI ===
-      const rawAng = Math.atan2(player.y - e.y, player.x - e.x);
+      const rawAng = Math.atan2(tgtY - e.y, tgtX - e.x);
       if (e.animTime <= 0) {
         this._setEnemyDirFromAngle(e, rawAng);
       }

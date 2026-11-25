@@ -7,7 +7,10 @@ import { ForgeModalUI } from "./ui/ForgeModal";
 import { WorldMapModalUI } from "./ui/WorldMapModal";
 import { QuestJournalModalUI } from "./ui/QuestJournalModal";
 import { TutorialModalUI, type TutorialTabId } from "./ui/TutorialModal";
+import { CoopModalUI } from "./ui/CoopModal";
+import { MobileTouchUI } from "./ui/MobileTouchUI";
 import { ItemReviewTooltip } from "./ui/ItemReviewTooltip";
+import { normalizeRoomCode } from "./net/protocol";
 import { installRopeFrameAssets } from "./graphics/ropeFrame";
 import { sfx } from "./audio/chiptuneSynth";
 
@@ -25,10 +28,18 @@ function bootstrap() {
   let worldMap: WorldMapModalUI;
   let journal: QuestJournalModalUI;
   let tutorial: TutorialModalUI;
+  let coopModal: CoopModalUI;
+  let mobileTouch: MobileTouchUI;
   let itemTooltip: ItemReviewTooltip;
 
   const game = new PixTelOpenWorldGame(canvas, {
-    onHudUpdate: () => hud?.update(),
+    onHudUpdate: () => {
+      hud?.update();
+      mobileTouch?.update();
+      if (game.activeModal === "coop" && game.coop.isConnected) {
+        coopModal?.render();
+      }
+    },
     onToast: (msg, tone) => hud?.toast(msg, tone),
     onModalChange: (modal: ModalId, payload?: unknown) => {
       itemTooltip?.hide();
@@ -39,9 +50,11 @@ function bootstrap() {
       worldMap?.hide();
       journal?.hide();
       tutorial?.hide();
+      coopModal?.hide();
       pauseModal.classList.add("hidden");
 
       hud?.setVisible(game.running && modal !== "class_select");
+      mobileTouch?.update();
 
       if (modal === "class_select") {
         const switching = Boolean((payload as { switching?: boolean } | undefined)?.switching);
@@ -60,6 +73,9 @@ function bootstrap() {
       } else if (modal === "tutorial") {
         const initTab = (payload as { tab?: TutorialTabId } | undefined)?.tab;
         tutorial.show(initTab);
+      } else if (modal === "coop") {
+        const code = (payload as { code?: string } | undefined)?.code;
+        coopModal.show(code);
       } else if (modal === "pause") {
         pauseModal.classList.remove("hidden");
       }
@@ -87,12 +103,43 @@ function bootstrap() {
   worldMap = new WorldMapModalUI(game);
   journal = new QuestJournalModalUI(game);
   tutorial = new TutorialModalUI(game);
+  coopModal = new CoopModalUI(game);
+  mobileTouch = new MobileTouchUI(game);
   itemTooltip = new ItemReviewTooltip(game);
+
+  hud.onToggleTouch = () => {
+    mobileTouch.toggleMobileOverlay();
+    hud.toast(
+      game.mobileMode
+        ? "📱 Đã bật giao diện cảm ứng Mobile (Twin-Stick + Tự Ngắm Thông Minh)!"
+        : "🖥 Đã tắt giao diện cảm ứng Mobile.",
+      "info"
+    );
+  };
+
+  // URL Invite Link (?room=CODE & optional ?ws=ws://...)
+  const params = new URLSearchParams(window.location.search);
+  const wsParam = params.get("ws");
+  if (wsParam) {
+    game.coop.mode = "ws";
+    game.coop.wsServerUrl = wsParam;
+  }
+  const roomParam = params.get("room");
+  if (roomParam) {
+    const cleanCode = normalizeRoomCode(roomParam);
+    if (cleanCode) {
+      coopModal.setDraftCode(cleanCode);
+      classSelect.setPendingRoomInvite(cleanCode);
+    }
+  }
 
   // Pause Modal Controls
   document.getElementById("btn-pause-resume")!.addEventListener("click", () => {
     sfx.playUiClick();
     game.setModal(null);
+  });
+  document.getElementById("btn-pause-coop")?.addEventListener("click", () => {
+    game.toggleModal("coop");
   });
   document.getElementById("btn-pause-help")?.addEventListener("click", () => {
     game.toggleModal("tutorial");
@@ -120,10 +167,16 @@ function bootstrap() {
     victoryModal.classList.add("hidden");
   });
 
+  // Register PWA Service Worker for Mobile Home Screen / Offline Asset Caching
+  if ("serviceWorker" in navigator && window.location.protocol.startsWith("http")) {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  }
+
   // Expose light debug handle for Playwright/DevTools inspection if needed
   (window as unknown as { __pixtel?: PixTelOpenWorldGame }).__pixtel = game;
 
   classSelect.show(false);
+  mobileTouch.update();
   game.startLoop();
 }
 

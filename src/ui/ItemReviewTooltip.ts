@@ -144,6 +144,26 @@ export class ItemReviewTooltip {
       }
     });
 
+    document.addEventListener(
+      "touchstart",
+      (ev) => {
+        const raw = ev.target as HTMLElement | null;
+        if (raw && this.root.contains(raw)) return;
+        const target = raw?.closest("[data-review-uid], [data-review-def]") as HTMLElement | null;
+        if (!target || target.dataset.reviewSource === "hud") {
+          if (this.activeTargetEl) this.hide();
+          return;
+        }
+        const t = ev.changedTouches[0];
+        if (!t) return;
+        this.lastMouseX = t.clientX;
+        this.lastMouseY = t.clientY;
+        this.activeTargetEl = target;
+        this._showForTarget(target, t.clientX, t.clientY);
+      },
+      { passive: true }
+    );
+
     document.addEventListener("scroll", () => this.hide(), true);
     window.addEventListener("blur", () => this.hide());
     window.addEventListener("keydown", (ev) => {

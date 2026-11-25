@@ -2525,3 +2525,604 @@ html, body {
   padding: 1px 5px;
   font-weight: 700;
 }
+
+/* =========================================================================
+   PHASE 1: MOBILE TWIN-STICK TOUCH OVERLAY & SAFE-AREA LANDSCAPE UX
+   ========================================================================= */
+
+input,
+textarea {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.mobile-touch-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 18;
+  touch-action: none;
+}
+
+.touch-joy-zone {
+  position: absolute;
+  left: max(8px, env(safe-area-inset-left));
+  bottom: max(8px, env(safe-area-inset-bottom));
+  width: 42vw;
+  max-width: 280px;
+  height: 58vh;
+  max-height: 240px;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.touch-joy-base {
+  position: absolute;
+  left: 26px;
+  bottom: 22px;
+  width: 96px;
+  height: 96px;
+  background: rgba(15, 14, 28, 0.62);
+  border: 2px solid rgba(143, 162, 214, 0.72);
+  box-shadow: inset 0 0 0 2px #07060d, 0 0 0 2px #07060d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.touch-joy-base.active {
+  background: rgba(24, 28, 54, 0.8);
+  border-color: var(--accent-cyan);
+}
+
+.touch-joy-base.sprinting {
+  border-color: var(--accent-gold);
+  box-shadow: inset 0 0 0 2px #362908, 0 0 0 2px #07060d;
+}
+
+.touch-joy-knob {
+  width: 40px;
+  height: 40px;
+  background: #2b355c;
+  border: 2px solid #ffffff;
+  box-shadow: inset -2px -2px 0 0 #151a30, 2px 2px 0 0 #07060d;
+}
+
+.touch-joy-base.sprinting .touch-joy-knob {
+  background: #8a6418;
+  border-color: var(--accent-gold);
+}
+
+.touch-sprint-pill {
+  position: absolute;
+  left: 28px;
+  bottom: 128px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-dim);
+  background: rgba(16, 15, 30, 0.85);
+  border: 2px solid var(--border-mid);
+  padding: 4px 10px;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.touch-sprint-pill.on {
+  color: #0b0a14;
+  background: var(--accent-gold);
+  border-color: #ffffff;
+}
+
+.touch-action-zone {
+  position: absolute;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  width: 230px;
+  height: 210px;
+  pointer-events: none;
+  touch-action: none;
+}
+
+.touch-atk-btn,
+.touch-arc-btn {
+  position: absolute;
+  pointer-events: auto;
+  touch-action: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: rgba(21, 20, 38, 0.86);
+  border: 2px solid var(--border-hi);
+  box-shadow: inset -2px -2px 0 0 #100e1c, 2px 2px 0 0 #05040a;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.touch-atk-btn {
+  right: 8px;
+  bottom: 8px;
+  width: 88px;
+  height: 88px;
+  background: rgba(32, 42, 79, 0.9);
+  border: 3px solid var(--accent-cyan);
+}
+
+.touch-atk-btn.pressing {
+  transform: scale(0.96);
+  background: rgba(44, 68, 122, 0.95);
+  border-color: #ffffff;
+}
+
+.touch-atk-btn.just-window {
+  background: #8f6514;
+  border-color: #ffffff;
+  box-shadow: 0 0 0 3px var(--accent-gold), inset 0 0 0 2px #ffe066;
+}
+
+.touch-atk-ico {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.touch-atk-sub {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent-gold);
+  margin-top: 2px;
+}
+
+.touch-arc-btn {
+  width: 62px;
+  height: 54px;
+  padding: 2px;
+}
+
+.touch-arc-btn:active {
+  transform: translate(1px, 1px);
+}
+
+.touch-arc-btn.dash-btn {
+  right: 108px;
+  bottom: 10px;
+  border-color: #5ef2ff;
+}
+
+.touch-arc-btn.skill-btn {
+  right: 100px;
+  bottom: 76px;
+  border-color: #44ee88;
+}
+
+.touch-arc-btn.ult-btn {
+  right: 26px;
+  bottom: 108px;
+  border-color: #c266ff;
+}
+
+.touch-arc-btn.ult-btn.ult-ready {
+  background: #521d73;
+  border-color: var(--accent-gold);
+}
+
+.touch-arc-btn.interact-btn {
+  right: 162px;
+  bottom: 76px;
+  width: 54px;
+  height: 48px;
+  opacity: 0.45;
+  border-color: var(--border-mid);
+}
+
+.touch-arc-btn.interact-btn.active-target {
+  opacity: 1;
+  background: #1d5c3c;
+  border-color: var(--accent-gold);
+}
+
+.touch-arc-btn.on-cd {
+  opacity: 0.55;
+  border-color: #464c6b;
+}
+
+.touch-btn-ico {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.touch-btn-sub {
+  font-size: 9.5px;
+  color: var(--text-dim);
+}
+
+.mobile-rotate-banner {
+  position: absolute;
+  top: max(8px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 55;
+  background: #291a0d;
+  border: 2px solid var(--accent-gold);
+  box-shadow: 0 0 0 2px #07060d;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-gold);
+  max-width: 94vw;
+}
+
+body.is-mobile-touch #game-canvas {
+  cursor: default;
+}
+
+/* On mobile touch, keep the 4 tap-able Consumable Potions centered and hide PC-only key boxes */
+body.is-mobile-touch #slot-skill-lmb,
+body.is-mobile-touch #slot-skill-e,
+body.is-mobile-touch #slot-skill-q,
+body.is-mobile-touch #slot-dash,
+body.is-mobile-touch .hotbar-sep {
+  display: none;
+}
+
+/* =========================================================================
+   PHASE 2: CO-OP PARTY HUD BOX & MULTIPLAYER LOBBY MODAL [P]
+   ========================================================================= */
+
+.hud-party-box {
+  position: absolute;
+  top: 174px;
+  left: 10px;
+  width: 224px;
+  padding: 6px 8px;
+  border-color: var(--accent-green);
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.hud-party-hdr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11.5px;
+  color: var(--accent-green);
+  border-bottom: 1px solid #294d3a;
+  padding-bottom: 3px;
+  cursor: pointer;
+}
+
+.hud-party-empty {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.hud-party-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.hud-party-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.hud-party-name {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.hud-party-lv {
+  color: var(--text-dim);
+  font-size: 10.5px;
+}
+
+.hud-party-hp {
+  height: 6px;
+  background: #0d0c17;
+  border: 1px solid #353954;
+  margin-top: 2px;
+}
+
+.hud-party-hp > div {
+  height: 100%;
+  background: var(--accent-green);
+}
+
+.hud-tp-btn {
+  padding: 1px 6px;
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+
+.coop-invite-banner {
+  background: #112920;
+  border: 2px solid var(--accent-green);
+  padding: 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.coop-invite-text {
+  font-size: 13px;
+  color: #dcffe9;
+}
+
+.coop-invite-btns {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.coop-status-banner {
+  padding: 7px 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  border: 2px solid var(--accent-cyan);
+  background: #102436;
+  margin-bottom: 8px;
+}
+
+.coop-status-banner.error {
+  border-color: var(--accent-red);
+  background: #2e111b;
+  color: #ffb3c1;
+}
+
+.coop-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 10px;
+  margin: 8px 0;
+}
+
+.coop-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.coop-mode-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.px-input {
+  font-family: var(--font-ui);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #ffffff;
+  background: #0e0d1a;
+  border: 2px solid var(--border-hi);
+  padding: 6px 10px;
+  outline: none;
+}
+
+.px-input:focus {
+  border-color: var(--accent-gold);
+}
+
+.px-input.code-input {
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 16px;
+  text-align: center;
+  width: 148px;
+  color: var(--accent-gold);
+}
+
+.coop-split-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.coop-action-card {
+  background: var(--panel-bg-2);
+  border: 2px solid var(--border-mid);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.coop-action-card p {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+
+.coop-card-title {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.coop-join-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.coop-room-banner {
+  background: #10241b;
+  border: 2px solid var(--accent-green);
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.coop-room-code-big {
+  font-family: var(--font-pixel);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: var(--accent-gold);
+  line-height: 1.1;
+}
+
+.coop-share-btns {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.coop-invite-url-box {
+  margin: 8px 0;
+  padding: 6px 10px;
+  background: #100f1e;
+  border: 1px solid #353b5c;
+  font-size: 12px;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  word-break: break-all;
+}
+
+.coop-invite-url-box code {
+  color: var(--accent-cyan);
+  user-select: all;
+  -webkit-user-select: all;
+}
+
+.coop-member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.coop-member-card {
+  background: #121122;
+  border: 2px solid #3a4166;
+  padding: 7px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.coop-member-card.me {
+  border-color: var(--accent-gold);
+}
+
+.coop-member-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.coop-role-pill {
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 1px 6px;
+  background: #232845;
+  border: 1px solid var(--border-hi);
+}
+
+.coop-role-pill.host {
+  background: #3d2e0e;
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+
+/* =========================================================================
+   RESPONSIVE MOBILE LANDSCAPE & COMPACT VIEWPORT ADAPTATION
+   ========================================================================= */
+
+@media (max-width: 960px), (max-height: 540px) {
+  .overlay-screen {
+    align-items: flex-start;
+    overflow-y: auto;
+    padding: 8px;
+  }
+
+  .class-select-box {
+    max-height: none;
+    padding: 10px 12px;
+    width: 98vw;
+  }
+
+  .class-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .hud-top-left {
+    width: 210px;
+    padding: 6px 8px;
+    top: max(6px, env(safe-area-inset-top));
+    left: max(6px, env(safe-area-inset-left));
+  }
+
+  .hud-party-box {
+    top: 142px;
+    left: max(6px, env(safe-area-inset-left));
+    width: 196px;
+  }
+
+  .hud-top-right {
+    top: max(6px, env(safe-area-inset-top));
+    right: max(6px, env(safe-area-inset-right));
+    width: 220px;
+  }
+
+  #minimap-canvas {
+    width: 82px;
+    height: 82px;
+  }
+
+  .quest-tracker {
+    display: none;
+  }
+
+  .hud-bottom-bar {
+    bottom: max(6px, env(safe-area-inset-bottom));
+  }
+
+  .modal-box {
+    width: 96vw !important;
+    max-height: 94vh;
+    padding: 8px 10px;
+  }
+
+  .inv-layout,
+  .forge-matrix-shell,
+  .forge-split,
+  .map-layout,
+  .coop-split-cards,
+  .coop-form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .class-grid {
+    grid-template-columns: 1fr;
+  }
+}

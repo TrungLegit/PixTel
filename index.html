@@ -2,12 +2,19 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PIXTEL — 16-Bit Open-World Action RPG</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#090712" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>PIXTEL — 16-Bit Open-World Action RPG (PC · Mobile · Co-op)</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+  <link rel="apple-touch-icon" href="./icon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@500;600;700;800&family=Pixelify+Sans:wght@400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
   <div id="app-shell">
@@ -40,6 +47,9 @@
         <button id="hud-stat-pts-btn" class="hud-stat-pts-btn hidden" title="Nhấn [I] để cộng điểm tiềm năng!">✨ +0 ĐIỂM TIỀM NĂNG [I]</button>
       </div>
 
+      <!-- Top-Left Co-op Party Box -->
+      <div id="hud-party-box" class="hud-panel hud-party-box hidden"></div>
+
       <!-- Top-Center Boss HP & Bleach Shield Bar -->
       <div id="hud-boss-bar" class="hud-panel hud-boss-bar hidden">
         <div id="hud-boss-name" class="boss-name">THE ERASER</div>
@@ -60,10 +70,13 @@
       <!-- Top-Right Minimap + Toolbar + Quest Tracker -->
       <div class="hud-top-right">
         <div class="hud-toolbar">
+          <button id="hud-btn-coop" class="hud-mini-btn" style="color:#44ee88;border-color:#44ee88" title="Tổ Đội Co-op Online 2–4 Người [P]">P·COOP</button>
           <button id="hud-btn-help" class="hud-mini-btn" style="color:#ffe066;border-color:#ffe066" title="Cẩm Nang Tân Thủ, Combo & 9 Nguyên Tố [H / F1]">H·HDẪN</button>
           <button id="hud-btn-map" class="hud-mini-btn" title="Bản đồ thế giới [M]">M·MAP</button>
           <button id="hud-btn-bag" class="hud-mini-btn" title="Túi đồ [I / B]">I·TÚI</button>
           <button id="hud-btn-quest" class="hud-mini-btn" title="Nhiệm vụ & Biên Niên Sử [J]">J·SỔ</button>
+          <button id="hud-btn-touch" class="hud-mini-btn" title="Bật/Tắt nút cảm ứng Mobile">📱</button>
+          <button id="hud-btn-fs" class="hud-mini-btn" title="Toàn màn hình ngang">⛶</button>
           <button id="hud-btn-save" class="hud-mini-btn" title="Lưu nhanh">LƯU</button>
           <button id="hud-btn-mute" class="hud-mini-btn" title="Bật/Tắt âm thanh">SFX</button>
           <button id="hud-btn-pause" class="hud-mini-btn" title="Tạm dừng [ESC]">ESC</button>
@@ -134,6 +147,44 @@
       </div>
     </div>
 
+    <!-- PHASE 1: MOBILE TWIN-STICK TOUCH OVERLAY & PORTRAIT ROTATE HINT -->
+    <div id="mobile-touch-layer" class="mobile-touch-layer hidden">
+      <div id="touch-joy-zone" class="touch-joy-zone">
+        <div id="touch-joy-base" class="touch-joy-base">
+          <div id="touch-joy-knob" class="touch-joy-knob"></div>
+        </div>
+        <button id="touch-btn-sprint" class="touch-sprint-pill" type="button">⚡ CHẠY</button>
+      </div>
+
+      <div id="touch-action-zone" class="touch-action-zone">
+        <div id="touch-btn-interact" class="touch-arc-btn interact-btn">
+          <span class="touch-btn-ico">🖐</span>
+          <span class="touch-btn-sub">[F] MỞ</span>
+        </div>
+        <div id="touch-btn-ult" class="touch-arc-btn ult-btn">
+          <span class="touch-btn-ico">🔥 [Q]</span>
+          <span id="touch-ult-sub" class="touch-btn-sub">0%</span>
+        </div>
+        <div id="touch-btn-skill" class="touch-arc-btn skill-btn">
+          <span class="touch-btn-ico">✦ [E]</span>
+          <span id="touch-skill-sub" class="touch-btn-sub">SẴN SÀNG</span>
+        </div>
+        <div id="touch-btn-dash" class="touch-arc-btn dash-btn">
+          <span class="touch-btn-ico">💨 LƯỚT</span>
+          <span id="touch-dash-sub" class="touch-btn-sub">SẴN SÀNG</span>
+        </div>
+        <div id="touch-btn-atk" class="touch-atk-btn">
+          <span class="touch-atk-ico">⚔ ĐÁNH</span>
+          <span id="touch-atk-sub" class="touch-atk-sub">NHỊP 1/3</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="mobile-rotate-banner" class="mobile-rotate-banner hidden">
+      <span>📱 Xoay ngang điện thoại để chiến đấu rộng rãi hơn!</span>
+      <button id="btn-rotate-fullscreen" class="px-btn sm primary" type="button">⛶ TOÀN MÀN HÌNH NGANG</button>
+    </div>
+
     <!-- SCREEN: CLASS SELECT / TITLE / CLASS ALTAR -->
     <div id="screen-class-select" class="overlay-screen">
       <div class="class-select-box">
@@ -143,9 +194,10 @@
             BIÊN NIÊN SỬ AETHEL-16 — Giải mã Bia Ký, làm chủ 9 Nguyên Tố & thanh tẩy The Eraser
           </div>
         </div>
+        <div id="title-room-invite-banner" class="coop-invite-banner hidden"></div>
         <div id="class-grid" class="class-grid"></div>
         <div class="title-controls-hint">
-          <b>WASD</b> Di chuyển · <b>Shift</b> Chạy · <b>Space</b> Chroma Dodge · <b>LMB / Giữ</b> Combo 3 nhịp & Just-Charge · <b>E / Q</b> Kỹ năng · <b>F</b> Tương tác · <b>1-4</b> Dược phẩm · <b>H / F1</b> Cẩm nang Tân thủ & 9 Nguyên Tố
+          <b>PC:</b> WASD · Shift · Space · LMB/Giữ · E/Q · F · 1-4 · <b>P</b> Co-op · <b>H</b> Cẩm nang &nbsp;|&nbsp; <b>Mobile:</b> Cần xoay Analog + Cụm phím Twin-Stick Tự Ngắm
         </div>
         <div id="newbie-guide-wrap" class="tutorial-opt-row">
           <label class="tutorial-opt-toggle">
@@ -156,6 +208,7 @@
         <div class="title-actions">
           <button id="btn-continue-save" class="px-btn good big hidden">▶ TIẾP TỤC PHIÊU LƯU (SAVE)</button>
           <button id="btn-start-adventure" class="px-btn primary big">BẮT ĐẦU PHIÊU LƯU MỚI</button>
+          <button id="btn-open-coop" class="px-btn big" style="border-color:#44ee88;color:#44ee88">🤝 TỔ ĐỘI CO-OP (2–4 NGƯỜI) [P]</button>
           <button id="btn-open-tutorial" class="px-btn big" style="border-color:#ffe066;color:#ffe066">📖 HƯỚNG DẪN TÂN THỦ & COMBO [H]</button>
           <button id="btn-close-class-select" class="px-btn big hidden">ĐÓNG</button>
         </div>
@@ -294,6 +347,17 @@
       </div>
     </div>
 
+    <!-- MODAL: CO-OP MULTIPLAYER [P] -->
+    <div id="modal-coop" class="modal-backdrop hidden">
+      <div class="modal-box modal-lg">
+        <div class="modal-header">
+          <div>🤝 TỔ ĐỘI CO-OP ONLINE (2–4 NGƯỜI · PC & MOBILE) [P]</div>
+          <button id="btn-close-coop" class="px-btn sm">✕ ĐÓNG</button>
+        </div>
+        <div id="coop-body" class="modal-scroll"></div>
+      </div>
+    </div>
+
     <!-- MODAL: PAUSE [ESC] -->
     <div id="modal-pause" class="modal-backdrop hidden">
       <div class="modal-box modal-sm">
@@ -302,6 +366,7 @@
         </div>
         <div class="pause-actions">
           <button id="btn-pause-resume" class="px-btn primary">▶ TIẾP TỤC CHƠI</button>
+          <button id="btn-pause-coop" class="px-btn" style="border-color:#44ee88;color:#44ee88">🤝 TỔ ĐỘI CO-OP ONLINE [P]</button>
           <button id="btn-pause-help" class="px-btn" style="border-color:#ffe066;color:#ffe066">📖 CẨM NANG & COMBO [H]</button>
           <button id="btn-pause-save" class="px-btn good">💾 LƯU TIẾN TRÌNH</button>
           <button id="btn-pause-title" class="px-btn">🏠 VỀ MÀN HÌNH CHÍNH</button>
@@ -328,6 +393,6 @@
     <div id="item-review-tooltip" class="rope-review-frame hidden" aria-hidden="true"></div>
   </div>
 
-  <script type="module" src="/src/main.ts"></script>
+  <script type="module" src="./src/main.ts"></script>
 </body>
 </html>

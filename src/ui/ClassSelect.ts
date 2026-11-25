@@ -39,6 +39,7 @@ export class ClassSelectUI {
   private titleSubEl: HTMLElement;
   private selectedId: ClassId = "prism_knight";
   private switchingMode = false;
+  private pendingRoomCode = "";
   private previews: CardPreview[] = [];
   private rafId = 0;
   private lastT = 0;
@@ -67,6 +68,13 @@ export class ClassSelectUI {
       }
     });
 
+    document.getElementById("btn-open-coop")?.addEventListener("click", () => {
+      sfx.unlock();
+      sfx.playUiClick();
+      this.game.player.classId = this.selectedId;
+      this.game.openCoopFromTitle(this.pendingRoomCode || undefined);
+    });
+
     document.getElementById("btn-open-tutorial")?.addEventListener("click", () => {
       sfx.unlock();
       sfx.playUiClick();
@@ -82,6 +90,55 @@ export class ClassSelectUI {
     this.closeBtn.addEventListener("click", () => {
       sfx.playUiClick();
       this.game.setModal(null);
+    });
+  }
+
+  setPendingRoomInvite(code: string) {
+    this.pendingRoomCode = code.trim().toUpperCase();
+    this._renderInviteBanner();
+  }
+
+  private _renderInviteBanner() {
+    const banner = document.getElementById("title-room-invite-banner");
+    if (!banner) return;
+    if (!this.pendingRoomCode || this.switchingMode) {
+      banner.classList.add("hidden");
+      return;
+    }
+    banner.classList.remove("hidden");
+    const hasSave = this.game.saveSys.hasSave();
+    banner.innerHTML = `
+      <div class="coop-invite-text">
+        🤝 Bạn được mời vào Tổ Đội Co-op <b>[${this.pendingRoomCode}]</b> — Chọn Class phía trên rồi bấm vào phòng ngay!
+      </div>
+      <div class="coop-invite-btns">
+        <button id="btn-quick-join-new" class="px-btn sm good">🚀 VÀO NGAY PHÒNG [${this.pendingRoomCode}]</button>
+        ${hasSave ? `<button id="btn-quick-join-save" class="px-btn sm primary">▶ VÀO BẰNG FILE SAVE</button>` : ""}
+      </div>
+    `;
+    banner.querySelector("#btn-quick-join-new")?.addEventListener("click", async () => {
+      sfx.unlock();
+      sfx.playUiClick();
+      const code = this.pendingRoomCode;
+      this.game.startNewGame(this.selectedId, false);
+      try {
+        await this.game.joinCoopSession(code);
+      } catch {
+        this.game.setModal("coop", { code });
+      }
+    });
+    banner.querySelector("#btn-quick-join-save")?.addEventListener("click", async () => {
+      sfx.unlock();
+      sfx.playUiClick();
+      const code = this.pendingRoomCode;
+      if (!this.game.loadSavedGame()) {
+        this.game.startNewGame(this.selectedId, false);
+      }
+      try {
+        await this.game.joinCoopSession(code);
+      } catch {
+        this.game.setModal("coop", { code });
+      }
     });
   }
 
@@ -185,6 +242,9 @@ export class ClassSelectUI {
 
   selectClass(id: ClassId) {
     this.selectedId = id;
+    if (!this.switchingMode && !this.game.running && this.game.player) {
+      this.game.player.classId = id;
+    }
     for (const el of Array.from(this.gridEl.querySelectorAll(".class-card"))) {
       el.classList.toggle("selected", (el as HTMLElement).dataset.classId === id);
     }
@@ -196,6 +256,7 @@ export class ClassSelectUI {
 
     const startBtn = document.getElementById("btn-start-adventure")!;
     const guideWrap = document.getElementById("newbie-guide-wrap");
+    const coopBtn = document.getElementById("btn-open-coop");
     if (switching) {
       this.selectClass(this.game.player.classId);
       this.titleSubEl.textContent = "ĐÀI ĐỔI CLASS — Chọn nhân vật mới (giữ nguyên cấp độ, trang bị & nhiệm vụ)";
@@ -203,13 +264,16 @@ export class ClassSelectUI {
       this.continueBtn.classList.add("hidden");
       this.closeBtn.classList.remove("hidden");
       guideWrap?.classList.add("hidden");
+      coopBtn?.classList.add("hidden");
     } else {
       this.titleSubEl.textContent = "THẾ GIỚI MỞ 16-BIT ACTION RPG — Đánh thức Trụ Sắc Màu & tiêu diệt The Eraser";
       startBtn.textContent = "BẮT ĐẦU PHIÊU LƯU MỚI";
       this.continueBtn.classList.toggle("hidden", !this.game.saveSys.hasSave());
       this.closeBtn.classList.add("hidden");
       guideWrap?.classList.remove("hidden");
+      coopBtn?.classList.remove("hidden");
     }
+    this._renderInviteBanner();
 
     if (!this.rafId) {
       this.lastT = performance.now();

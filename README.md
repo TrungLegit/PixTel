@@ -7,6 +7,21 @@
 [![Renderer](https://img.shields.io/badge/Canvas_2D-480%C3%97270_16--Bit_%2B_pixelfx-ff66d8?style=flat-square)](#kiến-trúc--cấu-trúc-dự-án)
 [![Audio](https://img.shields.io/badge/Audio-Web_Audio_Chiptune-44ee88?style=flat-square)](#điểm-nổi-bật)
 [![License: MIT](https://img.shields.io/badge/License-MIT-ffe066?style=flat-square)](LICENSE)
+[![Play Online](https://img.shields.io/badge/Play_Online-PC_%26_Mobile_PWA-44ee88?style=flat-square)](https://trunglegit.github.io/PixTel/)
+
+---
+
+## 🌐 Chơi Ngay Trên Điện Thoại & Trình Duyệt (Không Cần Cài Đặt!)
+
+👉 **Link Web Chính Thức (PC · Android · iPhone/iPad):** **[https://trunglegit.github.io/PixTel/](https://trunglegit.github.io/PixTel/)**
+
+- **📱 Giai đoạn 1 — Hỗ trợ Điện Thoại & Máy Tính Bảng (Mobile Twin-Stick + PWA)**:
+  - Tự động bật **Cần xoay Analog bên trái** (đẩy sát viền ngoài tự động **Chạy Nhanh**) + **Cụm phím chiến đấu đa điểm bên phải** (`⚔ ĐÁNH / GIỮ TỤ LỰC`, `💨 LƯỚT`, `✦ [E]`, `🔥 [Q]`, `🖐 [F]`) kèm **Tự Ngắm Mục Tiêu Thông Minh (Smart Auto-Aim)** hoặc kéo vuốt 360°.
+  - Cài đặt như App Fullscreen: Trên Android bấm **Cài đặt ứng dụng / Thêm vào MH chính**; trên iOS Safari bấm **Chia sẻ ➔ Thêm vào MH chính**.
+- **🤝 Giai đoạn 2 — Tổ Đội Co-op Online 2–4 Người (`[P]` / Mã Phòng 6 Ký Tự)**:
+  - **Chế độ Online Trực Tiếp (WebRTC P2P)**: Hoạt động ngay trên link web GitHub Pages & mạng 4G/Wi-Fi điện thoại mà không cần mở port hay chạy server. Bấm **`P·COOP`** ➔ **Tạo Phòng** lấy **Mã 6 Ký Tự** (hoặc bấm **Chia Sẻ Link Mời `?room=CODE`**) gửi qua Zalo/Messenger/Discord cho bạn bè vào chung ngay!
+  - **Chế độ Dedicated Server (`npm run server`)**: Máy chủ phòng WebSocket Node.js độc lập hỗ trợ nhiều phòng đồng thời với độ trễ cực thấp.
+  - Phối hợp **Phản Ứng Nguyên Tố Kép (9 Hệ)** giữa các người chơi, chia nhau thắp **Trụ Sắc Màu**, và nhận **100% XP + Vật phẩm rơi riêng (Instanced Loot)** cho từng thành viên!
 
 ---
 
@@ -125,6 +140,8 @@ npm run dev
 Các script khác trong `package.json`:
 
 ```bash
+npm test            # Chạy tự động 12 bộ kiểm thử (Combat, 9 Nguyên Tố, Boss, Mobile Touch & Co-op Server)
+npm run server      # Chạy Dedicated WebSocket Co-op Room Server tại ws://0.0.0.0:8787
 npm run typecheck   # Kiểm tra kiểu TypeScript (tsc --noEmit)
 npm run build       # Build bản production ra thư mục dist/
 npm run preview     # Xem trước bản build production tại local

@@ -41,8 +41,11 @@ export class HudUI {
   private miniCtx: CanvasRenderingContext2D;
   private toastContainer: HTMLElement;
   private tutorialBannerEl: HTMLElement | null;
+  private partyBoxEl: HTMLElement | null;
   private lastTutorialStepKey = "";
+  private lastPartySig = "";
   private cachedHotbarIcons = ["", "", "", ""];
+  onToggleTouch?: () => void;
 
   constructor(game: PixTelOpenWorldGame) {
     this.game = game;
@@ -52,6 +55,7 @@ export class HudUI {
     this.miniCtx.imageSmoothingEnabled = false;
     this.toastContainer = document.getElementById("toast-stack")!;
     this.tutorialBannerEl = document.getElementById("hud-tutorial-banner");
+    this.partyBoxEl = document.getElementById("hud-party-box");
 
     onCodixelReady(() => {
       this.cachedHotbarIcons.fill("");
@@ -59,6 +63,15 @@ export class HudUI {
     });
 
     // Quick toolbar buttons
+    document.getElementById("hud-btn-coop")?.addEventListener("click", () => this.game.toggleModal("coop"));
+    document.getElementById("hud-btn-touch")?.addEventListener("click", () => {
+      sfx.playUiClick();
+      this.onToggleTouch?.();
+    });
+    document.getElementById("hud-btn-fs")?.addEventListener("click", () => {
+      sfx.playUiClick();
+      this.game.toggleFullscreen();
+    });
     document.getElementById("hud-btn-help")?.addEventListener("click", () => this.game.toggleModal("tutorial"));
     document.getElementById("hud-btn-map")!.addEventListener("click", () => this.game.toggleModal("world_map"));
     document.getElementById("hud-btn-bag")!.addEventListener("click", () => this.game.toggleModal("inventory"));
@@ -400,6 +413,62 @@ export class HudUI {
       promptEl.classList.add("hidden");
     }
 
+    // Co-op Party Roster Box (Top-Left below Hero Panel)
+    if (this.partyBoxEl) {
+      const coop = this.game.coop;
+      if (coop.isConnected) {
+        this.partyBoxEl.classList.remove("hidden");
+        const remotes = Array.from(this.game.remotePlayers.values());
+        const sig = `${coop.roomCode}|${coop.isHost ? 1 : 0}|${remotes
+          .map((r) => `${r.snap.id}:${r.snap.name}:${r.snap.classId}:${r.snap.level}:${Math.ceil(r.snap.hp)}/${r.snap.maxHp}`)
+          .join(",")}`;
+        if (sig !== this.lastPartySig) {
+          this.lastPartySig = sig;
+          const rows =
+            remotes.length === 0
+              ? `<div class="hud-party-empty">Đang chờ bạn bè vào phòng... Bấm [P] để gửi mã!</div>`
+              : remotes
+                  .map((rp) => {
+                    const rc = getClassDef(rp.snap.classId);
+                    const pct = Math.max(0, Math.min(100, (rp.snap.hp / Math.max(1, rp.snap.maxHp)) * 100));
+                    return `
+                      <div class="hud-party-row">
+                        <div class="hud-party-info">
+                          <div class="hud-party-name">
+                            <span style="color:${rc.accent}">● ${rp.snap.name}</span>
+                            <span class="hud-party-lv">LV.${rp.snap.level}</span>
+                          </div>
+                          <div class="hud-party-hp"><div style="width:${pct}%"></div></div>
+                        </div>
+                        <button class="hud-mini-btn hud-tp-btn" data-hud-tp="${rp.snap.id}" title="Dịch chuyển tới đồng đội">⚡</button>
+                      </div>
+                    `;
+                  })
+                  .join("");
+          this.partyBoxEl.innerHTML = `
+            <div class="hud-party-hdr" id="hud-party-open">
+              <span>🤝 PHÒNG <b>${coop.roomCode}</b></span>
+              <span>${1 + remotes.length}/4 · [P]</span>
+            </div>
+            ${rows}
+          `;
+          this.partyBoxEl.querySelector("#hud-party-open")?.addEventListener("click", () => {
+            this.game.toggleModal("coop");
+          });
+          this.partyBoxEl.querySelectorAll("[data-hud-tp]").forEach((btn) => {
+            btn.addEventListener("click", (ev) => {
+              ev.stopPropagation();
+              const peerId = (btn as HTMLElement).dataset.hudTp!;
+              this.game.teleportToCoopPeer(peerId);
+            });
+          });
+        }
+      } else {
+        this.partyBoxEl.classList.add("hidden");
+        this.lastPartySig = "";
+      }
+    }
+
     this._drawMinimap();
   }
 
@@ -451,6 +520,11 @@ export class HudUI {
       if (ch.state !== "opened") {
         plot(ch.x / TILE_SIZE, ch.y / TILE_SIZE, ch.state === "unlocked" ? "#ffe066" : "#ff6688", 3);
       }
+    }
+
+    // Co-op teammates (green dots)
+    for (const rp of this.game.remotePlayers.values()) {
+      plot(rp.renderX / TILE_SIZE, rp.renderY / TILE_SIZE, "#44ee88", 4);
     }
 
     const blink = (Math.floor(this.game.time * 4) & 1) === 0;
