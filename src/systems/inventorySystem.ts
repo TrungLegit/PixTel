@@ -3,6 +3,8 @@ import { SET_BONUSES, STARTER_WEAPON_BY_CLASS, type SetBonusDef } from "../data/
 import {
   CONSUMABLE_HOTKEY_GROUPS,
   ITEMS,
+  RARITY_INFO,
+  canClassEquip,
   createItemInstance,
   getDismantleShardYield,
   getItemEffectiveStats,
@@ -270,13 +272,21 @@ export class InventorySystem {
     return { ok: true, shards, itemName: def.name };
   }
 
+  getItemSellValue(item: ItemInstance, fullStack = false): number {
+    const def = ITEMS[item.defId];
+    if (!def) return 0;
+    if (def.category === "equipment") {
+      return def.sellPrice + item.enhanceLevel * 12;
+    }
+    return def.sellPrice * (fullStack ? item.qty : 1);
+  }
+
   sellBagItem(uid: string): number {
     const idx = this.bag.findIndex((b) => b.uid === uid);
     if (idx < 0) return 0;
     const item = this.bag[idx];
-    const def = ITEMS[item.defId];
-    if (!def) return 0;
-    const unitVal = def.sellPrice + item.enhanceLevel * 12;
+    const unitVal = this.getItemSellValue(item, false);
+    if (unitVal <= 0) return 0;
     this.gold += unitVal;
     if (item.qty > 1) {
       item.qty -= 1;
@@ -284,6 +294,73 @@ export class InventorySystem {
       this.bag.splice(idx, 1);
     }
     return unitVal;
+  }
+
+  /** Sells every selected bag stack at once after user confirmation and returns sold count + gold earned. */
+  sellMultipleFromBag(uids: string[]): { soldCount: number; totalGold: number } {
+    const picked = new Set(uids);
+    let soldCount = 0;
+    let totalGold = 0;
+    for (let i = this.bag.length - 1; i >= 0; i--) {
+      const item = this.bag[i];
+      if (!picked.has(item.uid)) continue;
+      const val = this.getItemSellValue(item, true);
+      totalGold += val;
+      soldCount += ITEMS[item.defId]?.category === "equipment" ? 1 : item.qty;
+      this.bag.splice(i, 1);
+    }
+    this.gold += totalGold;
+    return { soldCount, totalGold };
+  }
+
+  /** Scores an equipment item to identify upgrades for "Equip Best". */
+  computeEquipScore(item: ItemInstance): number {
+    const def = ITEMS[item.defId];
+    if (!def || def.category !== "equipment") return -1;
+    const st = getItemEffectiveStats(item);
+    const rarityIdx = RARITY_INFO[def.rarity].tier;
+    return (
+      st.atk * 4.5 +
+      st.def * 3.2 +
+      st.maxHp * 0.45 +
+      st.crit * 3.0 +
+      st.spd * 2.0 +
+      st.elementBonus * 1.8 +
+      st.maxStamina * 0.5 +
+      st.poiseBreakPct * 1.1 +
+      Math.abs(st.skillCdPct) * 1.6 +
+      (def.passiveId ? 18 : 0) +
+      rarityIdx * 4
+    );
+  }
+
+  /** Automatically equips the highest-scoring compatible item from bag for each of the 5 slots. */
+  equipBestForClass(classId: ClassId): { equipped: { slot: EquipSlot; itemName: string }[] } {
+    const equipped: { slot: EquipSlot; itemName: string }[] = [];
+    for (const slot of EQUIP_SLOTS) {
+      const cur = this.equipment[slot];
+      let bestScore = cur ? this.computeEquipScore(cur) : -1;
+      let bestUid: string | null = null;
+      for (const bagIt of this.bag) {
+        const def = ITEMS[bagIt.defId];
+        if (!def || def.category !== "equipment" || def.slot !== slot) continue;
+        if (!canClassEquip(def, classId)) continue;
+        const sc = this.computeEquipScore(bagIt);
+        if (sc > bestScore) {
+          bestScore = sc;
+          bestUid = bagIt.uid;
+        }
+      }
+      if (bestUid) {
+        const res = this.equipFromBag(bestUid, classId);
+        if (res.ok && res.slot) {
+          const nowEq = this.equipment[res.slot];
+          const nm = nowEq ? ITEMS[nowEq.defId]?.name ?? nowEq.defId : bestUid;
+          equipped.push({ slot: res.slot, itemName: nm });
+        }
+      }
+    }
+    return { equipped };
   }
 
   getAllEquipmentInstances(): { slotLabel: string; equipped: boolean; item: ItemInstance }[] {

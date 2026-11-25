@@ -3,11 +3,13 @@ import {
   ITEMS,
   RARITY_INFO,
   SLOT_LABELS,
+  canClassEquip,
   getDismantleShardYield,
   getItemEffectiveStats,
   getTierBadge,
 } from "../data/items";
 import { EQUIP_SLOTS, type EquipSlot, type StatAllocKey } from "../data/types";
+import { MAX_BAG_SLOTS } from "../systems/inventorySystem";
 
 const STAT_ALLOC_ROWS: { key: StatAllocKey; label: string; effect: string }[] = [
   { key: "str", label: "STR", effect: "+3 ATK" },
@@ -38,9 +40,12 @@ export class InventoryModalUI {
   private allocEl: HTMLElement | null;
   private bagEl: HTMLElement;
   private detailEl: HTMLElement;
+  private quickSellBarEl: HTMLElement | null;
 
   private selectedUid: string | null = null;
   private hoveredUid: string | null = null;
+  private quickSellMode = false;
+  private selectedSellUids = new Set<string>();
   private previewFacing: 1 | -1 = 1;
   private autoRotate = true;
   private animTime = 0;
@@ -59,6 +64,7 @@ export class InventoryModalUI {
     this.allocEl = document.getElementById("inv-stat-alloc");
     this.bagEl = document.getElementById("inv-bag-grid")!;
     this.detailEl = document.getElementById("inv-item-detail")!;
+    this.quickSellBarEl = document.getElementById("inv-quicksell-bar");
 
     onCodixelReady(() => {
       if (!this.root.classList.contains("hidden")) {
@@ -69,6 +75,33 @@ export class InventoryModalUI {
     document.getElementById("btn-close-inventory")!.addEventListener("click", () => {
       sfx.playUiClick();
       this.game.setModal(null);
+    });
+
+    document.getElementById("btn-equip-best")?.addEventListener("click", () => {
+      const res = this.game.inv.equipBestForClass(this.game.player.classId);
+      if (res.equipped.length === 0) {
+        sfx.playUiClick();
+        this.game.uiToast("Bạn đang mặc trang bị tốt nhất trong túi rồi!", "info");
+        return;
+      }
+      this.game.recalcPlayerStats(true);
+      this._playEquipSfx(res.equipped[0].slot);
+      this.game.saveGame(false);
+      this.game.refreshHud();
+      const summary = res.equipped.map((e) => e.itemName).join(", ");
+      this.game.uiToast(`⚡ Đã trang bị tối ưu: ${summary}`, "good");
+      this.render();
+    });
+
+    document.getElementById("btn-toggle-quicksell")?.addEventListener("click", () => {
+      sfx.playUiClick();
+      if (this.quickSellMode) {
+        this.quickSellMode = false;
+        this.selectedSellUids.clear();
+      } else {
+        this._enterQuickSellMode();
+      }
+      this.render();
     });
 
     document.getElementById("inv-rot-left")!.addEventListener("click", () => {
@@ -86,16 +119,36 @@ export class InventoryModalUI {
     });
   }
 
-  show() {
+  private _enterQuickSellMode() {
+    this.quickSellMode = true;
+    this.selectedSellUids.clear();
+    const classId = this.game.player.classId;
+    for (const item of this.game.inv.bag) {
+      const def = ITEMS[item.defId];
+      if (def && def.category === "equipment" && !canClassEquip(def, classId)) {
+        this.selectedSellUids.add(item.uid);
+      }
+    }
+  }
+
+  show(opts?: { quickSell?: boolean }) {
     this.root.classList.remove("hidden");
     this.hoveredUid = null;
     this.autoRotate = true;
+    if (opts?.quickSell) {
+      this._enterQuickSellMode();
+    } else {
+      this.quickSellMode = false;
+      this.selectedSellUids.clear();
+    }
     sfx.playBagOpen();
     this.render();
     this._startLoop();
   }
 
   hide() {
+    this.quickSellMode = false;
+    this.selectedSellUids.clear();
     this.root.classList.add("hidden");
   }
 
@@ -257,9 +310,21 @@ export class InventoryModalUI {
       `;
     }).join("");
 
-    // 3. 32-Slot Bag Grid
+    // 3. 40-Slot Bag Grid + Selective Quick Sell Mode
+    const toggleBtn = document.getElementById("btn-toggle-quicksell");
+    if (toggleBtn) {
+      toggleBtn.classList.toggle("active", this.quickSellMode);
+      toggleBtn.textContent = this.quickSellMode ? "✕ THOÁT BÁN NHANH" : "💰 BÁN NHANH";
+    }
+
+    // Prune stale UIDs from selectedSellUids
+    const currentBagUids = new Set(inv.bag.map((b) => b.uid));
+    for (const uid of [...this.selectedSellUids]) {
+      if (!currentBagUids.has(uid)) this.selectedSellUids.delete(uid);
+    }
+
     let bagHtml = "";
-    for (let i = 0; i < 32; i++) {
+    for (let i = 0; i < MAX_BAG_SLOTS; i++) {
       const it = inv.bag[i];
       if (!it) {
         bagHtml += `<div class="bag-cell empty"></div>`;
@@ -269,28 +334,45 @@ export class InventoryModalUI {
       const col = RARITY_INFO[def.rarity].color;
       const tInfo = getTierBadge(def);
       const sel = this.selectedUid === it.uid ? "selected" : "";
+      const pickedForSell = this.quickSellMode && this.selectedSellUids.has(it.uid);
+      const sellClass = pickedForSell ? "sell-picked" : "";
       const classMismatch =
-        def.requiredClass && def.requiredClass !== "all" && def.requiredClass !== p.classId;
+        def.category === "equipment" &&
+        def.requiredClass &&
+        def.requiredClass !== "all" &&
+        def.requiredClass !== p.classId;
       bagHtml += `
-        <div class="bag-cell rarity-${def.rarity} ${sel}" data-uid="${it.uid}" data-review-uid="${it.uid}" style="border-color:${col}">
+        <div class="bag-cell rarity-${def.rarity} ${sel} ${sellClass}" data-uid="${it.uid}" data-bag="1" data-review-uid="${it.uid}" style="border-color:${col}">
           <canvas class="px-item-icon" width="32" height="32" data-icon-def="${def.id}" data-icon-enh="${it.enhanceLevel}"></canvas>
           <span class="bag-tier" style="color:${tInfo.color}">${tInfo.badge}</span>
           ${it.qty > 1 ? `<span class="bag-qty">x${it.qty}</span>` : ""}
           ${it.enhanceLevel > 0 ? `<span class="bag-enh">+${it.enhanceLevel}</span>` : ""}
-          ${classMismatch ? `<span class="bag-lock" title="Khác Class">✕</span>` : ""}
+          ${pickedForSell ? `<span class="bag-sell-check">✓</span>` : classMismatch ? `<span class="bag-lock" title="Khác Class">✕</span>` : ""}
         </div>
       `;
     }
     this.bagEl.innerHTML = bagHtml;
+    this._renderQuickSellBar();
 
     // Paint codixel icons & attach live pixelfx high-rarity slot auras
     uiRarityFx.syncContainer(this.root);
 
-    // Bind click selection (hover review is handled globally by vintage rope ItemReviewTooltip)
+    // Bind click selection (supports toggling Quick-Sell multi-select + detail inspection)
     this.root.querySelectorAll("[data-uid]").forEach((el) => {
       const uid = (el as HTMLElement).dataset.uid ?? null;
+      const isBag = (el as HTMLElement).dataset.bag === "1";
       el.addEventListener("click", () => {
         sfx.playUiClick();
+        if (this.quickSellMode && isBag && uid) {
+          if (this.selectedSellUids.has(uid)) {
+            this.selectedSellUids.delete(uid);
+          } else {
+            this.selectedSellUids.add(uid);
+          }
+          this.selectedUid = uid;
+          this.render();
+          return;
+        }
         this.selectedUid = uid;
         this.render();
       });
@@ -309,6 +391,106 @@ export class InventoryModalUI {
     });
 
     this._renderDetail();
+  }
+
+  private _renderQuickSellBar() {
+    if (!this.quickSellBarEl) return;
+    if (!this.quickSellMode) {
+      this.quickSellBarEl.classList.add("hidden");
+      this.quickSellBarEl.innerHTML = "";
+      return;
+    }
+
+    const inv = this.game.inv;
+    const classId = this.game.player.classId;
+    let totalGold = 0;
+    let itemCount = 0;
+    for (const item of inv.bag) {
+      if (!this.selectedSellUids.has(item.uid)) continue;
+      totalGold += inv.getItemSellValue(item, true);
+      itemCount++;
+    }
+
+    this.quickSellBarEl.classList.remove("hidden");
+    this.quickSellBarEl.innerHTML = `
+      <div class="qs-top">
+        <span><b>CHẾ ĐỘ BÁN NHANH:</b> Tự đánh dấu đồ khác Class. Click các ô trong túi để chọn thêm hoặc bỏ chọn, rồi nhấn <b>Xác Nhận Bán</b>!</span>
+      </div>
+      <div class="qs-controls">
+        <div class="qs-filters">
+          <button class="px-btn sm" id="qs-pick-offclass">Chỉ Khác Class</button>
+          <button class="px-btn sm" id="qs-add-weaker">+ Đồ Yếu Hơn</button>
+          <button class="px-btn sm" id="qs-add-common">+ Đồ Trắng (+0)</button>
+          <button class="px-btn sm" id="qs-clear">Bỏ Chọn</button>
+        </div>
+        <div class="qs-confirm-group">
+          <span class="qs-summary">Đã chọn: <b style="color:#ffe066">${itemCount}</b> ô · Thu: <b style="color:#44ee88">+${totalGold} G</b></span>
+          <button class="px-btn sm ${itemCount > 0 ? "good" : "disabled"}" id="qs-confirm-sell">✔ XÁC NHẬN BÁN (+${totalGold} G)</button>
+          <button class="px-btn sm" id="qs-cancel">✕ HỦY</button>
+        </div>
+      </div>
+    `;
+
+    this.quickSellBarEl.querySelector("#qs-pick-offclass")?.addEventListener("click", () => {
+      sfx.playUiClick();
+      this._enterQuickSellMode();
+      this.render();
+    });
+
+    this.quickSellBarEl.querySelector("#qs-add-weaker")?.addEventListener("click", () => {
+      sfx.playUiClick();
+      for (const item of inv.bag) {
+        const def = ITEMS[item.defId];
+        if (!def || def.category !== "equipment" || !def.slot) continue;
+        if (!canClassEquip(def, classId)) continue;
+        const eq = inv.equipment[def.slot];
+        if (eq && inv.computeEquipScore(item) < inv.computeEquipScore(eq)) {
+          this.selectedSellUids.add(item.uid);
+        }
+      }
+      this.render();
+    });
+
+    this.quickSellBarEl.querySelector("#qs-add-common")?.addEventListener("click", () => {
+      sfx.playUiClick();
+      for (const item of inv.bag) {
+        const def = ITEMS[item.defId];
+        if (def && def.category === "equipment" && def.rarity === "common" && item.enhanceLevel === 0) {
+          this.selectedSellUids.add(item.uid);
+        }
+      }
+      this.render();
+    });
+
+    this.quickSellBarEl.querySelector("#qs-clear")?.addEventListener("click", () => {
+      sfx.playUiClick();
+      this.selectedSellUids.clear();
+      this.render();
+    });
+
+    this.quickSellBarEl.querySelector("#qs-cancel")?.addEventListener("click", () => {
+      sfx.playUiClick();
+      this.quickSellMode = false;
+      this.selectedSellUids.clear();
+      this.render();
+    });
+
+    this.quickSellBarEl.querySelector("#qs-confirm-sell")?.addEventListener("click", () => {
+      if (this.selectedSellUids.size === 0) return;
+      const res = inv.sellMultipleFromBag([...this.selectedSellUids]);
+      this.selectedSellUids.clear();
+      this.quickSellMode = false;
+      if (this.selectedUid && !inv.findByUid(this.selectedUid)) {
+        this.selectedUid = null;
+      }
+      if (res.soldCount > 0) {
+        sfx.playBuy();
+        this.game.saveGame(false);
+        this.game.refreshHud();
+        this.game.uiToast(`💰 Đã bán ${res.soldCount} vật phẩm, thu về +${res.totalGold} G!`, "good");
+      }
+      this.render();
+    });
   }
 
   private _paintAllIcons(container: HTMLElement) {

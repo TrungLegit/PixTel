@@ -13,6 +13,10 @@ import * as compileTurretMod from "./pixelfx/fx/pixtel/compile-turret.js";
 import * as bossTelegraphMod from "./pixelfx/fx/pixtel/boss-telegraph.js";
 import * as overdriveAuraMod from "./pixelfx/fx/pixtel/overdrive-aura.js";
 import * as rarityAuraMod from "./pixelfx/fx/pixtel/rarity-aura.js";
+import * as sonicWaveMod from "./pixelfx/fx/pixtel/sonic-wave.js";
+import * as leafStormMod from "./pixelfx/fx/pixtel/leaf-storm.js";
+import * as rainbowBurstMod from "./pixelfx/fx/pixtel/rainbow-burst.js";
+import * as hexShieldMod from "./pixelfx/fx/pixtel/hex-shield.js";
 
 // Melee & Combat pixelfx
 import * as swordSlashMod from "./pixelfx/fx/melee/sword-slash.js";
@@ -74,6 +78,10 @@ export const PIXELFX_MODS: Record<string, PixelfxModule> = {
   "pixtel/boss-telegraph": bossTelegraphMod,
   "pixtel/overdrive-aura": overdriveAuraMod,
   "pixtel/rarity-aura": rarityAuraMod,
+  "pixtel/sonic-wave": sonicWaveMod,
+  "pixtel/leaf-storm": leafStormMod,
+  "pixtel/rainbow-burst": rainbowBurstMod,
+  "pixtel/hex-shield": hexShieldMod,
   "melee/sword-slash": swordSlashMod,
   "melee/double-slash": doubleSlashMod,
   "melee/heavy-cleave": heavyCleaveMod,
@@ -127,15 +135,16 @@ export const PIXELFX_MODS: Record<string, PixelfxModule> = {
 const PIVOT_OFFSETS: Record<string, [number, number]> = {
   "melee/sword-slash": [0, -26],
   "melee/double-slash": [0, -24],
-  "melee/heavy-cleave": [0, -24],
+  "melee/heavy-cleave": [0, 0],
   "melee/thrust": [0, -22],
-  "melee/dagger-flurry": [16, -26],
-  "impacts/shield-block": [4, -22],
+  "melee/dagger-flurry": [10, -24],
+  "impacts/shield-block": [0, -8],
   "melee/spin-slash": [0, -17],
   "ui/level-up": [0, -16],
   "scifi/glitch": [0, -8],
   "spawn/disintegrate": [0, -8],
   "status/haste": [0, -8],
+  "pixtel/hex-shield": [0, 0],
 };
 
 export const ATLAS_PRESETS: Record<string, { mod: PixelfxModule; opts: BakeOptions }> = {
@@ -165,6 +174,16 @@ export const ATLAS_PRESETS: Record<string, { mod: PixelfxModule; opts: BakeOptio
   "heal-burst": { mod: healMod, opts: { options: { palette: PAL.heal }, fps: 18, maxDuration: 0.9, downscale: 0.55 } },
   "heal-aoe": { mod: healAoeMod, opts: { options: { palette: PAL.heal, reach: 44 }, fps: 16, maxDuration: 1.2, downscale: 0.52 } },
   "ground-slam": { mod: groundSlamMod, opts: { options: { palette: PAL.blood, reach: 56 }, fps: 16, maxDuration: 1.2, downscale: 0.52 } },
+  "ground-slam-nature": { mod: groundSlamMod, opts: { options: { palette: PAL.poison, reach: 52 }, fps: 16, maxDuration: 1.15, downscale: 0.52 } },
+  "ground-slam-fire": { mod: groundSlamMod, opts: { options: { palette: PAL.fire, reach: 58 }, fps: 16, maxDuration: 1.2, downscale: 0.52 } },
+  "ground-slam-void": { mod: groundSlamMod, opts: { options: { palette: PAL.shadow, reach: 52 }, fps: 16, maxDuration: 1.15, downscale: 0.52 } },
+  "dirt-puff": { mod: dirtExplosionMod, opts: { options: { palette: PAL.stone, fire: PAL.poison }, fps: 18, maxDuration: 0.72, downscale: 0.34 } },
+  "parry-cyan": { mod: parryMod, opts: { options: { palette: PAL.ice, height: 18 }, fps: 22, maxDuration: 0.65, downscale: 0.52 } },
+  "parry-poison": { mod: parryMod, opts: { options: { palette: PAL.poison, height: 16 }, fps: 22, maxDuration: 0.65, downscale: 0.48 } },
+  "muzzle-poison": { mod: muzzleSmgMod, opts: { options: { palette: PAL.poison, height: 6 }, fps: 22, maxDuration: 0.32, downscale: 0.48 } },
+  "muzzle-fire": { mod: muzzlePistolMod, opts: { options: { palette: PAL.fire, height: 6 }, fps: 22, maxDuration: 0.32, downscale: 0.48 } },
+  "muzzle-void": { mod: muzzlePistolMod, opts: { options: { palette: PAL.neon, height: 6 }, fps: 22, maxDuration: 0.32, downscale: 0.48 } },
+  "proj-emerald": { mod: fireballMod, opts: { options: { palette: PAL.heal, radius: 5 }, fps: 18, downscale: 0.54 } },
   "boss-thorns": { mod: thornsMod, opts: { options: { palette: PAL.poison, glow: PAL.neon, count: 5 }, fps: 16, maxDuration: 1.2, downscale: 0.52 } },
   "boss-starfall": { mod: starFallMod, opts: { options: { palette: PAL.candy }, fps: 16, maxDuration: 1.4, downscale: 0.6 } },
   "boss-smite": { mod: smiteMod, opts: { options: { palette: PAL.neon }, fps: 16, maxDuration: 1.1, downscale: 0.52 } },
@@ -364,6 +383,7 @@ export class VfxManager {
       "proj-poison", "proj-laser", "proj-shuriken", "waypoint-pad",
       "beam-uncommon", "beam-rare", "beam-epic", "beam-legendary",
       "item-aura-rare", "item-aura-epic", "item-aura-legendary",
+      "parry-cyan", "parry-poison", "muzzle-poison", "proj-emerald", "ground-slam-nature",
     ];
     for (const k of eager) {
       const p = ATLAS_PRESETS[k];
@@ -398,6 +418,7 @@ export class VfxManager {
       offsetY?: number;
       pivot?: [number, number] | null;
       durationScale?: number;
+      startTime?: number;
       maxLife?: number | null;
     } = {}
   ): LiveFxEntry | null {
@@ -427,6 +448,9 @@ export class VfxManager {
       seed: ((Math.random() * 9999) | 0) + 1,
       ...(opts.options ?? {}),
     });
+    if (opts.startTime && opts.startTime > 0) {
+      fx.update(opts.startTime);
+    }
 
     const entry: LiveFxEntry = {
       modId,

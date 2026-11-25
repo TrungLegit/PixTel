@@ -9,6 +9,7 @@ import type {
   Rarity,
   ResourceNodeDef,
 } from "../data/types";
+import type { HeroAttackKind } from "../graphics/paperDoll";
 
 export interface PlayerEntity {
   classId: ClassId;
@@ -68,6 +69,9 @@ export interface PlayerEntity {
   elementIdx: number; // Chroma Mage 0:fire, 1:ice, 2:poison
   walkTime: number;
   attackAnimTime: number;
+  attackAnimDuration: number;
+  attackAnimKind: HeroAttackKind;
+  attackAnimAngle: number;
 
   // Derived equipment bonuses & passives
   staminaCostPct: number; // negative = cheaper charge/dash
@@ -107,6 +111,43 @@ export interface PlayerEntity {
   respawnWaypointId: string;
 }
 
+export type EnemyFacingDir = "down" | "up" | "left" | "right";
+
+export type EnemyAnimKind =
+  | "idle"
+  | "leap_slam"
+  | "spit_moss"
+  | "roll_charge"
+  | "shell_burst"
+  | "thorn_shot"
+  | "vine_trap"
+  | "quake_slam"
+  | "root_whip"
+  | "bark_shield"
+  | "ground_roots"
+  | "emerald_orb"
+  | "leaf_storm"
+  | "dive_slash"
+  | "sonic_wave"
+  | "claw_clamp"
+  | "quartz_shield"
+  | "thin_laser"
+  | "refract_split"
+  | "halberd_sweep"
+  | "crystal_lunge"
+  | "shard_rain"
+  | "refract_rain"
+  | "prism_breath"
+  | "rainbow_storm"
+  | "amber_roll"
+  | "molten_slam"
+  | "ember_cast"
+  | "ember_volley"
+  | "void_slam"
+  | "void_blink"
+  | "void_barrage"
+  | "erase_cast";
+
 export interface EnemyEntity {
   uid: number;
   defId: string;
@@ -119,6 +160,7 @@ export interface EnemyEntity {
   vx: number;
   vy: number;
   facing: number;
+  facingDir: EnemyFacingDir;
   radius: number;
 
   hp: number;
@@ -142,6 +184,18 @@ export interface EnemyEntity {
   phase: number;
   hitFlash: number;
   walkTime: number;
+
+  // Synchronized 4-dir skill animations, dash momentum & shield guard
+  animKind: EnemyAnimKind;
+  animTime: number;
+  animDuration: number;
+  animAngle: number;
+  animImpactDone?: boolean;
+  dashVx: number;
+  dashVy: number;
+  dashTime: number;
+  guardTime: number;
+  skillCycle: number;
 
   // 9-Element reaction & Boss Bleach Shield / Stagger states
   element: ElementType | null;
@@ -196,6 +250,8 @@ export interface ProjectileEntity {
   canOverclockTurret?: boolean;
   hitPreset?: string;
   poiseMult?: number;
+  spawnHazardOnHit?: "moss_pool";
+  hazardDamage?: number;
 }
 
 export interface TurretEntity {
@@ -220,6 +276,7 @@ export interface HazardEntity {
     | "meteor"
     | "afterimage"
     | "acid_pool"
+    | "moss_pool"
     | "null_frost"
     | "chroma_bloom"
     | "flame_trail"
@@ -240,6 +297,7 @@ export interface HazardEntity {
   tickTimer: number;
   damage: number;
   angle?: number;
+  vfxPreset?: string;
   triggered: boolean;
 }
 

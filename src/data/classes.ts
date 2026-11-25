@@ -133,7 +133,7 @@ export const CLASSES: ClassDef[] = [
     skills: {
       lmb: {
         name: "Song Đao Phong Ảnh",
-        desc: "Chém cực nhanh + phóng phi tiêu xuyên thấu; đòn kết N3 quét lốc Gió [Wind] khuếch tán Ấn!",
+        desc: "Combo 3 nhịp chém song đao cận chiến cực nhanh; đòn kết N3 xoay lốc Gió [Wind] 360° khuếch tán Ấn!",
       },
       charge: {
         name: "Quạt Phi Tiêu Gió (Giữ LMB)",

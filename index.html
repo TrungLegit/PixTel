@@ -6,7 +6,7 @@
   <title>PIXTEL — 16-Bit Open-World Action RPG</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@500;600;700;800&family=Pixelify+Sans:wght@400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
@@ -184,10 +184,10 @@
           <div class="inv-left">
             <div class="inv-char-stage">
               <div class="inv-char-preview">
-                <canvas id="inv-hero-canvas" width="96" height="96"></canvas>
+                <canvas id="inv-hero-canvas" width="128" height="96"></canvas>
+                <div id="inv-hero-class" class="inv-hero-tag">CLASS · LV.1</div>
                 <div class="inv-rot-bar">
                   <button id="inv-rot-left" class="px-btn sm" title="Xoay trái">◀</button>
-                  <span id="inv-hero-class" class="inv-hero-tag">CLASS · LV.1</span>
                   <button id="inv-rot-right" class="px-btn sm" title="Xoay phải">▶</button>
                 </div>
               </div>
@@ -202,7 +202,14 @@
             <div id="inv-set-bonuses" class="inv-set-bonuses"></div>
           </div>
           <div class="inv-right">
-            <div class="section-hdr" style="margin-top:0">TÚI ĐỒ (40 Ô) — Rê chuột để so sánh · Click để thao tác</div>
+            <div class="inv-bag-hdr-row">
+              <div class="section-hdr" style="margin:0;border:0;padding:0">TÚI ĐỒ (40 Ô)</div>
+              <div class="inv-bag-actions">
+                <button id="btn-equip-best" class="px-btn sm primary" title="Tự động mặc trang bị mạnh nhất đúng Class của bạn">⚡ TRANG BỊ TỐT NHẤT</button>
+                <button id="btn-toggle-quicksell" class="px-btn sm warn" title="Tự chọn trước đồ khác Class và bấm chọn thêm đồ muốn bán rồi mới Xác Nhận">💰 BÁN NHANH</button>
+              </div>
+            </div>
+            <div id="inv-quicksell-bar" class="inv-quicksell-bar hidden"></div>
             <div id="inv-bag-grid" class="bag-grid"></div>
             <div class="section-hdr">SO SÁNH CHỈ SỐ & THAO TÁC</div>
             <div id="inv-item-detail" class="item-detail-box"></div>

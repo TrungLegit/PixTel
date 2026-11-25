@@ -9,14 +9,28 @@ import {
   makeReactionKey,
 } from "../src/data/elements";
 import { ENEMIES } from "../src/data/enemies";
+import { ENEMY_DROP_TABLES } from "../src/data/lootTables";
+import codixelEnemiesMeta from "../src/assets/codixel-enemies.json";
 import { STARTER_WEAPON_BY_CLASS } from "../src/data/equipments";
-import { ITEMS, createItemInstance, getItemEffectiveStats, pickRandomEquipByRarity } from "../src/data/items";
+import {
+  ITEMS,
+  canClassEquip,
+  createItemInstance,
+  getItemEffectiveStats,
+  pickRandomEquipByRarity,
+  resolveClassReward,
+} from "../src/data/items";
 import { BOSS_CODEX, LORE_TABLETS, WORLD_PROLOGUE } from "../src/data/lore";
 import { QUESTS } from "../src/data/quests";
 import { FORGE_RECIPES } from "../src/data/recipes";
 import { BOSS_ARENAS, TILE_SIZE, WAYPOINTS, WORLD_CAMPS, WORLD_RESOURCES } from "../src/data/worldConfig";
 import type { ActiveBossLock, ClassId } from "../src/data/types";
 import { ColorRestorationSystem } from "../src/graphics/colorRestoration";
+import {
+  getClassShowcaseEquipment,
+  getOrBakePixelfxHero,
+  getPixelfxHeroCompiled,
+} from "../src/graphics/pixelfxHeroModels";
 import { CombatSystem, type CombatContext } from "../src/systems/combat";
 import { ELEMENT_DISPLAY, ForgeSystem } from "../src/systems/forgeSystem";
 import { InventorySystem, recalculatePlayerStats } from "../src/systems/inventorySystem";
@@ -27,6 +41,8 @@ import type { EnemyEntity, HazardEntity, PlayerEntity, ProjectileEntity, TurretE
 import { findNearestInteractable } from "../src/world/interactables";
 import { WorldSpawner } from "../src/world/spawner";
 import { WorldMap } from "../src/world/worldMap";
+import { ATLAS_PRESETS, PIXELFX_MODS } from "../src/vfx/vfxManager";
+import { createFrame, createFx } from "../src/vfx/pixelfx/core/index.js";
 
 // Lightweight headless mocks for browser globals so all systems run at pure logic speed in Node
 (globalThis as unknown as { performance?: { now: () => number } }).performance ??= {
@@ -83,10 +99,21 @@ const memStore = new Map<string, string>();
   }),
 };
 
-function createMockVfx() {
+interface MockVfxCall {
+  modId: string;
+  opts: Record<string, unknown>;
+}
+
+function createMockVfx(record?: { live: MockVfxCall[]; pooled: MockVfxCall[] }) {
   return {
-    spawnLive: () => {},
-    spawnPooled: () => {},
+    spawnLive: (modId: string, opts: Record<string, unknown> = {}) => {
+      record?.live.push({ modId, opts });
+      return null;
+    },
+    spawnPooled: (presetKey: string, opts: Record<string, unknown> = {}) => {
+      record?.pooled.push({ modId: presetKey, opts });
+      return null;
+    },
     spawnDamageText: () => {},
     spawnPixelDot: () => {},
     clearAll: () => {},
@@ -146,6 +173,9 @@ function makeTestPlayer(classId: ClassId = "prism_knight"): PlayerEntity {
     elementIdx: 0,
     walkTime: 0,
     attackAnimTime: 0,
+    attackAnimDuration: 0.24,
+    attackAnimKind: "slash_1",
+    attackAnimAngle: 0,
     staminaCostPct: 0,
     poiseBreakPct: 0,
     skillCdPct: 0,
@@ -291,6 +321,7 @@ function spawnDummyEnemy(spawner: WorldSpawner, x: number, y: number, defId = "q
     vx: 0,
     vy: 0,
     facing: 1,
+    facingDir: "down",
     radius: edef.radius,
     hp: 5000,
     maxHp: 5000,
@@ -309,6 +340,16 @@ function spawnDummyEnemy(spawner: WorldSpawner, x: number, y: number, defId = "q
     phase: 1,
     hitFlash: 0,
     walkTime: 0,
+    animKind: "idle",
+    animTime: 0,
+    animDuration: 0.4,
+    animAngle: 0,
+    animImpactDone: false,
+    dashVx: 0,
+    dashVy: 0,
+    dashTime: 0,
+    guardTime: 0,
+    skillCycle: 0,
     element: null,
     elementTime: 0,
     reactionIcd: 0,
@@ -955,6 +996,540 @@ runTest("Hardcore RPG: Bare-Handed Start, Skill Gating, Class Locks, Matrix Forg
   assert.ok(warden.hp < warden.maxHp);
   lowH.spawner.resetBossOnPlayerDeath(warden.uid);
   assert.equal(warden.hp, warden.maxHp, "Boss resets to full HP when challenger falls inside arena");
+});
+
+// ============================================================================
+// 8. PIXELFX HERO MODELS, EQUIP BEST, SELECTIVE QUICK SELL, 25 QUESTS & BALANCE
+// ============================================================================
+runTest("Pixelfx Hero Models, Equip Best, Selective Quick Sell, 25 Main+Side Quests & Rebalanced Combat", () => {
+  // 1. All 4 pixelfx 3D-rigged class models render crisp non-empty silhouettes & gear diffs
+  for (const c of CLASSES) {
+    const compiled = getPixelfxHeroCompiled(c.id, 0);
+    let maskPixels = 0;
+    for (let i = 0; i < compiled.actor.mask.data.length; i++) {
+      if (compiled.actor.mask.data[i]) maskPixels++;
+    }
+    assert.ok(maskPixels > 40, `${c.id} pixelfx hero model has non-empty 3D silhouette (${maskPixels}px)`);
+
+    const bareBaked = getOrBakePixelfxHero(c.id, {}, "idle", 0, 1, "right", 1.0);
+    const gearBaked = getOrBakePixelfxHero(c.id, getClassShowcaseEquipment(c.id), "idle", 0, 1, "right", 1.0);
+    let diffCount = 0;
+    for (let i = 0; i < bareBaked.actor.pixels.length; i++) {
+      if (bareBaked.actor.pixels[i] !== gearBaked.actor.pixels[i]) diffCount++;
+    }
+    assert.ok(diffCount > 25, `${c.id} equipped loadout visibly transforms pixelfx model (${diffCount}px changed)`);
+  }
+
+  // 2. Equip Best selects highest-scoring compatible gear across 5 slots and skips off-class items
+  const inv = new InventorySystem();
+  inv.resetStarterKit();
+  inv.addItem("wpn_apprentice_staff", 1, 8); // strong +8 but Mage-only!
+  inv.addItem("wpn_starter", 1, 0);
+  inv.addItem("wpn_prism_halberd", 1, 2); // Knight-compatible strong weapon
+  inv.addItem("arm_amber_aegis", 1, 0);
+  inv.addItem("hlm_quartz_visor", 1, 0);
+  inv.addItem("bts_amber_treads", 1, 0);
+  inv.addItem("acc_wind_feather", 1, 0);
+  const optBest = inv.equipBestForClass("prism_knight");
+  assert.equal(optBest.equipped.length, 5, "Equip Best fills all 5 compatible slots");
+  assert.equal(inv.equipment.weapon?.defId, "wpn_prism_halberd", "Equip Best chooses best Knight weapon, never off-class +8 staff");
+  assert.equal(inv.equipment.armor?.defId, "arm_amber_aegis");
+  assert.equal(inv.equipment.accessory?.defId, "acc_wind_feather");
+
+  // 3. Selective Quick Sell removes off-class + user-chosen items cleanly after confirmation
+  inv.addItem("wpn_glitch_fangs", 1, 0); // Rogue off-class
+  const spareIdx = inv.bag.filter((b) => {
+    const d = ITEMS[b.defId];
+    return d && d.category === "equipment" && !canClassEquip(d, "prism_knight");
+  });
+  assert.equal(spareIdx.length, 2, "Identifies 2 off-class equipment items in bag");
+  const extraPot = inv.bag.find((b) => b.defId === "pot_hp")!;
+  const sellUids = [...spareIdx.map((s) => s.uid), extraPot.uid];
+  const expectedGold = sellUids.reduce((acc, u) => {
+    const it = inv.bag.find((b) => b.uid === u)!;
+    return acc + inv.getItemSellValue(it, true);
+  }, 0);
+  const goldBefore = inv.gold;
+  const sellRes = inv.sellMultipleFromBag(sellUids);
+  assert.equal(sellRes.totalGold, expectedGold, "Confirmed batch sell pays exact computed gold total");
+  assert.equal(inv.gold, goldBefore + expectedGold);
+  assert.equal(inv.bag.some((b) => sellUids.includes(b.uid)), false, "All confirmed items removed cleanly from bag");
+
+  // 4. 25 Main + Chained Side + Bounty quests integrity & 4-tier class rewards
+  assert.equal(QUESTS.length, 25, "QUESTS defines 10 Main + 12 Chained Side + 3 Bounties (25 total)");
+  const mainCount = QUESTS.filter((q) => q.isMain).length;
+  const sideCount = QUESTS.filter((q) => q.category === "side").length;
+  const bountyCount = QUESTS.filter((q) => q.category === "bounty").length;
+  assert.equal(mainCount, 10);
+  assert.equal(sideCount, 12);
+  assert.equal(bountyCount, 3);
+
+  const qIds = new Set(QUESTS.map((q) => q.id));
+  for (const q of QUESTS) {
+    if (q.prereqQuestId) {
+      assert.ok(qIds.has(q.prereqQuestId), `Prereq ${q.prereqQuestId} exists for ${q.id}`);
+    }
+    for (const ri of q.rewards.items ?? []) {
+      assert.ok(ITEMS[ri.defId], `Reward item ${ri.defId} exists for ${q.id}`);
+    }
+  }
+  for (const c of CLASSES) {
+    for (const key of ["starter_weapon", "meadow_weapon", "quartz_weapon", "amber_weapon"] as const) {
+      const rw = resolveClassReward(c.id, key);
+      assert.ok(ITEMS[rw] && canClassEquip(ITEMS[rw], c.id), `${c.id} reward ${key} -> ${rw} is valid & equippable`);
+    }
+  }
+
+  // Walk one full 3-step NPC side chain (Kael)
+  const qs = new QuestSystem();
+  qs.reset();
+  assert.equal(qs.getState("sq_kael_1"), "available", "Side chain step 1 unlocks immediately");
+  assert.equal(qs.getState("sq_kael_2"), "locked", "Side chain step 2 starts locked behind step 1");
+  qs.acceptQuest("sq_kael_1");
+  qs.recordEvent("mine_resource", undefined, 2);
+  const k1 = qs.turnInQuest("sq_kael_1", "prism_knight");
+  assert.ok(k1 && qs.getState("sq_kael_2") === "available", "Completing step 1 unlocks Kael step 2");
+
+  // 5. Balanced Mob/Boss curve & Threat/DEF combat formulas
+  assert.equal(ENEMIES["null_slime"].level, 1);
+  assert.equal(ENEMIES["null_slime"].maxHp, 44);
+  assert.ok(ENEMIES["boss_the_eraser"].maxHp === 6800 && ENEMIES["boss_xing_warden"].maxHp === 1250);
+
+  const defLow = makeTestHarness("prism_knight");
+  const defHi = makeTestHarness("prism_knight");
+  defLow.player.x = 50 * TILE_SIZE + 8;
+  defLow.player.y = 50 * TILE_SIZE + 8;
+  defHi.player.x = 50 * TILE_SIZE + 8;
+  defHi.player.y = 50 * TILE_SIZE + 8;
+  defLow.player.def = 2;
+  defHi.player.def = 55;
+  defLow.player.hp = 500;
+  defLow.player.maxHp = 500;
+  defHi.player.hp = 500;
+  defHi.player.maxHp = 500;
+  defLow.combat.damagePlayer(defLow.ctx, 80, defLow.player.x + 5, defLow.player.y, false, 1);
+  defHi.combat.damagePlayer(defHi.ctx, 80, defHi.player.x + 5, defHi.player.y, false, 1);
+  assert.ok(500 - defHi.player.hp < 500 - defLow.player.hp, "Smooth asymptotic DEF mitigates incoming damage");
+
+  const lowLv = makeTestHarness("prism_knight");
+  lowLv.player.x = 50 * TILE_SIZE + 8;
+  lowLv.player.y = 50 * TILE_SIZE + 8;
+  lowLv.player.level = 1;
+  lowLv.player.hp = 1000;
+  lowLv.player.maxHp = 1000;
+  lowLv.combat.damagePlayer(lowLv.ctx, 50, lowLv.player.x + 5, lowLv.player.y, false, 19);
+  const dmgFromBoss = 1000 - lowLv.player.hp;
+  lowLv.player.hp = 1000;
+  lowLv.player.invuln = 0;
+  lowLv.combat.damagePlayer(lowLv.ctx, 50, lowLv.player.x + 5, lowLv.player.y, false, 1);
+  const dmgFromEqual = 1000 - lowLv.player.hp;
+  assert.ok(dmgFromBoss > dmgFromEqual, `Under-leveled hero takes extra threat damage vs Lv.19 boss (${dmgFromBoss} > ${dmgFromEqual})`);
+});
+
+// ============================================================================
+// 9. ATTACK ANIMATION & PIXELFX VFX SYNCHRONIZATION
+// ============================================================================
+runTest("Attack Animation & Pixelfx VFX Synchronization Across All Classes & Modes", () => {
+  // 1. Bare-handed combo N1/N2/N3 + Charged Uppercut assign exact attack kinds & weapon-height VFX
+  const bare = makeTestHarness("prism_knight");
+  const bareRec = { live: [] as MockVfxCall[], pooled: [] as MockVfxCall[] };
+  bare.ctx.vfx = createMockVfx(bareRec);
+  delete bare.inv.equipment.weapon;
+  recalculatePlayerStats(bare.player, bare.inv, true);
+
+  bare.player.aimAngle = 0;
+  bare.combat.performPrimaryAttack(bare.ctx);
+  assert.equal(bare.player.attackAnimKind, "punch_1");
+  assert.ok(bare.player.attackAnimDuration >= 0.2);
+
+  bare.player.atkCd = 0;
+  bare.combat.performPrimaryAttack(bare.ctx);
+  assert.equal(bare.player.attackAnimKind, "punch_2");
+
+  bare.player.atkCd = 0;
+  bare.combat.performPrimaryAttack(bare.ctx);
+  assert.equal(bare.player.attackAnimKind, "punch_3");
+
+  bare.combat.performChargedAttack(bare.ctx, true);
+  assert.equal(bare.player.attackAnimKind, "uppercut");
+  assert.equal(bareRec.pooled.length, 4, "Bare-handed punches emit muzzle sparks at fist height");
+
+  // 2. Equipped 4 Classes: N1/N2/N3, Charged, [E], [Q], plus left-facing melee VFX orientation
+  const expectedN: Record<ClassId, string[]> = {
+    prism_knight: ["slash_1", "slash_2", "cleave"],
+    chroma_mage: ["cast_1", "cast_2", "cast_3"],
+    bit_rogue: ["flurry_1", "flurry_2", "spin"],
+    pixel_tinker: ["shoot", "shoot", "shoot_heavy"],
+  };
+  const expectedCharge: Record<ClassId, string> = {
+    prism_knight: "thrust",
+    chroma_mage: "cast_heavy",
+    bit_rogue: "spin",
+    pixel_tinker: "beam",
+  };
+
+  for (const cls of CLASSES) {
+    const h = makeTestHarness(cls.id);
+    const rec = { live: [] as MockVfxCall[], pooled: [] as MockVfxCall[] };
+    h.ctx.vfx = createMockVfx(rec);
+    h.player.aimAngle = Math.PI; // Aim directly LEFT!
+
+    for (let s = 0; s < 3; s++) {
+      h.player.atkCd = 0;
+      h.combat.performPrimaryAttack(h.ctx);
+      assert.equal(h.player.attackAnimKind, expectedN[cls.id][s], `${cls.id} N${s + 1} sets synchronized attack kind`);
+      assert.ok(h.player.attackAnimDuration >= 0.2 && h.player.attackAnimTime === h.player.attackAnimDuration);
+      assert.equal(h.player.facing, -1, `${cls.id} N${s + 1} facing snaps left when aiming PI`);
+    }
+
+    // Left-facing melee slash checks (never upside-down!)
+    if (cls.id === "prism_knight") {
+      assert.equal(rec.live.length, 3);
+      for (const call of rec.live) {
+        assert.equal(call.opts.flip, true, "Left-aimed prism_knight melee VFX flips horizontally");
+        assert.ok(
+          Math.abs((call.opts.angle as number) ?? 0) < Math.PI / 2,
+          "Left-aimed prism_knight melee VFX stays right-side-up (|angle| < PI/2)"
+        );
+        assert.equal(call.opts.follow, h.player, "Prism Knight melee VFX follows hero position");
+      }
+      assert.ok((rec.live[2].opts.startTime as number) > 0, "Heavy cleave skips pre-swing dead frames via startTime");
+    }
+    if (cls.id === "bit_rogue") {
+      assert.equal(rec.live.length, 3);
+      for (const call of rec.live) {
+        assert.equal(call.opts.flip, true, "Left-aimed bit_rogue melee VFX flips horizontally");
+        assert.equal(call.opts.follow, h.player, "Bit Rogue melee VFX follows hero position");
+      }
+      assert.equal(h.ctx.projectiles.length, 0, "bit_rogue normal attacks are pure melee and spawn 0 projectiles");
+      h.player.cloneTime = 3.0;
+      h.player.atkCd = 0;
+      h.combat.performPrimaryAttack(h.ctx);
+      assert.equal(h.ctx.projectiles.length, 0, "bit_rogue Phantom Clone normal attacks do not fire projectiles");
+      h.player.cloneTime = 0;
+    }
+
+    // Diagonal up-left aiming (-3*PI/4) keeps upward local pitch for Painter (toY(1, 0) = -sin(angle) < 0 when flip=true)
+    h.player.atkCd = 0;
+    h.player.comboStep = 0;
+    h.player.aimAngle = -Math.PI * 0.75;
+    rec.live.length = 0;
+    h.combat.performPrimaryAttack(h.ctx);
+    if (cls.id === "prism_knight" || cls.id === "bit_rogue") {
+      const angOut = (rec.live[0].opts.angle as number) ?? 0;
+      assert.equal(rec.live[0].opts.flip, true);
+      assert.ok(angOut > 0 && Math.abs(angOut) < Math.PI / 2, "Up-left diagonal mirrors Painter upward (-sin(angOut) < 0)");
+    }
+
+    h.ctx.projectiles.length = 0;
+    h.player.stamina = 100;
+    h.player.aimAngle = Math.PI;
+    h.combat.performChargedAttack(h.ctx, false);
+    assert.equal(h.player.attackAnimKind, expectedCharge[cls.id], `${cls.id} Charged uses synchronized pose`);
+    if (cls.id === "bit_rogue") {
+      assert.ok(h.ctx.projectiles.length >= 5, "bit_rogue Charged attack fires 5 shuriken fan projectiles");
+      assert.ok(
+        h.ctx.projectiles.every((p) => p.preset === "proj-shuriken"),
+        "bit_rogue Charged fan projectiles all use proj-shuriken"
+      );
+    }
+
+    h.player.skillCd = 0;
+    h.combat.performSkillE(h.ctx);
+    if (cls.id !== "bit_rogue") {
+      assert.ok(h.player.attackAnimTime > 0, `${cls.id} [E] triggers active cast/beam pose`);
+    } else {
+      assert.ok(h.player.dashing > 0, "bit_rogue [E] triggers dash lunge");
+    }
+
+    h.player.overdrive = 100;
+    h.combat.performUltimateQ(h.ctx);
+    if (cls.id === "prism_knight") {
+      assert.ok(h.player.stormTime > 2.5, "prism_knight [Q] activates whirlwind storm pose");
+    } else {
+      assert.equal(h.player.attackAnimKind, "cast_ult", `${cls.id} [Q] triggers synchronized ultimate pose`);
+    }
+  }
+
+  // 3. Multi-phase keyframes produce visibly distinct pixelfx baked skeletons across swing progress
+  const eqK = getClassShowcaseEquipment("prism_knight");
+  const p0 = getOrBakePixelfxHero("prism_knight", eqK, "attack", 0, 1, "right", 0.62, {
+    attackKind: "cleave",
+    attackProgress: 0.05,
+  });
+  const p1 = getOrBakePixelfxHero("prism_knight", eqK, "attack", 0, 1, "right", 0.62, {
+    attackKind: "cleave",
+    attackProgress: 0.45,
+  });
+  const p2 = getOrBakePixelfxHero("prism_knight", eqK, "attack", 0, 1, "right", 0.62, {
+    attackKind: "cleave",
+    attackProgress: 0.92,
+  });
+  let diff01 = 0;
+  let diff12 = 0;
+  for (let i = 0; i < p0.actor.pixels.length; i++) {
+    if (p0.actor.pixels[i] !== p1.actor.pixels[i]) diff01++;
+    if (p1.actor.pixels[i] !== p2.actor.pixels[i]) diff12++;
+  }
+  assert.ok(diff01 > 20 && diff12 > 20, `Cleave keyframes animate sharply (${diff01}px, ${diff12}px changed)`);
+});
+
+// ============================================================================
+// 10. 10 REFERENCE MONSTER MODELS, 4-DIRECTION ATLAS & SYNCHRONIZED SKILL VFX
+// ============================================================================
+runTest("10 Reference Monster Models, 4-Direction Atlas & Synchronized Enemy Skill VFX", () => {
+  const refMonsterIds = [
+    "null_slime",
+    "ash_hopper",
+    "thorn_archer",
+    "root_golem",
+    "boss_xing_warden",
+    "bleach_hound",
+    "quartz_stalker",
+    "static_imp",
+    "quartz_knight",
+    "boss_blight_root",
+  ] as const;
+
+  const frames = codixelEnemiesMeta.frames as Record<string, { x: number; y: number; w: number; h: number; anchorY: number }>;
+  const monsters = codixelEnemiesMeta.monsters as Record<string, { w: number; h: number; floating: boolean }>;
+
+  assert.equal(Object.keys(frames).length, 122, "Enemy sprite atlas contains 122 multi-frame sprites (10x4x3 + 2 special poses)");
+  for (const id of refMonsterIds) {
+    assert.ok(monsters[id] && monsters[id].w >= 24 && monsters[id].h >= 22, `${id} registered in codixel-enemies metadata`);
+    for (const dir of ["front", "right", "left", "back"] as const) {
+      const f = frames[`${id}:${dir}`];
+      const f1 = frames[`${id}:${dir}:1`];
+      const f2 = frames[`${id}:${dir}:2`];
+      assert.ok(f && f.w > 0 && f.h > 0 && f.anchorY === f.h, `${id}:${dir} has valid grounded frame rect`);
+      assert.ok(f1 && f1.w === f.w && f1.h === f.h, `${id}:${dir}:1 animation frame present`);
+      assert.ok(f2 && f2.w === f.w && f2.h === f.h, `${id}:${dir}:2 animation frame present`);
+    }
+    assert.ok(ENEMIES[id], `${id} exists in ENEMIES`);
+    assert.ok(ENEMY_DROP_TABLES[id], `${id} exists in ENEMY_DROP_TABLES`);
+    assert.ok(
+      WORLD_CAMPS.some((c) => c.enemies.some((en) => en.typeId === id)),
+      `${id} spawns inside WORLD_CAMPS`
+    );
+  }
+  assert.ok(frames["null_slime:slam"] && frames["ash_hopper:roll"], "Special attack pose frames (slam, roll) baked cleanly");
+
+  // Verify 4 new bespoke pixelfx modules & color-accurate presets execute without errors
+  for (const modId of ["pixtel/sonic-wave", "pixtel/leaf-storm", "pixtel/rainbow-burst", "pixtel/hex-shield"] as const) {
+    const mod = PIXELFX_MODS[modId];
+    assert.ok(mod, `${modId} registered in PIXELFX_MODS`);
+    const ox = mod.meta.origin?.[0] ?? 0;
+    const oy = mod.meta.origin?.[1] ?? 0;
+    const fr = createFrame(mod.meta.size[0], mod.meta.size[1], -ox, -oy);
+    const fx = createFx(mod, { x: 0, y: 0 });
+    fx.update(0.22);
+    fx.draw(fr);
+    let nonZero = 0;
+    for (let i = 0; i < fr.color.length; i++) {
+      if (fr.color[i] !== 0) nonZero++;
+    }
+    assert.ok(nonZero > 40, `${modId} renders crisp pixels (${nonZero}px drawn)`);
+  }
+  for (const preset of [
+    "ground-slam-nature",
+    "ground-slam-fire",
+    "ground-slam-void",
+    "dirt-puff",
+    "parry-cyan",
+    "parry-poison",
+    "muzzle-poison",
+    "muzzle-fire",
+    "muzzle-void",
+    "proj-emerald",
+  ] as const) {
+    assert.ok(ATLAS_PRESETS[preset], `ATLAS_PRESETS[${preset}] exists`);
+  }
+
+  // Test synchronized combat skills, left-facing VFX orientation & animKinds across all 10 monsters
+  const expectedSkills: Record<string, { first: string; second: string; hasLeftMeleeVfx?: boolean }> = {
+    null_slime: { first: "leap_slam", second: "spit_moss" },
+    ash_hopper: { first: "roll_charge", second: "shell_burst" },
+    thorn_archer: { first: "thorn_shot", second: "thorn_shot" },
+    root_golem: { first: "root_whip", second: "quake_slam", hasLeftMeleeVfx: true },
+    bleach_hound: { first: "dive_slash", second: "sonic_wave", hasLeftMeleeVfx: true },
+    quartz_stalker: { first: "claw_clamp", second: "claw_clamp", hasLeftMeleeVfx: true },
+    static_imp: { first: "thin_laser", second: "refract_split" },
+    quartz_knight: { first: "halberd_sweep", second: "crystal_lunge", hasLeftMeleeVfx: true },
+  };
+
+  for (const [id, spec] of Object.entries(expectedSkills)) {
+    const h = makeTestHarness("prism_knight");
+    const rec = { live: [] as MockVfxCall[], pooled: [] as MockVfxCall[] };
+    h.ctx.vfx = createMockVfx(rec);
+    const e = spawnDummyEnemy(h.spawner, h.player.x + 48, h.player.y, id); // Player is strictly LEFT of enemy!
+    e.aiTimer = 0;
+    h.combat.update(h.ctx, 0.016);
+    assert.equal(e.facingDir, "left", `${id} locks facingDir=left when attacking player to its left`);
+    assert.equal(e.animKind, spec.first, `${id} triggers first synchronized skill (${spec.first})`);
+    assert.ok(e.animTime > 0.25, `${id} keeps active attack animation timer`);
+
+    if (spec.hasLeftMeleeVfx) {
+      assert.ok(rec.live.length >= 1, `${id} spawns pixelfx melee overlay on strike`);
+      assert.equal(rec.live[0].opts.flip, true, `${id} left-facing melee VFX mirrors horizontally`);
+      assert.ok(Math.abs((rec.live[0].opts.angle as number) ?? 0) < Math.PI / 2, `${id} melee VFX stays upright`);
+      assert.equal(rec.live[0].opts.follow, e, `${id} melee VFX follows enemy`);
+    }
+
+    // Trigger second skill in cycle
+    e.animTime = 0;
+    e.dashTime = 0;
+    e.aiTimer = 0;
+    h.combat.update(h.ctx, 0.016);
+    assert.equal(e.animKind, spec.second, `${id} cycles cleanly to second skill (${spec.second})`);
+  }
+
+  // Test null_slime phase-locked leap_slam landing & spit_moss projectile-synced moss_pool
+  {
+    const h = makeTestHarness("prism_knight");
+    const rec = { live: [] as MockVfxCall[], pooled: [] as MockVfxCall[] };
+    h.ctx.vfx = createMockVfx(rec);
+    const slime = spawnDummyEnemy(h.spawner, h.player.x + 48, h.player.y, "null_slime");
+    slime.aiTimer = 0;
+    h.combat.update(h.ctx, 0.016);
+    assert.equal(slime.animKind, "leap_slam");
+    assert.equal(
+      rec.pooled.some((c) => c.modId === "acid-splash"),
+      false,
+      "null_slime leap_slam does NOT trigger landing acid-splash prematurely at windup t=0"
+    );
+    for (let step = 0; step < 36; step++) {
+      h.combat.update(h.ctx, 0.02);
+    }
+    assert.equal(
+      rec.pooled.some((c) => c.modId === "acid-splash"),
+      true,
+      "null_slime leap_slam triggers landing acid-splash cleanly upon touching down"
+    );
+
+    // Next skill: spit_moss fires projectile without prematurely spawning moss_pool at player position
+    rec.pooled.length = 0;
+    slime.animTime = 0;
+    slime.dashTime = 0;
+    slime.aiTimer = 0;
+    const hazardsBefore = h.ctx.hazards.length;
+    h.combat.update(h.ctx, 0.016);
+    assert.equal(slime.animKind, "spit_moss");
+    assert.equal(h.ctx.hazards.length, hazardsBefore, "spit_moss waits until projectile lands/expires before creating moss_pool");
+    assert.ok(rec.pooled.some((c) => c.modId === "muzzle-poison"), "spit_moss emits muzzle-poison effect");
+    for (let step = 0; step < 50; step++) {
+      h.combat.update(h.ctx, 0.02);
+    }
+    assert.ok(
+      h.ctx.hazards.some((hz) => hz.kind === "moss_pool"),
+      "spit_moss projectile spawns moss_pool on landing/expiry"
+    );
+  }
+
+  // Test signature custom VFX + nature ground slam + hex-shield + parry-cyan
+  {
+    const h = makeTestHarness("prism_knight");
+    const rec = { live: [] as MockVfxCall[], pooled: [] as MockVfxCall[] };
+    h.ctx.vfx = createMockVfx(rec);
+    const golem = spawnDummyEnemy(h.spawner, h.player.x + 48, h.player.y, "root_golem");
+    golem.skillCycle = 1;
+    golem.aiTimer = 0;
+    h.combat.update(h.ctx, 0.016);
+    const natureSlam = h.ctx.hazards.find((hz) => hz.kind === "boss_slam");
+    assert.equal(natureSlam?.vfxPreset, "ground-slam-nature", "root_golem quake_slam uses emerald nature shockwave");
+
+    const bat = spawnDummyEnemy(h.spawner, h.player.x + 52, h.player.y, "bleach_hound");
+    bat.skillCycle = 1;
+    bat.aiTimer = 0;
+    h.combat.update(h.ctx, 0.016);
+    assert.ok(rec.live.some((c) => c.modId === "pixtel/sonic-wave"), "bleach_hound emits pixtel/sonic-wave rings");
+
+    const crab = spawnDummyEnemy(h.spawner, h.player.x + 36, h.player.y, "quartz_stalker");
+    crab.skillCycle = 0;
+    crab.aiTimer = 0;
+    h.combat.update(h.ctx, 0.016);
+    assert.ok(rec.pooled.some((c) => c.modId === "parry-cyan"), "quartz_stalker claw_clamp bursts blazing parry-cyan cross-star");
+  }
+
+  // Test shield guard mitigation & hex-shield live dome (Root Golem Bark Shield & Quartz Crab Shield)
+  for (const shieldId of ["root_golem", "quartz_stalker"] as const) {
+    const h = makeTestHarness("prism_knight");
+    const rec = { live: [] as MockVfxCall[], pooled: [] as MockVfxCall[] };
+    h.ctx.vfx = createMockVfx(rec);
+    const e = spawnDummyEnemy(h.spawner, h.player.x + 36, h.player.y, shieldId);
+    e.bleachShield = 0;
+    e.skillCycle = 2; // Jumps directly to bark_shield / quartz_shield
+    e.aiTimer = 0;
+    h.combat.update(h.ctx, 0.016);
+    assert.ok(e.guardTime > 2.0, `${shieldId} activates synchronized defensive guardTime`);
+    assert.ok(rec.live.some((c) => c.modId === "impacts/shield-block"), `${shieldId} spawns shield-block VFX`);
+    assert.ok(rec.live.some((c) => c.modId === "pixtel/hex-shield"), `${shieldId} spawns pixtel/hex-shield barrier`);
+
+    const hpBeforeGuard = e.hp;
+    h.combat.damageEnemy(h.ctx, e, 100, false, "hit-cyan");
+    const dmgGuarded = hpBeforeGuard - e.hp;
+
+    e.guardTime = 0;
+    e.hp = hpBeforeGuard;
+    h.combat.damageEnemy(h.ctx, e, 100, false, "hit-cyan");
+    const dmgUnguarded = hpBeforeGuard - e.hp;
+    assert.ok(dmgGuarded < dmgUnguarded, `${shieldId} active shield mitigates damage (${dmgGuarded} < ${dmgUnguarded})`);
+  }
+
+  // Test Biome Main Bosses signature animations & custom storm VFX (Hộ Vệ Cổ Thụ & Rồng Lăng Kính)
+  for (const bossId of ["boss_xing_warden", "boss_blight_root"] as const) {
+    const h = makeTestHarness("prism_knight");
+    const rec = { live: [] as MockVfxCall[], pooled: [] as MockVfxCall[] };
+    h.ctx.vfx = createMockVfx(rec);
+    const b = spawnDummyEnemy(h.spawner, h.player.x + 56, h.player.y, bossId);
+    b.aiTimer = 0;
+    b.specialTimer = 5;
+    h.combat.update(h.ctx, 0.016);
+    assert.equal(
+      b.animKind,
+      bossId === "boss_xing_warden" ? "emerald_orb" : "prism_breath",
+      `${bossId} primary attack triggers synced signature pose`
+    );
+
+    b.animTime = 0;
+    b.aiTimer = 5;
+    b.specialTimer = 0;
+    b.skillCycle = 1; // Trigger Leaf Storm / Rainbow Storm (center-locked front view)
+    h.combat.update(h.ctx, 0.016);
+    assert.equal(
+      b.animKind,
+      bossId === "boss_xing_warden" ? "leaf_storm" : "rainbow_storm",
+      `${bossId} storm special triggers synced storm pose`
+    );
+    assert.equal(b.facingDir, "down", `${bossId} storm locks front-facing ring symmetry`);
+    assert.ok(
+      rec.live.some((c) => c.modId === (bossId === "boss_xing_warden" ? "pixtel/leaf-storm" : "pixtel/rainbow-burst")),
+      `${bossId} spawns custom signature storm pixelfx`
+    );
+  }
+
+  // Test Amber & Ruins monsters animation states + biome-specific enemy deaths
+  {
+    const expectedOther = [
+      ["amber_beetle", "amber_roll", "explode-fire"],
+      ["cinder_imp", "ember_cast", "explode-fire"],
+      ["prism_golem", "void_slam", "explode-void"],
+      ["void_wraith", "void_blink", "explode-void"],
+    ] as const;
+    for (const [id, expectedAnim, expectedDeath] of expectedOther) {
+      const h = makeTestHarness("prism_knight");
+      const rec = { live: [] as MockVfxCall[], pooled: [] as MockVfxCall[] };
+      h.ctx.vfx = createMockVfx(rec);
+      const e = spawnDummyEnemy(h.spawner, h.player.x + 50, h.player.y, id);
+      e.aiTimer = 0;
+      h.combat.update(h.ctx, 0.016);
+      assert.equal(e.animKind, expectedAnim, `${id} runs synchronized Amber/Ruins skill pose (${expectedAnim})`);
+
+      rec.pooled.length = 0;
+      rec.live.length = 0;
+      h.combat.damageEnemy(h.ctx, e, 999999, false, "hit-cyan");
+      assert.ok(rec.pooled.some((c) => c.modId === expectedDeath), `${id} death emits biome-specific ${expectedDeath}`);
+    }
+  }
 });
 
 console.log("\n========================================================");

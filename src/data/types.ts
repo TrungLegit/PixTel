@@ -20,7 +20,7 @@ export interface HeroVisualLoadout {
   weaponEnhance: number;
 }
 
-export type ClassRewardKey = "starter_weapon";
+export type ClassRewardKey = "starter_weapon" | "meadow_weapon" | "quartz_weapon" | "amber_weapon";
 
 export interface ActiveBossLock {
   bossUid: number;
@@ -231,6 +231,9 @@ export interface QuestObjectiveDef {
 export interface QuestDef {
   id: string;
   chapter?: string;
+  category?: "main" | "side" | "bounty";
+  chainName?: string;
+  recommendedLevel?: number;
   title: string;
   giverNpcId: string;
   prereqQuestId?: string;
@@ -343,6 +346,8 @@ export interface EnemyDef {
     | "ranged"
     | "flanker"
     | "bruiser"
+    | "mini_root_golem"
+    | "mini_quartz_knight"
     | "boss_warden"
     | "boss_root"
     | "boss_amber"

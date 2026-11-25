@@ -15,6 +15,7 @@ export class QuestJournalModalUI {
   private root: HTMLElement;
   private bodyEl: HTMLElement;
   private tab: "quests" | "lore" = "quests";
+  private questFilter: "all" | "main" | "side" | "bounty" = "all";
   private focusedLoreId: string | null = null;
 
   constructor(game: PixTelOpenWorldGame) {
@@ -66,6 +67,13 @@ export class QuestJournalModalUI {
       this.tab = "lore";
       this.render();
     });
+    this.bodyEl.querySelectorAll("[data-jfilter]").forEach((el) => {
+      el.addEventListener("click", () => {
+        sfx.playUiClick();
+        this.questFilter = ((el as HTMLElement).dataset.jfilter as "all" | "main" | "side" | "bounty") ?? "all";
+        this.render();
+      });
+    });
 
     if (this.focusedLoreId) {
       const targetEl = this.bodyEl.querySelector(`[data-lore-card="${this.focusedLoreId}"]`);
@@ -78,11 +86,26 @@ export class QuestJournalModalUI {
       active: [] as string[],
       available: [] as string[],
       completed: [] as string[],
+      locked: [] as string[],
     };
 
+    const filterBtns = [
+      { id: "all", label: `Tất cả (${QUESTS.length})` },
+      { id: "main", label: "Chính Tuyến" },
+      { id: "side", label: "Chuỗi Phụ" },
+      { id: "bounty", label: "Truy Nã" },
+    ]
+      .map(
+        (b) =>
+          `<button class="px-btn sm ${this.questFilter === b.id ? "primary" : ""}" data-jfilter="${b.id}">${b.label}</button>`
+      )
+      .join("");
+
     for (const q of QUESTS) {
+      const qCat = q.category ?? (q.isMain ? "main" : "bounty");
+      if (this.questFilter !== "all" && qCat !== this.questFilter) continue;
+
       const st = this.game.quests.getState(q.id);
-      if (st === "locked") continue;
       const p = this.game.quests.progress[q.id];
       const giver = TOWN_NPCS.find((n) => n.id === q.giverNpcId)?.name ?? "NPC";
       const allRewards = [
@@ -96,6 +119,29 @@ export class QuestJournalModalUI {
         .map((r) => `${ITEMS[r.defId]?.name ?? r.defId} x${r.qty}`)
         .join(", ");
 
+      const qTagClass = qCat === "main" ? "main" : qCat === "side" ? "side-chain" : "side";
+      const qTagLabel = qCat === "main" ? "CHÍNH TUYẾN" : qCat === "side" ? "NHIỆM VỤ PHỤ" : "TRUY NÃ";
+
+      if (st === "locked") {
+        const prereqTitle =
+          QUESTS.find((pq) => pq.id === q.prereqQuestId)?.title ?? q.prereqQuestId ?? "Nhiệm vụ trước";
+        sections.locked.push(`
+          <div class="quest-card" style="border-color:#353954;opacity:0.78">
+            <div class="quest-card-top">
+              <div>
+                <span class="quest-tag ${qTagClass}">${qTagLabel}</span>
+                <b style="color:#b8c2e0">🔒 ${q.title}</b>
+                ${q.chainName ? `<span style="color:#5ef2ff;font-size:11px;margin-left:6px">${q.chainName}</span>` : ""}
+              </div>
+              <span class="j-giver">${giver}${q.recommendedLevel ? ` · LV.${q.recommendedLevel}` : ""}</span>
+            </div>
+            <div class="j-summary" style="color:#9ba4bf">Yêu cầu hoàn thành trước: <b style="color:#ffe066">${prereqTitle}</b></div>
+            <div class="quest-reward">Thưởng dự kiến: <b style="color:#ffe066">${q.rewards.gold}G</b> · <b style="color:#5ef2ff">${q.rewards.xp} XP</b>${rewards ? ` · <b style="color:#44ee88">${rewards}</b>` : ""}</div>
+          </div>
+        `);
+        continue;
+      }
+
       const objs = q.objectives
         .map((o) => {
           const cur = p?.counts[o.id] ?? 0;
@@ -104,19 +150,19 @@ export class QuestJournalModalUI {
         })
         .join("");
 
-      const chapterBadge = q.chapter
-        ? `<div style="font-size:10px;color:#5ef2ff;font-weight:700;margin-bottom:2px">${q.chapter}</div>`
-        : "";
+      const chapterBadge = [q.chapter, q.chainName, q.recommendedLevel ? `Đề xuất LV.${q.recommendedLevel}` : ""]
+        .filter(Boolean)
+        .join(" · ");
       const loreQuote = q.loreNote
-        ? `<div style="font-size:11px;color:#b8c2e0;font-style:italic;margin:4px 0;padding-left:6px;border-left:2px solid #4be8ff">"${q.loreNote}"</div>`
+        ? `<div class="quest-lore-quote">"${q.loreNote}"</div>`
         : "";
 
       const card = `
         <div class="quest-card state-${st}">
-          ${chapterBadge}
+          ${chapterBadge ? `<div class="quest-chain-hint">${chapterBadge}</div>` : ""}
           <div class="quest-card-top">
             <div>
-              <span class="quest-tag ${q.isMain ? "main" : "side"}">${q.isMain ? "CHÍNH TUYẾN" : "TRUY NÃ"}</span>
+              <span class="quest-tag ${qTagClass}">${qTagLabel}</span>
               <b>${q.title}</b>
             </div>
             <span class="j-giver">${giver}</span>
@@ -134,12 +180,15 @@ export class QuestJournalModalUI {
     }
 
     return `
+      <div class="j-filter-bar">${filterBtns}</div>
       <div class="section-hdr">ĐANG THỰC HIỆN (${sections.active.length})</div>
       ${sections.active.join("") || `<div class="detail-empty">Chưa có nhiệm vụ đang làm. Gặp Trưởng Làng Elian, Thợ Rèn Kael hoặc Thương Nhân Mira ở Thị Trấn!</div>`}
-      <div class="section-hdr">CÓ THỂ NHẬN (${sections.available.length})</div>
+      <div class="section-hdr">CÓ THỂ NHẬN NGAY (${sections.available.length})</div>
       ${sections.available.join("") || `<div class="detail-empty">Không có nhiệm vụ mới khả dụng lúc này.</div>`}
+      <div class="section-hdr">CHUỖI SẮP MỞ KHÓA (${sections.locked.length})</div>
+      ${sections.locked.join("") || `<div class="detail-empty">Mọi chuỗi nhiệm vụ đều đã được mở khóa!</div>`}
       <div class="section-hdr">ĐÃ HOÀN THÀNH (${sections.completed.length})</div>
-      ${sections.completed.join("") || `<div class="detail-empty">Chưa hoàn thành nhiệm vụ cốt truyện nào.</div>`}
+      ${sections.completed.join("") || `<div class="detail-empty">Chưa hoàn thành nhiệm vụ nào.</div>`}
     `;
   }
 

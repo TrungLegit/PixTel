@@ -42,6 +42,28 @@ export const ENEMY_DROP_TABLES: Record<string, EnemyDropTable> = {
       { itemId: "wpn_volt_blaster", chance: 0.06 },
     ],
   },
+  thorn_archer: {
+    rolls: [
+      { itemId: "mat_glitch_core", chance: 0.74, minQty: 1, maxQty: 2 },
+      { itemId: "mat_iron_ore", chance: 0.46, minQty: 1, maxQty: 2 },
+      { itemId: "mat_pigment_green", chance: 0.2 },
+      { itemId: "pot_stamina", chance: 0.18 },
+      { itemId: "wpn_leaf_daggers", chance: 0.08 },
+      { itemId: "wpn_volt_blaster", chance: 0.08 },
+      { itemId: "hlm_meadow_crest", chance: 0.1 },
+    ],
+  },
+  root_golem: {
+    rolls: [
+      { itemId: "mat_iron_ore", chance: 0.9, minQty: 2, maxQty: 4 },
+      { itemId: "mat_prism_shard", chance: 0.6, minQty: 1, maxQty: 2 },
+      { itemId: "mat_pigment_green", chance: 0.35 },
+      { itemId: "arm_meadow_mail", chance: 0.24 },
+      { itemId: "wpn_meadow_edge", chance: 0.2 },
+      { itemId: "wpn_meadow_wand", chance: 0.18 },
+      { itemId: "acc_wind_feather", chance: 0.14 },
+    ],
+  },
 
   // === RỪNG THẠCH ANH (LV 5-10) ===
   static_imp: {
@@ -77,6 +99,18 @@ export const ENEMY_DROP_TABLES: Record<string, EnemyDropTable> = {
       { itemId: "wpn_prism_halberd", chance: 0.09 },
       { itemId: "wpn_pulse_carbine", chance: 0.09 },
       { itemId: "acc_amulet_wind", chance: 0.08 },
+    ],
+  },
+  quartz_knight: {
+    rolls: [
+      { itemId: "mat_quartz_shard", chance: 0.95, minQty: 2, maxQty: 4 },
+      { itemId: "mat_prism_shard", chance: 0.7, minQty: 1, maxQty: 3 },
+      { itemId: "mat_pigment_cyan", chance: 0.38 },
+      { itemId: "arm_quartz_plate", chance: 0.24 },
+      { itemId: "hlm_quartz_visor", chance: 0.22 },
+      { itemId: "wpn_prism_halberd", chance: 0.18 },
+      { itemId: "wpn_quartz_reaver", chance: 0.18 },
+      { itemId: "rng_quartz_eye", chance: 0.16 },
     ],
   },
 

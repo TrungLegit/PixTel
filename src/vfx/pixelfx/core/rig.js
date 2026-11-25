@@ -141,10 +141,19 @@ const BW = 300, BH = 240, OX = 150, OY = 180; // the scratch grid, big enough fo
 const Zb = new Float32Array(BW * BH), Tone = new Float32Array(BW * BH), Part = new Int8Array(BW * BH), Mat = new Int8Array(BW * BH), Fr = new Int8Array(BW * BH), LX = new Float32Array(BW * BH), LY = new Float32Array(BW * BH), Col = new Uint32Array(BW * BH);
 const touched = [];
 const LIGHT = unit([-0.55, 0.72, 0.5]);
-let clipBody = false, clipWeapon = false, curFrameIndex = 0, curDim = 0, onlyPart = 0;
+let clipBody = false, clipWeapon = false, curFrameIndex = 0, curDim = 0, onlyPart = 0, renderScale = 1;
 const FRAME_IDS = ["pelvis", "waist", "chest", "head", "neck", "upperN", "foreN", "upperF", "foreF", "thighN", "shinN", "thighF", "shinF", "footN", "footF"];
+const EMPTY_THEME = {};
+let ACTIVE_THEME = EMPTY_THEME;
+let COLLECT_GLOWS = null;
+
+function sc3(v) {
+  return renderScale === 1 ? v : [v[0] * renderScale, v[1] * renderScale, v[2] * renderScale];
+}
+
 function plot(i, z, tone, part, mat, wx, wy, color) {
   if (onlyPart && part !== onlyPart) return;
+  if (i < 0 || i >= BW * BH) return;
   if (Part[i] === 0) touched.push(i);
   else if (z <= Zb[i]) return;
   Zb[i] = z;
@@ -156,59 +165,69 @@ function plot(i, z, tone, part, mat, wx, wy, color) {
   LY[i] = wy;
   Col[i] = color;
 }
-function sphere(c, r, part, mat) {
+function sphere(cRaw, rRaw, part, mat, colOverride = 0) {
+  const c = sc3(cRaw), r = Math.max(0.65, rRaw * renderScale);
   const x0 = Math.floor(c[0] - r), x1 = Math.ceil(c[0] + r), y0 = Math.floor(c[1] - r), y1 = Math.ceil(c[1] + r);
+  const minCut = 1.5 * renderScale;
   for (let wy = y0; wy <= y1; wy++)
     for (let wx = x0; wx <= x1; wx++) {
       const dx = wx - c[0], dy = wy - c[1], d2 = dx * dx + dy * dy;
-      if (d2 > r * r || (clipBody && wy < 1.5)) continue;
+      if (d2 > r * r || (clipBody && wy < minCut)) continue;
       const dz = Math.sqrt(r * r - d2), n = [dx / r, dy / r, dz / r], i = (OY - wy) * BW + (OX + wx);
-      plot(i, c[2] + dz, dot(n, LIGHT), part, mat, wx, wy, 0);
+      plot(i, c[2] + dz, dot(n, LIGHT), part, mat, wx, wy, colOverride);
     }
 }
-function sweep(a, b, ra, rb, part, mat, bulge = 0) {
-  const n = Math.max(2, Math.ceil(len(sub(b, a)) / 0.4));
+function sweep(a, b, ra, rb, part, mat, bulge = 0, colOverride = 0) {
+  const stepDist = len(sub(sc3(b), sc3(a)));
+  const n = Math.max(2, Math.ceil(stepDist / 0.35));
   for (let k = 0; k <= n; k++) {
     const u = k / n;
-    sphere(add(a, mul(sub(b, a), u)), ra + (rb - ra) * u + bulge * Math.sin(u * Math.PI), part, mat);
+    sphere(add(a, mul(sub(b, a), u)), ra + (rb - ra) * u + bulge * Math.sin(u * Math.PI), part, mat, colOverride);
   }
 }
 // an ellipsoid with radii r along the axes of frame R, seen along z
-function ellipsoid(c, R, r, part, mat) {
+function ellipsoid(cRaw, R, rRaw, part, mat, colOverride = 0) {
+  const c = sc3(cRaw);
+  const r = renderScale === 1
+    ? rRaw
+    : [Math.max(0.7, rRaw[0] * renderScale), Math.max(0.7, rRaw[1] * renderScale), Math.max(0.7, rRaw[2] * renderScale)];
   const big = Math.max(r[0], r[1], r[2]), x0 = Math.floor(c[0] - big), x1 = Math.ceil(c[0] + big), y0 = Math.floor(c[1] - big), y1 = Math.ceil(c[1] + big);
   const Rt = [R[0], R[3], R[6], R[1], R[4], R[7], R[2], R[5], R[8]], D = [1 / (r[0] * r[0]), 1 / (r[1] * r[1]), 1 / (r[2] * r[2])];
   // A = R diag(D) R^T
   const A = new Array(9);
   for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) A[i * 3 + j] = R[i * 3] * D[0] * R[j * 3] + R[i * 3 + 1] * D[1] * R[j * 3 + 1] + R[i * 3 + 2] * D[2] * R[j * 3 + 2];
   void Rt;
+  const minCut = 1.5 * renderScale;
   for (let wy = y0; wy <= y1; wy++)
     for (let wx = x0; wx <= x1; wx++) {
-      if (clipBody && wy < 1.5) continue;
+      if (clipBody && wy < minCut) continue;
       const dx = wx - c[0], dy = wy - c[1];
       const qa = A[8], qb = 2 * (A[2] * dx + A[5] * dy), qc = A[0] * dx * dx + 2 * A[1] * dx * dy + A[4] * dy * dy - 1, disc = qb * qb - 4 * qa * qc;
       if (disc < 0) continue;
       const dz = (-qb + Math.sqrt(disc)) / (2 * qa);
       const n = unit([A[0] * dx + A[1] * dy + A[2] * dz, A[3] * dx + A[4] * dy + A[5] * dz, A[6] * dx + A[7] * dy + A[8] * dz]);
-      plot((OY - wy) * BW + (OX + wx), c[2] + dz, dot(n, LIGHT), part, mat, wx, wy, 0);
+      plot((OY - wy) * BW + (OX + wx), c[2] + dz, dot(n, LIGHT), part, mat, wx, wy, colOverride);
     }
 }
 // parts: each has its own number, so edges between them can be seen
-const PART = { pelvis: 1, waist: 2, chest: 3, neck: 4, head: 5, face: 6, upperN: 7, elbowN: 8, foreN: 9, handN: 10, upperF: 11, elbowF: 12, foreF: 13, handF: 14, thighN: 15, kneeN: 16, shinN: 17, footN: 18, thighF: 19, kneeF: 20, shinF: 21, footF: 22, weapon: 23, offWeapon: 24 };
+const PART = { pelvis: 1, waist: 2, chest: 3, neck: 4, head: 5, face: 6, upperN: 7, elbowN: 8, foreN: 9, handN: 10, upperF: 11, elbowF: 12, foreF: 13, handF: 14, thighN: 15, kneeN: 16, shinN: 17, footN: 18, thighF: 19, kneeF: 20, shinF: 21, footF: 22, weapon: 23, offWeapon: 24, helmet: 25, hair: 26, cloak: 27, pack: 28, shield: 29 };
 const useFrame = (name) => { curFrameIndex = FRAME_IDS.indexOf(name); };
 
 function drawBody(S) {
   const { B, armN, armF, legN, legF, sN, sF, hipN, hipF, turn } = S, F_ = (name) => B[name];
+  const bareHands = !!ACTIVE_THEME.bareHands;
+  const bareHead = !ACTIVE_THEME.headgear || ACTIVE_THEME.headgear === "hair";
   useFrame("pelvis");
-  ellipsoid(add(F_("pelvis").t, mv(F_("pelvis").R, [0, -0.2, 0])), F_("pelvis").R, [2.9, 2.6, 4.2], PART.pelvis, 0);
+  ellipsoid(add(F_("pelvis").t, mv(F_("pelvis").R, [0, -0.2, 0])), F_("pelvis").R, [2.9, 2.6, 4.2], PART.pelvis, 1);
   useFrame("waist");
   sweep(F_("pelvis").t, F_("chest").t, 3, 3.3, PART.waist, 1);
   useFrame("chest");
   ellipsoid(add(F_("chest").t, mv(F_("chest").R, [0.2, 0.9, 0])), F_("chest").R, [3.4, 4.2, 5.5], PART.chest, 0);
   useFrame("neck");
-  sweep(F_("neck").t, add(F_("neck").t, mv(F_("head").R, [0, 1.6, 0])), 1.25, 1.15, PART.neck, 1);
+  sweep(F_("neck").t, add(F_("neck").t, mv(F_("head").R, [0, 1.6, 0])), 1.25, 1.15, PART.neck, 4);
   useFrame("head");
-  ellipsoid(F_("head").t, F_("head").R, [3, 3.3, 2.8], PART.head, 0);
-  ellipsoid(add(F_("head").t, mv(F_("head").R, [0.85, -0.45, 0])), F_("head").R, [2.4, 2.7, 2.35], PART.face, 0);
+  ellipsoid(F_("head").t, F_("head").R, [3, 3.3, 2.8], PART.head, bareHead ? 4 : 3);
+  ellipsoid(add(F_("head").t, mv(F_("head").R, [0.85, -0.45, 0])), F_("head").R, [2.4, 2.7, 2.35], PART.face, 4);
   const arm = (far, A, sh, up, el, fo, ha, nameU, nameF) => {
     curDim = far ? 1 : 0;
     useFrame(nameU);
@@ -217,20 +236,20 @@ function drawBody(S) {
     sphere(A.joint, 1.45, el, 1);
     useFrame(nameF);
     sweep(A.joint, A.end, 1.6, 1.2, fo, 0, 0.15);
-    sphere(A.end, 1.9, ha, 0);
+    sphere(A.end, 1.9, ha, bareHands ? 4 : 1);
     curDim = 0;
   };
   arm(false, armN, sN, PART.upperN, PART.elbowN, PART.foreN, PART.handN, "upperN", "foreN");
   arm(true, armF, sF, PART.upperF, PART.elbowF, PART.foreF, PART.handF, "upperF", "foreF");
   const leg = (far, L, hip, th, kn, sh, fo, nameT, nameS, nameFt) => {
     useFrame(nameT);
-    sweep(hip, L.joint, 3.2, 2.2, th, 0);
+    sweep(hip, L.joint, 3.2, 2.2, th, 1);
     sphere(L.joint, 1.9, kn, 1);
     useFrame(nameS);
-    sweep(L.joint, L.end, 2.15, 1.4, sh, 0, 0.4);
+    sweep(L.joint, L.end, 2.15, 1.4, sh, 5, 0.4);
     useFrame(nameFt);
     const R = F_(nameFt).R, a = F_(nameFt).t;
-    sweep(add(a, mv(R, [-1.5, -0.6, 0])), add(a, mv(R, [4.6, -1.1, 0])), 1.7, 1.25, fo, 0);
+    sweep(add(a, mv(R, [-1.5, -0.6, 0])), add(a, mv(R, [4.6, -1.1, 0])), 1.7, 1.25, fo, 5);
   };
   leg(false, legN, hipN, PART.thighN, PART.kneeN, PART.shinN, PART.footN, "thighN", "shinN", "footN");
   leg(true, legF, hipF, PART.thighF, PART.kneeF, PART.shinF, PART.footF, "thighF", "shinF", "footF");
@@ -241,7 +260,9 @@ function drawBody(S) {
 function along(H, axis, side, part) {
   const n = cross(axis, side);
   const T = (i, k, c, lift = 0) => {
-    const x = H[0] + axis[0] * i + side[0] * k + n[0] * lift, y = H[1] + axis[1] * i + side[1] * k + n[1] * lift, z = H[2] + axis[2] * i + side[2] * k + n[2] * lift;
+    const x = (H[0] + axis[0] * i + side[0] * k + n[0] * lift) * renderScale;
+    const y = (H[1] + axis[1] * i + side[1] * k + n[1] * lift) * renderScale;
+    const z = (H[2] + axis[2] * i + side[2] * k + n[2] * lift) * renderScale;
     const wx = Math.round(x), wy = Math.round(y);
     if (clipWeapon && wy < 0) return;
     const idx = (OY - wy) * BW + (OX + wx);
@@ -253,106 +274,241 @@ function along(H, axis, side, part) {
   return T;
 }
 const STEEL = Object.fromEntries(Object.entries({ hi: "#ffffff", a: "#e8edf6", b: "#a4afc6", d: "#68748f", gold: "#ffd84a", goldD: "#b8862a", grip: "#7a3a2a", gripD: "#4a2018", wood: "#8a5a32", woodD: "#5a3820", dark: "#3a3448", darkD: "#262033", olive: "#58663f", oliveA: "#7d8c58", oliveD: "#3a4529" }).map(([k, v]) => [k, hex(v) >>> 0]));
+let WCOL = STEEL;
 function blade(T, from, length, w) {
-  for (let i = from; i <= from + length + 0.01; i += 0.4) {
+  for (let i = from; i <= from + length + 0.01; i += 0.35) {
     const r = i - from, wd = r > length - 5 ? Math.max(0, ((length - r) / 5) * w) : w;
-    for (let k = -wd; k <= wd + 0.01; k += 0.4) T(i, k, k < -w * 0.4 ? STEEL.hi : k > w * 0.4 ? STEEL.d : STEEL.a);
+    for (let k = -wd; k <= wd + 0.01; k += 0.35) T(i, k, k < -w * 0.4 ? WCOL.hi : k > w * 0.4 ? WCOL.d : WCOL.a);
   }
 }
 const haft = (T, from, to, a, d, r = 0.8) => {
-  for (let i = from; i <= to; i += 0.4) for (let k = -r; k <= r + 0.01; k += 0.4) T(i, k, k > 0.1 ? d : a);
+  for (let i = from; i <= to; i += 0.35) for (let k = -r; k <= r + 0.01; k += 0.35) T(i, k, k > 0.1 ? d : a);
 };
 export const WEAPONS = {
   // the fist is at i = 0; `two` is where the other hand goes; `across`: the handle lies across the weapon's length
   sword: { two: -4.4, draw(T, q) {
     const end = q.two ? -6.5 : -2.6;
-    haft(T, end, 2.2, STEEL.grip, STEEL.gripD);
-    for (let k = -1.4; k <= 1.4; k += 0.4) T(end - 0.4, k, STEEL.gold);
-    for (let k = -4.6; k <= 4.6; k += 0.4) (T(2.6, k, Math.abs(k) > 3.8 ? STEEL.goldD : STEEL.gold), T(3, k, STEEL.goldD));
+    haft(T, end, 2.2, WCOL.grip, WCOL.gripD);
+    for (let k = -1.4; k <= 1.4; k += 0.35) T(end - 0.4, k, WCOL.gold);
+    for (let k = -4.6; k <= 4.6; k += 0.35) (T(2.6, k, Math.abs(k) > 3.8 ? WCOL.goldD : WCOL.gold), T(3, k, WCOL.goldD));
     blade(T, 3.2, 25, 2.2);
   } },
   greatsword: { two: -4.8, draw(T) {
-    haft(T, -7.2, 2.2, STEEL.grip, STEEL.gripD);
-    for (let k = -1.8; k <= 1.8; k += 0.4) T(-7.6, k, STEEL.gold);
-    for (let k = -6.6; k <= 6.6; k += 0.4) (T(2.6, k, Math.abs(k) > 5.6 ? STEEL.goldD : STEEL.gold), T(3, k, STEEL.goldD));
+    haft(T, -7.2, 2.2, WCOL.grip, WCOL.gripD);
+    for (let k = -1.8; k <= 1.8; k += 0.35) T(-7.6, k, WCOL.gold);
+    for (let k = -6.6; k <= 6.6; k += 0.35) (T(2.6, k, Math.abs(k) > 5.6 ? WCOL.goldD : WCOL.gold), T(3, k, WCOL.goldD));
     blade(T, 3.2, 31, 3);
-    for (let i = 4; i <= 28; i += 0.4) T(i, 0, STEEL.b);
+    for (let i = 4; i <= 28; i += 0.35) T(i, 0, WCOL.b);
+  } },
+  staff: { two: -7.5, draw(T) {
+    haft(T, -12, 22, WCOL.wood, WCOL.woodD, 0.72);
+    for (let k = -2.8; k <= 2.8; k += 0.35) T(22.2, k, WCOL.gold);
+    for (let i = 22.8; i <= 29; i += 0.35) {
+      const spread = (i - 22.5) * 0.48;
+      T(i, -spread, WCOL.gold);
+      T(i, spread, WCOL.goldD);
+    }
+    const orbCenter = T.at(26.2, 0);
+    sphere(orbCenter, 2.7, PART.weapon, 2, WCOL.a);
+    sphere([orbCenter[0] - 0.6, orbCenter[1] + 0.6, orbCenter[2] + 0.5], 1.2, PART.weapon, 2, WCOL.hi);
+    if (COLLECT_GLOWS) {
+      COLLECT_GLOWS.push({ x: orbCenter[0] * renderScale, y: -orbCenter[1] * renderScale, color: WCOL.a, radius: 7 * renderScale });
+    }
   } },
   dagger: { draw(T) {
-    haft(T, -2.4, 1.8, STEEL.grip, STEEL.gripD);
-    for (let k = -2.6; k <= 2.6; k += 0.4) T(2.2, k, STEEL.goldD);
+    haft(T, -2.4, 1.8, WCOL.grip, WCOL.gripD);
+    for (let k = -2.6; k <= 2.6; k += 0.35) T(2.2, k, WCOL.goldD);
     blade(T, 2.6, 10, 1.3);
   } },
   spear: { two: -12, draw(T) {
-    haft(T, -18, 36, STEEL.wood, STEEL.woodD, 0.5);
+    haft(T, -18, 36, WCOL.wood, WCOL.woodD, 0.5);
     blade(T, 36, 11, 2);
-    for (let k = -2.4; k <= 2.4; k += 0.4) T(36, k, STEEL.goldD);
+    for (let k = -2.4; k <= 2.4; k += 0.35) T(36, k, WCOL.goldD);
   } },
   hammer: { two: -7, draw(T) {
-    for (const lift of [-0.8, 0, 0.8]) for (let i = -10; i <= 18; i += 0.4) for (let k = -0.8; k <= 0.81; k += 0.4) T(i, k, k > 0.1 ? STEEL.woodD : STEEL.wood, lift);
+    for (const lift of [-0.8, 0, 0.8]) for (let i = -10; i <= 18; i += 0.35) for (let k = -0.8; k <= 0.81; k += 0.35) T(i, k, k > 0.1 ? WCOL.woodD : WCOL.wood, lift);
     // the head is a block: its two faces, and the steel between them
-    for (let i = 18; i <= 28; i += 0.4) for (let k = -9; k <= 9; k += 0.4) {
-      const face = Math.abs(k) > 7.4 ? (k < 0 ? STEEL.a : STEEL.d) : i < 20 ? STEEL.hi : i > 26.4 ? STEEL.d : Math.abs(k) < 2 ? STEEL.gold : STEEL.b;
+    for (let i = 18; i <= 28; i += 0.35) for (let k = -9; k <= 9; k += 0.35) {
+      const face = Math.abs(k) > 7.4 ? (k < 0 ? WCOL.a : WCOL.d) : i < 20 ? WCOL.hi : i > 26.4 ? WCOL.d : Math.abs(k) < 2 ? WCOL.gold : WCOL.b;
       T(i, k, face, 4.5);
       T(i, k, face, -4.5);
-      if (i < 18.4 || i > 27.6 || Math.abs(k) > 8.6) for (let l = -4; l <= 4; l += 0.4) T(i, k, k < 0 ? STEEL.a : i > 27.6 ? STEEL.d : STEEL.b, l);
+      if (i < 18.4 || i > 27.6 || Math.abs(k) > 8.6) for (let l = -4; l <= 4; l += 0.35) T(i, k, k < 0 ? WCOL.a : i > 27.6 ? WCOL.d : WCOL.b, l);
     }
   } },
   scythe: { two: -11, draw(T) {
-    haft(T, -16, 31, STEEL.dark, STEEL.darkD, 0.5);
-    for (let j = 0; j <= 28; j += 0.4) {
+    haft(T, -16, 31, WCOL.dark, WCOL.darkD, 0.5);
+    for (let j = 0; j <= 28; j += 0.35) {
       const u = j / 28, w = 3.2 * (1 - u) + 0.3, b = 31.5 - u * u * 12;
-      for (let k = -w; k <= w; k += 0.4) T(b + k, j + 0.8, k > w * 0.3 ? STEEL.hi : k < -w * 0.4 ? STEEL.d : STEEL.b);
+      for (let k = -w; k <= w; k += 0.35) T(b + k, j + 0.8, k > w * 0.3 ? WCOL.hi : k < -w * 0.4 ? WCOL.d : WCOL.b);
     }
   } },
   claw: { draw(T) {
     for (const q0 of [-2.4, 0, 2.4])
-      for (let i = 2; i <= 9.5; i += 0.4) {
+      for (let i = 2; i <= 9.5; i += 0.35) {
         const u = (i - 2) / 7.5, k = q0 + u * u * 1.8;
-        T(i, k, u > 0.55 ? STEEL.hi : STEEL.a);
-        if (u < 0.6) T(i, k + 0.8, STEEL.d);
+        T(i, k, u > 0.55 ? WCOL.hi : WCOL.a);
+        if (u < 0.6) T(i, k + 0.8, WCOL.d);
       }
   } },
   bow: { across: true, draw(T, q, off) {
     for (let u = -1; u <= 1.001; u += 0.025) {
       const k = u * 17, i = 6 * (1 - u * u) - 1;
-      T(i, k, Math.abs(u) > 0.85 ? STEEL.goldD : STEEL.wood);
-      T(i + 0.8, k, STEEL.woodD);
+      T(i, k, Math.abs(u) > 0.85 ? WCOL.goldD : WCOL.wood);
+      T(i + 0.8, k, WCOL.woodD);
     }
     const tipA = T.at(-1, -17), tipB = T.at(-1, 17), mid = q.pull ? off : T.at(-1, 0);
     const line = (A, B, c) => {
-      const n = Math.max(2, Math.ceil(len(sub(B, A)) / 0.4)), Z = STEEL.a;
+      const n = Math.max(2, Math.ceil(len(sub(B, A)) / 0.35)), Z = WCOL.a;
       for (let k = 0; k <= n; k++) {
-        const P = add(A, mul(sub(B, A), k / n)), wx = Math.round(P[0]), wy = Math.round(P[1]), idx = (OY - wy) * BW + (OX + wx);
+        const P = add(A, mul(sub(B, A), k / n)), wx = Math.round(P[0] * renderScale), wy = Math.round(P[1] * renderScale), idx = (OY - wy) * BW + (OX + wx);
         curFrameIndex = -1;
-        plot(idx, P[2] + 0.05, 2, PART.weapon, 2, wx, wy, c ?? Z);
+        plot(idx, P[2] * renderScale + 0.05, 2, PART.weapon, 2, wx, wy, c ?? Z);
       }
     };
     line(tipA, mid);
     line(tipB, mid);
     if (q.nocked) {
       const nock = mid, tip = T.at(13, 0);
-      line(nock, tip, STEEL.wood);
-      for (let i = 9; i <= 13; i += 0.4) for (let k = -(13 - i) * 0.45; k <= (13 - i) * 0.45; k += 0.4) T(i, k, STEEL.hi);
+      line(nock, tip, WCOL.wood);
+      for (let i = 9; i <= 13; i += 0.35) for (let k = -(13 - i) * 0.45; k <= (13 - i) * 0.45; k += 0.35) T(i, k, WCOL.hi);
     }
   } },
   pistol: { across: true, draw(T) {
-    for (let i = -1; i <= 9.5; i += 0.4) for (let k = -4.2; k <= -2.4; k += 0.4) T(i, k, k < -3.6 ? STEEL.a : k > -2.9 ? STEEL.d : STEEL.b);
-    for (let i = -1.2; i <= 1.2; i += 0.4) for (let k = -2.4; k <= 2.4; k += 0.4) T(i, k, STEEL.gripD);
-    T(9, -4.6, STEEL.hi);
+    for (let i = -1; i <= 10.5; i += 0.35) for (let k = -4.2; k <= -2.1; k += 0.35) T(i, k, k < -3.5 ? WCOL.a : k > -2.7 ? WCOL.d : WCOL.b);
+    for (let i = -1.2; i <= 1.4; i += 0.35) for (let k = -2.4; k <= 2.4; k += 0.35) T(i, k, WCOL.gripD);
+    T(10, -4.6, WCOL.hi);
+    if (COLLECT_GLOWS) {
+      const tip = T.at(10.5, -3.2);
+      COLLECT_GLOWS.push({ x: tip[0] * renderScale, y: -tip[1] * renderScale, color: WCOL.hi, radius: 5 * renderScale });
+    }
   } },
   launcher: { two: -9, draw(T) {
-    for (let i = -14; i <= 22; i += 0.4) for (let k = -6; k <= -1; k += 0.4) T(i, k, k < -4.8 ? STEEL.oliveA : k > -2.2 ? STEEL.oliveD : Math.abs(i - 3) < 1.4 ? STEEL.gold : STEEL.olive);
-    for (let k = -6.8; k <= -0.2; k += 0.4) (T(22.4, k, STEEL.b), T(-14.4, k, STEEL.d));
+    for (let i = -14; i <= 22; i += 0.35) for (let k = -6; k <= -1; k += 0.35) T(i, k, k < -4.8 ? WCOL.oliveA : k > -2.2 ? WCOL.oliveD : Math.abs(i - 3) < 1.4 ? WCOL.gold : WCOL.olive);
+    for (let k = -6.8; k <= -0.2; k += 0.35) (T(22.4, k, WCOL.b), T(-14.4, k, WCOL.d));
+    if (COLLECT_GLOWS) {
+      const tip = T.at(22.4, -3.5);
+      COLLECT_GLOWS.push({ x: tip[0] * renderScale, y: -tip[1] * renderScale, color: WCOL.gold, radius: 6 * renderScale });
+    }
   } },
   handle: { draw(T) {
-    haft(T, -2.6, 6, STEEL.grip, STEEL.gripD);
-    for (let k = -1.6; k <= 1.6; k += 0.4) (T(-3, k, STEEL.gold), T(6.4, k, STEEL.gold));
+    haft(T, -2.6, 6, WCOL.grip, WCOL.gripD);
+    for (let k = -1.6; k <= 1.6; k += 0.35) (T(-3, k, WCOL.gold), T(6.4, k, WCOL.gold));
   } },
 };
 
+function drawExtras(S) {
+  const th = ACTIVE_THEME;
+  if (!th || th === EMPTY_THEME) return;
+  const { B } = S;
+  const H = B.head.t, HR = B.head.R, C = B.chest.t, CR = B.chest.R, P = B.pelvis.t;
+  const atH = (v) => add(H, mv(HR, v));
+  const atC = (v) => add(C, mv(CR, v));
+  const addGlow = (worldPt, color, radius) => {
+    if (COLLECT_GLOWS && color) {
+      COLLECT_GLOWS.push({ x: worldPt[0] * renderScale, y: -worldPt[1] * renderScale, color, radius: radius * renderScale });
+    }
+  };
+
+  // Back accessory (Cape / Scarf / Volt Pack) behind torso
+  if (th.backAccessory === "cape") {
+    const topL = atC([-2.6, 2.8, -2.5]), topR = atC([-2.4, 2.6, 2.2]);
+    const botL = add(P, [-5.6, -4.8, -3.2]), botR = add(P, [-5.2, -5.0, 2.8]);
+    for (let u = 0; u <= 1.001; u += 0.25) {
+      const a = add(mul(topL, 1 - u), mul(topR, u));
+      const b = add(mul(botL, 1 - u), mul(botR, u));
+      sweep(a, b, 1.35, 2.0, PART.cloak, 6);
+    }
+  } else if (th.backAccessory === "scarf") {
+    const neckBack = add(B.neck.t, mv(HR, [-2.2, 0.2, 0]));
+    const tipA = add(neckBack, [-4.8, 1.2, -1.8]);
+    const tipB = add(tipA, [-4.6, -2.1, -1.0]);
+    sweep(neckBack, tipA, 1.7, 1.3, PART.cloak, 6);
+    sweep(tipA, tipB, 1.3, 0.8, PART.cloak, 6);
+  } else if (th.backAccessory === "volt_pack") {
+    const pkTop = atC([-3.8, 3.0, -0.4]), pkBot = atC([-4.1, -2.2, -0.4]);
+    sweep(pkTop, pkBot, 2.4, 2.5, PART.pack, 5);
+    const coilTop = atC([-4.2, 6.2, -0.8]);
+    sweep(pkTop, coilTop, 0.75, 0.65, PART.pack, 2, 0, th.eye || WCOL.gold);
+    addGlow(coilTop, th.eye || WCOL.gold, 5);
+  }
+
+  // Headgear / Bare Hair + Class Face Accent
+  const hg = th.headgear || "hair";
+  if (hg === "hair") {
+    ellipsoid(atH([-0.7, 1.4, -0.3]), HR, [2.9, 2.2, 2.9], PART.hair, 7);
+    sphere(atH([1.6, 2.2, 0.8]), 1.3, PART.hair, 7);
+    sphere(atH([-2.2, 0.4, -0.4]), 1.5, PART.hair, 7);
+  } else if (hg === "plume_helm") {
+    ellipsoid(atH([-0.2, 0.8, 0]), HR, [3.35, 3.3, 3.1], PART.helmet, 3);
+    // Cheek guards & T-crest
+    ellipsoid(atH([0.6, 3.1, 0]), HR, [2.2, 1.1, 0.9], PART.helmet, 6);
+    sweep(atH([-0.5, 4.1, 0]), atH([-4.4, 2.8, -0.4]), 1.4, 0.8, PART.helmet, 6);
+  } else if (hg === "wizard_hat") {
+    ellipsoid(atH([-0.1, 2.0, 0]), HR, [5.1, 0.9, 5.1], PART.helmet, 3);
+    sweep(atH([0, 2.2, 0]), atH([-2.6, 8.2, -0.4]), 3.0, 0.6, PART.helmet, 3);
+    ellipsoid(atH([-0.2, 2.8, 0]), HR, [2.7, 0.75, 2.7], PART.helmet, 6);
+  } else if (hg === "assassin_hood") {
+    ellipsoid(atH([-0.4, 0.7, 0]), HR, [3.4, 3.5, 3.1], PART.helmet, 3);
+    sweep(atH([-2.0, 2.0, 0]), atH([-4.8, 0.8, 0]), 1.6, 0.6, PART.helmet, 3);
+    // Lower face scarf mask
+    ellipsoid(atH([1.2, -1.6, 0]), HR, [2.2, 1.5, 2.2], PART.helmet, 6);
+  } else if (hg === "tinker_goggles") {
+    ellipsoid(atH([-0.6, 1.3, -0.2]), HR, [3.0, 2.3, 2.9], PART.hair, 7);
+    ellipsoid(atH([0.2, 1.4, 0]), HR, [3.2, 0.95, 3.0], PART.helmet, 3);
+    const gL = atH([2.5, 1.3, 1.1]), gR = atH([2.5, 1.3, -1.0]);
+    sphere(gL, 1.05, PART.helmet, 2, th.eye || WCOL.gold);
+    sphere(gR, 1.05, PART.helmet, 2, th.eye || WCOL.gold);
+    sweep(atH([-1.4, 2.4, -2.0]), atH([-2.2, 5.4, -2.2]), 0.45, 0.45, PART.helmet, 6);
+    addGlow(gL, th.eye || WCOL.gold, 4);
+  } else if (hg === "halo_crown") {
+    ellipsoid(atH([-0.5, 1.2, 0]), HR, [3.1, 2.4, 2.9], PART.hair, 7);
+    const haloPos = atH([-0.4, 5.2, 0]);
+    for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
+      const pt = [haloPos[0] + Math.cos(a) * 3.0, haloPos[1], haloPos[2] + Math.sin(a) * 2.4];
+      sphere(pt, 0.75, PART.helmet, 2, th.mark || WCOL.gold);
+    }
+    addGlow(haloPos, th.mark || WCOL.gold, 7);
+  }
+
+  // Eyes / Glowing Visor slit on face front
+  if (mv(HR, [1, 0, 0])[2] > -0.25 && th.eye) {
+    const e1 = atH([2.6, 0.0, 1.0]);
+    const e2 = atH([2.7, 0.0, -0.7]);
+    if (hg === "plume_helm") {
+      sweep(e1, e2, 0.7, 0.7, PART.helmet, 2, 0, th.eye);
+    } else if (hg !== "tinker_goggles") {
+      sphere(e1, 0.75, PART.face, 2, th.eye);
+      sphere(e2, 0.75, PART.face, 2, th.eye);
+    }
+    addGlow(e1, th.eye, 3.5);
+  }
+
+  // Offhand Kite Shield (Prism Knight when armed)
+  if (th.shielded) {
+    const shPos = B.foreF.t;
+    const shR = B.chest.R;
+    ellipsoid(add(shPos, [1.2, 0.2, -1.2]), shR, [1.3, 4.3, 3.6], PART.shield, 8);
+    sphere(add(shPos, [2.0, 0.3, -0.4]), 1.2, PART.shield, 2, th.mark || WCOL.hi);
+  }
+}
+
 // ---- flat tones, seams, and one clean ink line
 function finish(S, restFrames) {
+  const th = ACTIVE_THEME || EMPTY_THEME;
+  const inkCol = th.ink ?? INK;
+  const seamCol = th.seam ?? SEAM;
+  const markCol = th.mark ?? MARK;
+  const mats = [
+    th.shell || SHELL,
+    th.core || CORE,
+    null,
+    th.head || th.shell || SHELL,
+    th.face || th.head || SHELL,
+    th.boots || th.shell || SHELL,
+    th.cloak || th.core || CORE,
+    th.hair || th.core || CORE,
+    th.shield || th.head || SHELL,
+  ];
   const dim = (part) => part >= PART.upperF && part <= PART.handF ? 1 : part >= PART.thighF && part <= PART.footF ? 1 : 0;
   const toneOf = (v, part) => {
     let t = v > 0.8 ? 0 : v > 0.42 ? 1 : v > 0.08 ? 2 : 3;
@@ -377,7 +533,8 @@ function finish(S, restFrames) {
   }
   for (const i of touched) {
     if (Mat[i] === 2) continue;
-    Col[i] = (Mat[i] === 1 ? CORE : SHELL)[tones.get(i)];
+    const rampArr = mats[Mat[i]] || mats[0];
+    Col[i] = rampArr[tones.get(i)];
   }
   // where two parts meet: a soft seam if they touch, ink if one stands in front of the other
   const marks = new Map();
@@ -387,26 +544,30 @@ function finish(S, restFrames) {
       if (Part[j] === 0 || Part[j] === Part[i]) continue;
       const far = Zb[i] < Zb[j] ? i : j, dz = Math.abs(Zb[i] - Zb[j]), steel = Mat[i] === 2 || Mat[j] === 2;
       if (Mat[far] === 2 && dz < 1) continue;
-      const ink = steel || dz > 2.2;
-      if (ink) marks.set(far, INK);
-      else if (!marks.has(far)) marks.set(far, SEAM);
+      const ink = steel || dz > 2.0 * renderScale;
+      if (ink) marks.set(far, inkCol);
+      else if (!marks.has(far)) marks.set(far, seamCol);
     }
   }
   for (const [i, c] of marks) Col[i] = c;
   // the mark on his chest, when it's facing us
-  const { B } = S, chestAt = add(B.chest.t, mv(B.chest.R, [3, 1.6, -1.8]));
+  const { B } = S, chestAt = sc3(add(B.chest.t, mv(B.chest.R, [3, 1.6, -1.8])));
   if (mv(B.chest.R, [1, 0, 0])[2] > 0.15) {
-    const i = (OY - Math.round(chestAt[1])) * BW + (OX + Math.round(chestAt[0]));
-    if (Part[i] === PART.chest) Col[i] = MARK;
+    const ci = (OY - Math.round(chestAt[1])) * BW + (OX + Math.round(chestAt[0]));
+    if (Part[ci] === PART.chest) {
+      Col[ci] = markCol;
+      if (COLLECT_GLOWS) COLLECT_GLOWS.push({ x: chestAt[0], y: -chestAt[1], color: markCol, radius: 4 * renderScale });
+    }
   }
   // the outline, and everything into a small list of pixels
   const list = touched.slice(), ring = new Map();
   for (const i of list) for (const d of [-1, 1, -BW, BW]) { const j = i + d; if (Part[j] === 0 && !ring.has(j)) ring.set(j, i); }
-  const n = list.length + ring.size, out = { n, xs: new Int16Array(n), ys: new Int16Array(n), color: new Uint32Array(n), src: new Int16Array(n), ink: new Uint8Array(n), x0: 0, y0: 0, x1: 0, y1: 0 };
+  const n = list.length + ring.size, out = { n, xs: new Int16Array(n), ys: new Int16Array(n), color: new Uint32Array(n), src: new Int16Array(n), ink: new Uint8Array(n), x0: 0, y0: 0, x1: 0, y1: 0, glows: COLLECT_GLOWS || [] };
+  const invScale = renderScale === 1 ? 1 : 1 / renderScale;
   const srcFor = (i) => {
     const f = Fr[i];
     if (f < 0 || !restFrames) return -1;
-    const name = FRAME_IDS[f], A = B[name], R0 = restFrames[name], wx = (i % BW) - OX, wy = OY - ((i / BW) | 0), P = [wx, wy, Zb[i]];
+    const name = FRAME_IDS[f], A = B[name], R0 = restFrames[name], wx = ((i % BW) - OX) * invScale, wy = (OY - ((i / BW) | 0)) * invScale, P = [wx, wy, Zb[i] * invScale];
     const lp = tv(A.R, sub(P, A.t)), rp = add(R0.t, mv(R0.R, lp)), c = Math.round(rp[0]) + 12, r = 38 - Math.round(rp[1]);
     return c < 0 || r < 0 || c >= W0 || r >= H0 ? -1 : r * W0 + c;
   };
@@ -417,8 +578,8 @@ function finish(S, restFrames) {
     if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
     k++;
   };
-  for (const i of list) push(i, Col[i], srcFor(i), Col[i] === INK);
-  for (const [j, i] of ring) push(j, INK, srcFor(i), true);
+  for (const i of list) push(i, Col[i], srcFor(i), Col[i] === inkCol);
+  for (const [j, i] of ring) push(j, inkCol, srcFor(i), true);
   let zs = 0;
   for (const i of list) zs += Zb[i];
   Object.assign(out, { x0, y0, x1, y1, z: list.length ? zs / list.length : 0 });
@@ -436,25 +597,41 @@ const turnAll = (S, a) => {
   S.axis = P(S.axis); S.side = P(S.side);
 };
 let REST_FRAMES = null;
-function render(pose) {
-  const S = solve(pose), q = S.q, whole = (q.yaw ?? 0) + (q.face === -1 ? Math.PI : 0);
-  if (whole) turnAll(S, whole);
-  const air = (q.y ?? 0) < -0.5;
-  clipBody = !air;
-  clipWeapon = !air;
-  drawBody(S);
-  clipBody = false;
-  if (S.W) S.W.draw(along(S.armN.end, S.axis, S.side, PART.weapon), q, S.armF.end);
-  if (S.OW) {
-    const sb = q.sb ?? Math.PI;
-    let ax = [Math.cos(sb), -Math.sin(sb), 0], sd = [-Math.sin(sb), -Math.cos(sb), 0];
-    if (whole) { const R = rotY(-whole); ax = mv(R, ax); sd = mv(R, sd); }
-    S.OW.draw(along(S.armF.end, ax, sd, PART.offWeapon), q, S.armF.end);
+function render(pose, theme = EMPTY_THEME, scale = 1) {
+  ACTIVE_THEME = theme || EMPTY_THEME;
+  WCOL = ACTIVE_THEME.weaponColors ? { ...STEEL, ...ACTIVE_THEME.weaponColors } : STEEL;
+  renderScale = scale || 1;
+  COLLECT_GLOWS = theme && theme !== EMPTY_THEME ? [] : null;
+  try {
+    const S = solve(pose), q = S.q, whole = (q.yaw ?? 0) + (q.face === -1 ? Math.PI : 0);
+    if (whole) turnAll(S, whole);
+    const air = (q.y ?? 0) < -0.5;
+    clipBody = !air;
+    clipWeapon = !air;
+    drawBody(S);
+    if (ACTIVE_THEME !== EMPTY_THEME) drawExtras(S);
+    clipBody = false;
+    if (S.W) S.W.draw(along(S.armN.end, S.axis, S.side, PART.weapon), q, S.armF.end);
+    if (S.OW) {
+      const sb = q.sb ?? Math.PI;
+      let ax = [Math.cos(sb), -Math.sin(sb), 0], sd = [-Math.sin(sb), -Math.cos(sb), 0];
+      if (whole) { const R = rotY(-whole); ax = mv(R, ax); sd = mv(R, sd); }
+      S.OW.draw(along(S.armF.end, ax, sd, PART.offWeapon), q, S.armF.end);
+    }
+    clipWeapon = false;
+    return finish(S, REST_FRAMES);
+  } finally {
+    ACTIVE_THEME = EMPTY_THEME;
+    WCOL = STEEL;
+    renderScale = 1;
+    COLLECT_GLOWS = null;
   }
-  clipWeapon = false;
-  return finish(S, REST_FRAMES);
 }
 REST_FRAMES = solve({}).B;
+
+export function posedStyled(pose, theme = {}, scale = 1) {
+  return render(pose, theme, scale);
+}
 
 const CACHE = new Map();
 const keyOf = (p) => {

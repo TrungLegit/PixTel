@@ -1,6 +1,6 @@
 import type { ClassId, EquipSlot, ItemDef, ItemIconKind, ItemInstance } from "../data/types";
 import { drawCodixelIcon } from "./codixelAtlas";
-import { drawPaperDollHero } from "./paperDoll";
+import { drawPixelfxHero } from "./pixelfxHeroModels";
 
 // 16x16 pixel silhouettes for crisp procedural 16-bit icons
 // Legend: k=#100c18 (dark outline), m=primary color, a=accent highlight, w=#ffffff, t=wood/leather
@@ -406,9 +406,8 @@ export function drawEquippedHeroPreview(
   for (let gx = 0; gx < w; gx += 12) ctx.fillRect(gx, 0, 1, h);
   for (let gy = 0; gy < h; gy += 12) ctx.fillRect(0, gy, w, 1);
 
-  const scale = 4;
   const centerX = Math.round(w / 2);
-  const footY = Math.round(h - 14);
+  const footY = Math.round(h - 10);
 
   ctx.fillStyle = "#262242";
   ctx.fillRect(centerX - 24, footY, 48, 6);
@@ -428,12 +427,13 @@ export function drawEquippedHeroPreview(
     }
   }
 
-  drawPaperDollHero(ctx, {
+  drawPixelfxHero(ctx, {
     classId,
     equipment,
     x: centerX,
-    y: footY,
-    scale,
+    y: h - 10,
+    rigScale: 0.68,
+    drawScale: 2,
     walkFrame,
     facing,
     facingDir: facing < 0 ? "left" : "right",

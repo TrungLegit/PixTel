@@ -185,6 +185,7 @@ export class WorldSpawner {
           vx: 0,
           vy: 0,
           facing: 1,
+          facingDir: "down",
           radius: edef.radius,
           hp: edef.maxHp,
           maxHp: edef.maxHp,
@@ -203,6 +204,16 @@ export class WorldSpawner {
           phase: 1,
           hitFlash: 0,
           walkTime: Math.random() * 5,
+          animKind: "idle",
+          animTime: 0,
+          animDuration: 0.4,
+          animAngle: 0,
+          animImpactDone: false,
+          dashVx: 0,
+          dashVy: 0,
+          dashTime: 0,
+          guardTime: 0,
+          skillCycle: 0,
           element: null,
           elementTime: 0,
           reactionIcd: 0,
@@ -265,6 +276,13 @@ export class WorldSpawner {
       boss.y = boss.homeY;
       boss.vx = 0;
       boss.vy = 0;
+      boss.facingDir = "down";
+      boss.animKind = "idle";
+      boss.animTime = 0;
+      boss.animImpactDone = false;
+      boss.dashTime = 0;
+      boss.guardTime = 0;
+      boss.skillCycle = 0;
       boss.bleachShield = edef?.bleachShield ? Math.round(edef.bleachShield * 0.4) : 0;
       boss.bossSummonedAdds = false;
       boss.element = null;

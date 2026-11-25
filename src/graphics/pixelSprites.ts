@@ -3,6 +3,7 @@ import type { PixelfxActor } from "../vfx/pixelfxTypes";
 import { BIOME_CONFIGS } from "../data/worldConfig";
 import type { BiomeId, ClassId, HeroVisualLoadout } from "../data/types";
 import { buildAllNpcSprites, buildDynamicHeroFrames } from "./heroSprites";
+import { getPixelfxHeroCompiled } from "./pixelfxHeroModels";
 import { buildRichBuildings, buildRichInteractables, buildRichTileSet, type RichTileSet } from "./worldSprites";
 
 export type TileSet = RichTileSet;
@@ -687,9 +688,7 @@ class PixelSpriteAtlas {
 
   getHero(id: ClassId, frame = 0): CompiledSprite {
     this.init();
-    const list = this.heroes[id];
-    const idx = ((Math.floor(frame) % list.length) + list.length) % list.length;
-    return list[idx];
+    return getPixelfxHeroCompiled(id, frame);
   }
 
   getHeroDynamic(id: ClassId, loadout: HeroVisualLoadout, frame = 0): CompiledSprite {

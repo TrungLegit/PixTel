@@ -50,7 +50,7 @@ function bootstrap() {
         const npcId = (payload as { npcId?: string } | undefined)?.npcId ?? "npc_elder";
         dialogue.show(npcId);
       } else if (modal === "inventory") {
-        inventory.show();
+        inventory.show(payload as { quickSell?: boolean } | undefined);
       } else if (modal === "forge") {
         forge.show();
       } else if (modal === "world_map") {

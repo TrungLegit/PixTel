@@ -111,7 +111,7 @@ export class DialogueModalUI {
       }
       html += `
         <div class="npc-action-row">
-          <button class="px-btn warn" data-action="sell-common">Bán Nhanh Toàn Bộ Trang Bị Thường (Trắng) Trong Túi</button>
+          <button class="px-btn warn" data-action="open-quicksell">💰 MỞ BÁN NHANH (CHỌN ĐỒ KHÁC CLASS &amp; ĐỒ DƯ)</button>
         </div>
       `;
     }
@@ -141,6 +141,16 @@ export class DialogueModalUI {
               ? def.dialogueActive
               : def.dialogueStart;
 
+        const qCat = def.category ?? (def.isMain ? "main" : "bounty");
+        const qTagClass = qCat === "main" ? "main" : qCat === "side" ? "side-chain" : "side";
+        const qTagLabel = qCat === "main" ? "CHÍNH TUYẾN" : qCat === "side" ? "NHIỆM VỤ PHỤ" : "TRUY NÃ";
+        const metaHint = [
+          def.chainName,
+          def.recommendedLevel ? `LV.${def.recommendedLevel}` : "",
+        ]
+          .filter(Boolean)
+          .join(" · ");
+
         const btnHtml =
           state === "completable"
             ? `<button class="px-btn good" data-turnin="${def.id}">★ TRẢ NHIỆM VỤ & NHẬN THƯỞNG</button>`
@@ -150,9 +160,10 @@ export class DialogueModalUI {
 
         html += `
           <div class="quest-card state-${state}">
+            ${metaHint ? `<div class="quest-chain-hint">${metaHint}</div>` : ""}
             <div class="quest-card-top">
               <div>
-                <span class="quest-tag ${def.isMain ? "main" : "side"}">${def.isMain ? "CHÍNH TUYẾN" : "TRUY NÃ"}</span>
+                <span class="quest-tag ${qTagClass}">${qTagLabel}</span>
                 <b>${def.title}</b>
               </div>
               ${btnHtml}
@@ -201,26 +212,10 @@ export class DialogueModalUI {
       });
     });
 
-    this.bodyEl.querySelectorAll("[data-action='sell-common']").forEach((el) => {
+    this.bodyEl.querySelectorAll("[data-action='open-quicksell']").forEach((el) => {
       el.addEventListener("click", () => {
-        let earned = 0;
-        let sold = 0;
-        const commons = this.game.inv.bag.filter((b) => {
-          const d = ITEMS[b.defId];
-          return d && d.category === "equipment" && d.rarity === "common" && b.enhanceLevel === 0;
-        });
-        for (const it of commons) {
-          earned += this.game.inv.sellBagItem(it.uid);
-          sold++;
-        }
-        if (sold > 0) {
-          sfx.playBuy();
-          this.game.uiToast(`Đã bán ${sold} trang bị Thường, thu về +${earned} G!`, "good");
-          this.game.refreshHud();
-          this.render();
-        } else {
-          this.game.uiToast("Không có trang bị Thường (+0) nào trong túi để bán.", "info");
-        }
+        sfx.playUiClick();
+        this.game.setModal("inventory", { quickSell: true });
       });
     });
 

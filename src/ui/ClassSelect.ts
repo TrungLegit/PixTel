@@ -1,6 +1,6 @@
 import { CLASSES } from "../data/classes";
 import type { ClassId } from "../data/types";
-import { sprites } from "../graphics/pixelSprites";
+import { drawPixelfxHero, getClassShowcaseEquipment, getPixelfxHeroCompiled, type HeroAttackKind } from "../graphics/pixelfxHeroModels";
 import { createFrame, clearFrame, createFx, PAL } from "../vfx/pixelfx/core/index.js";
 import { PIXELFX_MODS } from "../vfx/vfxManager";
 import type { PixelfxFrame, PixelfxInstance } from "../vfx/pixelfxTypes";
@@ -105,7 +105,7 @@ export class ClassSelectUI {
 
       card.innerHTML = `
         <div class="class-card-head">
-          <canvas class="class-sprite-cv" width="48" height="48"></canvas>
+          <canvas class="class-sprite-cv" width="84" height="68"></canvas>
           <div class="class-card-meta">
             <div class="class-name" style="color:${cls.accent}">${cls.name}</div>
             <div class="class-vn">${cls.vnName}</div>
@@ -239,7 +239,7 @@ export class ClassSelectUI {
     } else if (p.classId === "chroma_mage") {
       p.fx = createFx(mod, { x: 72, y: 36, radius: 24, seed: 11 });
     } else if (p.classId === "bit_rogue") {
-      p.fx = createFx(mod, { x: 72, y: 46, actor: sprites.getHero("bit_rogue", 0).actor, seed: 19 });
+      p.fx = createFx(mod, { x: 72, y: 52, actor: getPixelfxHeroCompiled("bit_rogue", 0).actor, seed: 19 });
     } else {
       p.fx = createFx(mod, { x: 72, y: 46, seed: 23 });
     }
@@ -248,14 +248,15 @@ export class ClassSelectUI {
   private _tickPreviews(dt: number) {
     this.animT += dt;
     const frameIdx = Math.floor(this.animT * 5) % 4;
+    const previewAttackKind: Record<ClassId, HeroAttackKind> = {
+      prism_knight: "beam",
+      chroma_mage: "cast_heavy",
+      bit_rogue: "spin",
+      pixel_tinker: "shoot_heavy",
+    };
 
     for (const p of this.previews) {
-      // Animated 24x24 high-craft Hero sprite scaled cleanly 2x -> 48x48
-      p.spriteCtx.clearRect(0, 0, 48, 48);
-      const sp = sprites.getHero(p.classId, frameIdx);
-      p.spriteCtx.drawImage(sp.right, 0, 0, sp.w, sp.h, 0, 0, 48, 48);
-
-      // Live pixelfx two-buffer preview
+      // Live pixelfx two-buffer preview (ticked first so hero anim locks directly to p.fx.t)
       if (!p.fx) {
         p.cooldown -= dt;
         if (p.cooldown <= 0) this._spawnPreviewFx(p);
@@ -266,6 +267,33 @@ export class ClassSelectUI {
           p.cooldown = 0.35;
         }
       }
+
+      const fxActive = Boolean(p.fx && p.fx.t < 0.62);
+      const animState = fxActive ? "attack" : "run";
+      const attackProgress = p.fx ? Math.min(1, p.fx.t / 0.58) : 0;
+
+      // Animated 3D-rigged pixelfx Class Hero showcase synchronized with p.fx!
+      p.spriteCtx.clearRect(0, 0, p.spriteCanvas.width, p.spriteCanvas.height);
+      p.spriteCtx.fillStyle = "#100e1c";
+      p.spriteCtx.fillRect(0, 0, p.spriteCanvas.width, p.spriteCanvas.height);
+      p.spriteCtx.fillStyle = "#262242";
+      p.spriteCtx.fillRect(18, 56, 48, 5);
+      p.spriteCtx.fillStyle = "#3a3561";
+      p.spriteCtx.fillRect(22, 54, 40, 3);
+      drawPixelfxHero(p.spriteCtx, {
+        classId: p.classId,
+        equipment: getClassShowcaseEquipment(p.classId),
+        x: 42,
+        y: 58,
+        rigScale: 1.0,
+        drawScale: 1,
+        walkFrame: frameIdx,
+        facing: 1,
+        animState,
+        attackKind: previewAttackKind[p.classId],
+        attackProgress,
+        time: this.animT,
+      });
 
       p.fxCtx.fillStyle = "#100e1c";
       p.fxCtx.fillRect(0, 0, p.fxCanvas.width, p.fxCanvas.height);

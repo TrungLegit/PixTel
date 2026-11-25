@@ -19,10 +19,34 @@ export const CLASS_DISPLAY_NAMES: Record<ClassId, string> = {
 };
 
 export function resolveClassReward(classId: ClassId, key: ClassRewardKey): string {
-  if (key === "starter_weapon") {
-    return STARTER_WEAPON_BY_CLASS[classId] ?? "wpn_starter";
+  switch (key) {
+    case "starter_weapon":
+      return STARTER_WEAPON_BY_CLASS[classId] ?? "wpn_starter";
+    case "meadow_weapon":
+      return classId === "chroma_mage"
+        ? "wpn_meadow_wand"
+        : classId === "bit_rogue"
+          ? "wpn_leaf_daggers"
+          : classId === "pixel_tinker"
+            ? "wpn_volt_blaster"
+            : "wpn_meadow_edge";
+    case "quartz_weapon":
+      return classId === "chroma_mage"
+        ? "wpn_chroma_scepter"
+        : classId === "bit_rogue"
+          ? "wpn_glitch_fangs"
+          : classId === "pixel_tinker"
+            ? "wpn_pulse_carbine"
+            : "wpn_prism_halberd";
+    case "amber_weapon":
+      return classId === "chroma_mage"
+        ? "wpn_amber_staff"
+        : classId === "bit_rogue"
+          ? "wpn_magma_fangs"
+          : classId === "pixel_tinker"
+            ? "wpn_thermal_repeater"
+            : "wpn_amber_fury";
   }
-  return "wpn_starter";
 }
 
 export function canClassEquip(def: ItemDef, classId: ClassId): boolean {

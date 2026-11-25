@@ -16,10 +16,12 @@ import {
 } from "./data/worldConfig";
 import type { ActiveBossLock, BiomeId, ClassId, LoreTabletDef, SaveDataV2, StatAllocKey, WaypointDef } from "./data/types";
 import { ColorRestorationSystem } from "./graphics/colorRestoration";
+import { drawCodixelEnemy, getCodixelEnemySize } from "./graphics/enemyAtlas";
 import {
   drawPaperDollHero,
   getWeaponAnchorOffset,
   type HeroAnimState,
+  type HeroAttackKind,
 } from "./graphics/paperDoll";
 import { sprites } from "./graphics/pixelSprites";
 import { drawItemIcon } from "./graphics/itemIcons";
@@ -197,6 +199,9 @@ export class PixTelOpenWorldGame {
       elementIdx: 0,
       walkTime: 0,
       attackAnimTime: 0,
+      attackAnimDuration: 0.24,
+      attackAnimKind: "slash_1",
+      attackAnimAngle: 0,
       staminaCostPct: 0,
       poiseBreakPct: 0,
       skillCdPct: 0,
@@ -1095,8 +1100,8 @@ export class PixTelOpenWorldGame {
       const len = Math.hypot(mx, my);
       mx /= len;
       my /= len;
-      if (Math.abs(mx) > 0.1) p.facing = mx < 0 ? -1 : 1;
       if (p.attackAnimTime <= 0 && !p.charging) {
+        if (Math.abs(mx) > 0.1) p.facing = mx < 0 ? -1 : 1;
         if (Math.abs(mx) >= Math.abs(my)) {
           p.facingDir = mx < 0 ? "left" : "right";
         } else {
@@ -1188,11 +1193,14 @@ export class PixTelOpenWorldGame {
     if (this.mouseDown) {
       p.charging = true;
       p.chargeTime += dt;
+      if (p.chargeTime > 0.12 && p.attackAnimTime <= 0) {
+        p.facing = Math.cos(p.aimAngle) < 0 ? -1 : 1;
+      }
       if (p.chargeTime > reqCharge * 0.85 && Math.random() < 0.45) {
         const ang = Math.random() * Math.PI * 2;
         this.vfx.spawnPixelDot(
           p.x + Math.cos(ang) * 14,
-          p.y - 4 + Math.sin(ang) * 14,
+          p.y - 13 + Math.sin(ang) * 14,
           -Math.cos(ang) * 35,
           -Math.sin(ang) * 35,
           isJustWindow ? "#ffffff" : p.chargeTime >= reqCharge ? "#ffe066" : "#4be8ff",
@@ -1218,10 +1226,10 @@ export class PixTelOpenWorldGame {
     if (isHighTierWeapon || wpnLv >= 5) {
       const bleachedHere = !this.colorSys.isWorldPosRestored(p.x, p.y);
       const animState: HeroAnimState =
-        p.dashing > 0
-          ? "dash"
-          : p.attackAnimTime > 0
-            ? "attack"
+        p.stormTime > 0 || p.attackAnimTime > 0
+          ? "attack"
+          : p.dashing > 0
+            ? "dash"
             : p.charging && p.chargeTime > 0.12
               ? "charge"
               : moving
@@ -1352,10 +1360,11 @@ export class PixTelOpenWorldGame {
     // 1. Viewport-culled 16-bit Tilemap Ground
     this.tileRenderer.drawVisibleGround(ctx, this.world, this.colorSys, camX, camY, VIEW_W, VIEW_H, this.time);
 
-    // 1b. Persistent Ground Fields (Acid Pool, Flame Trail, Bleach Zone, Null Frost, Chroma Bloom!)
+    // 1b. Persistent Ground Fields (Acid Pool, Moss Pool, Flame Trail, Bleach Zone, Null Frost, Chroma Bloom!)
     for (const h of this.hazards) {
       if (
         h.kind !== "acid_pool" &&
+        h.kind !== "moss_pool" &&
         h.kind !== "flame_trail" &&
         h.kind !== "bleach_zone" &&
         h.kind !== "null_frost" &&
@@ -1368,7 +1377,7 @@ export class PixTelOpenWorldGame {
       if (sx < -48 || sy < -48 || sx > VIEW_W + 48 || sy > VIEW_H + 48) continue;
       const r = Math.round(h.radius * 0.65);
       ctx.fillStyle =
-        h.kind === "acid_pool"
+        h.kind === "acid_pool" || h.kind === "moss_pool"
           ? "rgba(46, 204, 102, 0.35)"
           : h.kind === "flame_trail"
             ? "rgba(255, 110, 34, 0.38)"
@@ -1379,7 +1388,7 @@ export class PixTelOpenWorldGame {
                 : "rgba(220, 228, 242, 0.36)";
       ctx.fillRect(sx - r, sy - Math.round(r * 0.55), r * 2, Math.round(r * 1.1));
       ctx.fillStyle =
-        h.kind === "acid_pool"
+        h.kind === "acid_pool" || h.kind === "moss_pool"
           ? "#66ff88"
           : h.kind === "flame_trail"
             ? "#ffee55"
@@ -1721,25 +1730,137 @@ export class PixTelOpenWorldGame {
     for (const e of this.spawner.enemies) {
       const sx = Math.round(e.x - camX);
       const sy = Math.round(e.y - camY);
-      if (sx < -36 || sy < -40 || sx > VIEW_W + 36 || sy > VIEW_H + 40) continue;
+      if (sx < -56 || sy < -56 || sx > VIEW_W + 56 || sy > VIEW_H + 56) continue;
       drawList.push({
         y: e.y,
         draw: () => {
           const frame = Math.floor(e.walkTime * 5) & 1;
           const sp = sprites.getEnemy(e.defId, frame);
-          ctx.fillStyle = "rgba(0,0,0,0.38)";
-          const sw = e.isBoss ? 22 : 10;
-          ctx.fillRect(Math.round(sx - sw / 2), sy - 1, sw, 3);
+          const atlasSz = getCodixelEnemySize(e.defId);
+          const isMoving =
+            e.dashTime > 0 ||
+            (e.stunTime <= 0 &&
+              e.rootTime <= 0 &&
+              (e.state === "leash" ||
+                (e.state === "patrol" && Math.hypot(e.patrolTargetX - e.x, e.patrolTargetY - e.y) >= 6) ||
+                (e.state === "aggro" && Math.hypot(this.player.x - e.x, this.player.y - e.y) > e.radius + this.player.radius + 3)));
 
-          const img =
-            e.hitFlash > 0
-              ? e.facing < 0
-                ? sp.whiteLeft
-                : sp.whiteRight
-              : e.facing < 0
-                ? sp.left
-                : sp.right;
-          ctx.drawImage(img, Math.round(sx - sp.w / 2), Math.round(sy - sp.h));
+          const animProgress =
+            e.animTime > 0
+              ? Math.min(1, Math.max(0, 1 - e.animTime / Math.max(0.05, e.animDuration)))
+              : 0;
+          const animKind = e.animTime > 0 ? e.animKind : "idle";
+          const drewAtlas = drawCodixelEnemy(ctx, {
+            defId: e.defId,
+            uid: e.uid,
+            x: sx,
+            y: sy,
+            facingDir: e.facingDir,
+            animKind,
+            animProgress,
+            animAngle: e.animAngle,
+            walkTime: e.walkTime,
+            isMoving,
+            isBoss: e.isBoss,
+            hitFlash: e.hitFlash > 0,
+            guardTime: e.guardTime,
+            dashTime: e.dashTime,
+            dashVx: e.dashVx,
+            dashVy: e.dashVy,
+            time: this.time,
+          });
+          if (!drewAtlas) {
+            const img =
+              e.hitFlash > 0
+                ? e.facing < 0
+                  ? sp.whiteLeft
+                  : sp.whiteRight
+                : e.facing < 0
+                  ? sp.left
+                  : sp.right;
+            const cs = Math.cos(e.animAngle);
+            const sn = Math.sin(e.animAngle);
+            const isFloater =
+              e.defId === "cinder_imp" || e.defId === "void_wraith" || e.defId === "boss_the_eraser";
+            let ox = 0;
+            let oy = isFloater ? Math.round(Math.sin(this.time * 4.5 + e.uid) * 2.5) : 0;
+            let sX = 1;
+            let sY = 1;
+            if (!isFloater && !isMoving && animKind === "idle") {
+              const b = Math.sin(this.time * 3.5 + e.uid);
+              sX = 1 - b * 0.03;
+              sY = 1 + b * 0.035;
+            }
+            if (animKind === "molten_slam" || animKind === "void_slam") {
+              if (animProgress < 0.32) {
+                const k = animProgress / 0.32;
+                sX = 1 + 0.16 * k;
+                sY = 1 - 0.14 * k;
+              } else if (animProgress < 0.72) {
+                const arc = Math.sin(((animProgress - 0.32) / 0.4) * Math.PI);
+                oy -= Math.round(arc * 14);
+                sX = 0.92;
+                sY = 1.12;
+              } else {
+                const k = 1 - (animProgress - 0.72) / 0.28;
+                sX = 1 + 0.25 * k;
+                sY = 1 - 0.22 * k;
+              }
+            } else if (
+              animKind === "ember_cast" ||
+              animKind === "ember_volley" ||
+              animKind === "void_barrage" ||
+              animKind === "erase_cast"
+            ) {
+              if (animProgress < 0.34) {
+                ox += ((Math.floor(this.time * 45) & 1) ? 1 : -1);
+                sX = 0.94;
+                sY = 1.08;
+              } else {
+                const k = 1 - (animProgress - 0.34) / 0.66;
+                ox += Math.round(cs * 3 * k);
+                oy += Math.round(sn * 2 * k);
+                sX = 1 + 0.1 * k;
+                sY = 0.94;
+              }
+            } else if (animKind === "amber_roll" || animKind === "void_blink") {
+              sX = 1.12;
+              sY = 0.9;
+            }
+            if (e.hitFlash > 0) {
+              sX *= 1.14;
+              sY *= 0.88;
+              ox += ((Math.floor(this.time * 55) + e.uid) & 1) ? 1 : -1;
+            }
+            const lift = Math.max(0, -oy) + (isFloater ? 3 : 0);
+            const sw = Math.max(6, Math.round((e.isBoss ? 24 : 12) * Math.max(0.45, 1 - lift * 0.024)));
+            ctx.fillStyle = `rgba(0,0,0,${Math.max(0.16, 0.38 - lift * 0.008).toFixed(2)})`;
+            ctx.fillRect(Math.round(sx + ox * 0.3 - sw / 2), sy - 1, sw, 3);
+
+            if (e.dashTime > 0 && e.hitFlash <= 0) {
+              const baseImg = e.facing < 0 ? sp.left : sp.right;
+              const dLen = Math.hypot(e.dashVx, e.dashVy) || 1;
+              for (let g = 2; g >= 1; g--) {
+                ctx.save();
+                ctx.globalAlpha = g === 1 ? 0.35 : 0.18;
+                ctx.imageSmoothingEnabled = false;
+                ctx.translate(
+                  Math.round(sx + ox - (e.dashVx / dLen) * g * 5),
+                  Math.round(sy + oy - (e.dashVy / dLen) * g * 4)
+                );
+                ctx.scale(sX, sY);
+                ctx.drawImage(baseImg, -sp.w / 2, -sp.h);
+                ctx.restore();
+              }
+            }
+
+            ctx.save();
+            ctx.imageSmoothingEnabled = false;
+            ctx.translate(Math.round(sx + ox), Math.round(sy + oy));
+            ctx.scale(sX, sY);
+            ctx.drawImage(img, -sp.w / 2, -sp.h);
+            ctx.restore();
+          }
 
           // Cryo-Root vines at enemy feet (image_3 / image_4)
           if (e.rootTime > 0) {
@@ -1751,7 +1872,8 @@ export class PixTelOpenWorldGame {
           }
 
           // Elemental status pip above enemy (supports all 9 elements!)
-          const topY = sy - sp.h;
+          const spriteH = drewAtlas && atlasSz ? atlasSz.h : sp.h;
+          const topY = sy - spriteH;
           if (e.element) {
             ctx.fillStyle = "#100c18";
             ctx.fillRect(sx - 3, topY - 11, 6, 5);
@@ -1833,15 +1955,25 @@ export class PixTelOpenWorldGame {
         this.keys.has("ArrowLeft") ||
         this.keys.has("ArrowRight");
       const heroAnim: HeroAnimState =
-        p.dashing > 0
-          ? "dash"
-          : p.attackAnimTime > 0
-            ? "attack"
+        p.stormTime > 0 || p.attackAnimTime > 0
+          ? "attack"
+          : p.dashing > 0
+            ? "dash"
             : p.charging && p.chargeTime > 0.12
               ? "charge"
               : isMovingNow
                 ? "run"
                 : "idle";
+      const activeAttackKind: HeroAttackKind =
+        p.stormTime > 0 ? "storm" : p.attackAnimKind;
+      const activeAttackProgress =
+        p.stormTime > 0
+          ? (this.time * 2.2) % 1
+          : Math.min(
+              1,
+              Math.max(0, 1 - p.attackAnimTime / Math.max(0.05, p.attackAnimDuration))
+            );
+      const activeAimAngle = p.attackAnimTime > 0 ? p.attackAnimAngle : p.aimAngle;
       const reqCharge = p.quickChargeTimer > 0 ? 0.26 : 0.38;
       const chargePct = p.charging ? Math.min(1, p.chargeTime / reqCharge) : 0;
       const inJustWindow =
@@ -1867,6 +1999,10 @@ export class PixTelOpenWorldGame {
               facing: p.facing,
               facingDir: p.facingDir,
               animState: heroAnim,
+              attackKind: activeAttackKind,
+              attackProgress: activeAttackProgress,
+              aimAngle: activeAimAngle,
+              shieldGuard: p.shieldTime > 0,
               bleached: heroBleached,
               time: this.time,
             });
@@ -1903,6 +2039,10 @@ export class PixTelOpenWorldGame {
               facing: p.facing,
               facingDir: p.facingDir,
               animState: heroAnim,
+              attackKind: activeAttackKind,
+              attackProgress: activeAttackProgress,
+              aimAngle: activeAimAngle,
+              shieldGuard: p.shieldTime > 0,
               hitFlash: p.hitFlash > 0,
               bleached: heroBleached,
               time: this.time,

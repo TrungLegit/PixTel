@@ -1,34 +1,34 @@
 # Project Brain Index
-*Generated: 2026-11-25T11:05:19.622223+00:00*
+*Generated: 2026-11-25T12:44:58.272636+00:00*
 
 ## Description
 > **Thế giới mở 16-Bit Action RPG trên trình duyệt** — Chiến đấu thời gian thực, đánh thức các **Trụ Sắc Màu**, khôi phục bảng màu 16-bit cho vùng đất bị **Nhiễu Trắng** và đánh bại **The Eraser**.
 
 ## Main Modules
-- **src/** (153 files)
+- **src/** (159 files)
 - **.agents/** (38 files)
 - **(root)/** (12 files)
+- **scripts/** (2 files)
 - **.github/** (1 files)
-- **scripts/** (1 files)
 
 ## Central Nodes
-- `file:tests/featureTests.ts` (file, 26 links): Expanded automated test suite to 7 suites covering both v2.6 9-element mechanics and hardcore RPG bare-hand/class-lock/matrix-forge/stat-alloc/boss-seal mechanics.
+- `file:src/vfx/vfxManager.ts` (file, 79 links): Registered 4 new pixelfx modules (sonic-wave, leaf-storm, rainbow-burst, hex-shield) and 10 color-matched enemy presets (ground-slam-nature/fire/void, dirt-puff, parry-cyan/poison, muzzle-poison/fire/void, proj-emerald).
+- `file:src/game.ts` (file, 65 links): Passed isMoving/isBoss to drawCodixelEnemy and added animated breathing, jump/slam arcs, cast recoil, hit-shiver, dynamic shadows, and dash afterimages for non-atlas Amber/Ruins monsters.
+- `file:src/data/types.ts` (file, 51 links): Added mini_root_golem and mini_quartz_knight AI types to EnemyDef.
+- `file:src/systems/combat.ts` (file, 42 links): Updated bit_rogue performPrimaryAttack to pure melee twin-dagger strikes (including Phantom Clone shadow melee echo) with zero projectiles on LMB tap; shuriken fan projectiles now fire exclusively on performChargedAttack.
+- `file:tests/featureTests.ts` (file, 28 links): Added assertions in Suite 9 verifying bit_rogue normal attacks (with and without Phantom Clone) spawn 0 projectiles while Charged attacks fire the proj-shuriken fan.
+- `file:src/data/worldConfig.ts` (file, 24 links): Updated Meadow & Quartz WORLD_CAMPS to spawn all 10 updated mobs, mini-bosses, and biome bosses.
 - `file:src/ui/ForgeModal.ts` (file, 21 links): Unified Rune Matrix Forge modal with 240x176 geometric animation, substat awakening, +5 8-element pigment infusion, catalyst/pity, and class-filtered crafting.
-- `file:src/graphics/heroSprites.ts` (file, 4 links): Added bleachedRight and bleachedLeft outputs to finalizeCharacter for CompiledSprite compatibility.
-- `file:src/graphics/pixelCraft.ts` (file, 4 links): Added PixelBuf.toBleachedCanvas() for v2.6 Bleach debuff sprite parity.
-- `file:src/graphics/worldSprites.ts` (file, 4 links): PixelBuf,
-- `decision:20261125101557-pixtel-v26-9element-pairwise` (decision, 4 links): Implemented all 9 canonical elements (fire, ice, nature, volt, prism, void, chroma, wind, quake) with 28 pairwise Primer+Detonator reactions and non-consuming 3-bolt homing Prismatic Refraction; upgraded Boss elemental weaknesses and The Eraser's Phase 2 Classic / Phase 3 Primord
-- `decision:20261125080500-pixelfx-highrarity-auras` (decision, 4 links): Implemented deterministic two-buffer pixelfx rarity-aura VFX across world loot + UI slots and a procedural 96x96 braided hemp rope parchment tooltip with a 72x72 showcase pedestal.
-- `decision:20261125110519-unified-pixtel-v26-with` (decision, 2 links): Merged origin/main v2.6 (9 elements, 5-slot codixel paperdoll, Aethel-16 Lore, 3-phase Eraser, Beginner Tutorial) with bare-handed start, class-locked gear, stat allocation, animated Rune Matrix Forge, Dual-Grid world tilesets, and 4-boss territory seals.
-- `decision:20261125071903-5tier-item-progression` (decision, 2 links): Built 64 24x24 codixel icons and 77 24x24 Paper-Doll overlays via codixel/core/pixel.js (hueRamp, P.band, rimLight, selout, P.Gem). Added full T1..T5 weapons per class, 2/4-pc Set Bonuses, 12 tiered consumables mapped to smart [1]-[4] hotkeys, and live 7-layer Paper-Doll hero vis
-- `bug:20261125042129-classselect-firstframe-negative-dt` (bug, 2 links): requestAnimationFrame timestamp can be slightly earlier than performance.now() on first frame, producing negative dt and negative sprite index (-1). Fixed by clamping dt >= 0.001 in ClassSelect.ts and ForgeModal.ts plus positive modulo indexing in pixelSprites.ts.
+- `file:src/world/entities.ts` (file, 19 links): Added 8 Amber/Ruins EnemyAnimKinds, animImpactDone phase latch, spawnHazardOnHit on ProjectileEntity, and vfxPreset on HazardEntity.
+- `file:src/systems/inventorySystem.ts` (file, 19 links): Added computeEquipScore, equipBestForClass, getItemSellValue, and sellMultipleFromBag for Equip Best & batch Quick Sell.
+- `file:src/graphics/paperDoll.ts` (file, 17 links): Exported HeroAttackKind and forwarded attackKind, attackProgress, aimAngle, and shieldGuard from drawPaperDollHero to drawPixelfxHero with calibrated weapon anchor heights.
 
 ## Recent Decisions
-- **Unified PIXTEL v2.6 with Hardcore RPG Overhaul** (`decision:20261125110519-unified-pixtel-v26-with`): Merged origin/main v2.6 (9 elements, 5-slot codixel paperdoll, Aethel-16 Lore, 3-phase Eraser, Beginner Tutorial) with bare-handed start, class-locked gear, stat allocation, animated Rune Matrix Forge, Dual-Grid world tilesets, and 4-boss territory seals.
-- **PIXTEL v2.6: 9-Element Pairwise Matrix, Phase 2/3 Eraser Totems, 8-Pigment Forge & 5-Tab Beginner Handbook** (`decision:20261125101557-pixtel-v26-9element-pairwise`): Implemented all 9 canonical elements (fire, ice, nature, volt, prism, void, chroma, wind, quake) with 28 pairwise Primer+Detonator reactions and non-consuming 3-bolt homing Prismatic Refraction; upgraded Boss elemental weaknesses and The Eraser's Phase 2 Classic / Phase 3 Primord
-- **PIXTEL v2.5 Aethel-16 Lore Codex, 7 Chroma Reactions, 4 Bosses & Prism Forge Pity/Infusion** (`decision:20261125092451-pixtel-v25-aethel16-lore`): Implemented Aethel-16 storyline (8 Lore Tablets, 5-Act 10-Quest campaign), Chroma Dodge/Dash-Offset/Just-Charge, 5-Element 7-Reaction matrix, Xing Warden + Bleach Shield + 3-Phase Eraser Totems, safe +0..+10 Forge Pity/+5 Pigment Infusion, and 6-suite featureTests.
-- **Pixelfx high-rarity auras & braided-rope hover review frame** (`decision:20261125080500-pixelfx-highrarity-auras`): Implemented deterministic two-buffer pixelfx rarity-aura VFX across world loot + UI slots and a procedural 96x96 braided hemp rope parchment tooltip with a 72x72 showcase pedestal.
-- **5-Tier Item Progression & codixel Paper-Doll Atlas** (`decision:20261125071903-5tier-item-progression`): Built 64 24x24 codixel icons and 77 24x24 Paper-Doll overlays via codixel/core/pixel.js (hueRamp, P.band, rimLight, selout, P.Gem). Added full T1..T5 weapons per class, 2/4-pc Set Bonuses, 12 tiered consumables mapped to smart [1]-[4] hotkeys, and live 7-layer Paper-Doll hero vis
+- **Bit Rogue Pure Melee LMB & Charged-Only Shurikens** (`decision:20261125124126-bit-rogue-pure-melee`): Removed proj-shuriken projectiles from bit_rogue performPrimaryAttack (and Phantom Clone normal attacks), boosted pure melee range/cone/multipliers + shadow melee echo, and restricted proj-shuriken fan firing exclusively to performChargedAttack.
+- **Multi-Frame Monster Animations & Biome-Matched Pixelfx VFX** (`decision:20261125123742-multiframe-monster-animations`): Upgraded all 16 map monsters and bosses with 122 crisp multi-frame pixel sprites, zero-blur movement, Amber/Ruins transform animations, landing-synced Slime leaps and moss pools, 4 bespoke pixelfx modules (sonic-wave, leaf-storm, rainbow-burst, hex-shield), emerald/fire/void grou
+- **4-Direction Monster Atlas & Synchronized Enemy Skill VFX** (`decision:20261125121555-4direction-monster-atlas`): Replaced Meadow & Quartz placeholder matrices with 40 extracted 4-direction sprites from the 10 reference sheets (codixel-enemies.png/json) paired with phase-locked skill animations, dash afterimages, shields, Painter-safe directional melee VFX, and moss_pool hazards.
+- **Attack Animation & Pixelfx VFX Synchronization** (`decision:20261125115658-attack-animation-pixelfx`): Synchronized 12fps keyframed pixelfx 3D IK hero attack poses, aim pitch, facing priority, Painter flip orientation, chest/weapon-tip VFX origins, startTime pre-warming, and Class Select card previews across bare-handed combat and all 4 classes.
+- **Pixelfx Hero Models, Selective Quick Sell, 25 Quests & Readability** (`decision:20261125113206-pixelfx-hero-models-selective`): Replaced character models with 3D-rigged pixelfx models, added Equip Best and multi-select confirmed Quick Sell, expanded to 25 Main+Side+Bounty quests, rebalanced Lv.1-19 mobs/bosses, and upgraded UI typography to Be Vietnam Pro.
 
 ## Stale Files (Need Re-reading)
 - `file:.agents/skills/project-brain/SKILL.md` (.agents/skills/project-brain/SKILL.md)
@@ -48,39 +48,41 @@
 - `file:src/assets/codixel-icons.json` (src/assets/codixel-icons.json)
 - `file:src/assets/codixel-paperdoll.json` (src/assets/codixel-paperdoll.json)
 - `file:src/audio/chiptuneSynth.ts` (src/audio/chiptuneSynth.ts)
-- `file:src/data/classes.ts` (src/data/classes.ts)
 - `file:src/data/elements.ts` (src/data/elements.ts)
-- `file:src/data/enemies.ts` (src/data/enemies.ts)
 - `file:src/data/equipments.ts` (src/data/equipments.ts)
 - `file:src/data/items.ts` (src/data/items.ts)
-- `file:src/data/lootTables.ts` (src/data/lootTables.ts)
-- `file:src/data/lore.ts` (src/data/lore.ts)
-- `file:src/data/quests.ts` (src/data/quests.ts)
 - `file:src/data/recipes.ts` (src/data/recipes.ts)
-- `file:src/data/types.ts` (src/data/types.ts)
-- `file:src/data/worldConfig.ts` (src/data/worldConfig.ts)
-- `file:src/game.ts` (src/game.ts)
 - `file:src/graphics/codixelAtlas.ts` (src/graphics/codixelAtlas.ts)
 - `file:src/graphics/colorRestoration.ts` (src/graphics/colorRestoration.ts)
 - `file:src/graphics/itemIcons.ts` (src/graphics/itemIcons.ts)
-- `file:src/graphics/paperDoll.ts` (src/graphics/paperDoll.ts)
 - `file:src/graphics/pixelSprites.ts` (src/graphics/pixelSprites.ts)
 - `file:src/graphics/ropeFrame.ts` (src/graphics/ropeFrame.ts)
 - `file:src/graphics/tileRenderer.ts` (src/graphics/tileRenderer.ts)
 - `file:src/main.ts` (src/main.ts)
-- `file:src/systems/combat.ts` (src/systems/combat.ts)
 - `file:src/systems/forgeSystem.ts` (src/systems/forgeSystem.ts)
-- `file:src/systems/inventorySystem.ts` (src/systems/inventorySystem.ts)
 - `file:src/systems/questSystem.ts` (src/systems/questSystem.ts)
 - `file:src/systems/saveSystem.ts` (src/systems/saveSystem.ts)
-- `file:src/ui/ClassSelect.ts` (src/ui/ClassSelect.ts)
 - `file:src/ui/DialogueModal.ts` (src/ui/DialogueModal.ts)
 - `file:src/ui/HUD.ts` (src/ui/HUD.ts)
-- `file:src/ui/InventoryModal.ts` (src/ui/InventoryModal.ts)
 - `file:src/ui/ItemReviewTooltip.ts` (src/ui/ItemReviewTooltip.ts)
-- `file:src/ui/QuestJournalModal.ts` (src/ui/QuestJournalModal.ts)
 - `file:src/ui/TutorialModal.ts` (src/ui/TutorialModal.ts)
 - `file:src/ui/WorldMapModal.ts` (src/ui/WorldMapModal.ts)
 - `file:src/vfx/fxAtlas.ts` (src/vfx/fxAtlas.ts)
 - `file:src/vfx/pixelfx/core/act.js` (src/vfx/pixelfx/core/act.js)
 - `file:src/vfx/pixelfx/core/actor.js` (src/vfx/pixelfx/core/actor.js)
+- `file:src/vfx/pixelfx/core/chain.js` (src/vfx/pixelfx/core/chain.js)
+- `file:src/vfx/pixelfx/core/color.js` (src/vfx/pixelfx/core/color.js)
+- `file:src/vfx/pixelfx/core/font.js` (src/vfx/pixelfx/core/font.js)
+- `file:src/vfx/pixelfx/core/fx.js` (src/vfx/pixelfx/core/fx.js)
+- `file:src/vfx/pixelfx/core/index.js` (src/vfx/pixelfx/core/index.js)
+- `file:src/vfx/pixelfx/core/math.js` (src/vfx/pixelfx/core/math.js)
+- `file:src/vfx/pixelfx/core/painter.js` (src/vfx/pixelfx/core/painter.js)
+- `file:src/vfx/pixelfx/core/particles.js` (src/vfx/pixelfx/core/particles.js)
+- `file:src/vfx/pixelfx/core/poses.js` (src/vfx/pixelfx/core/poses.js)
+- `file:src/vfx/pixelfx/core/scene.js` (src/vfx/pixelfx/core/scene.js)
+- `file:src/vfx/pixelfx/core/shapes.js` (src/vfx/pixelfx/core/shapes.js)
+- `file:src/vfx/pixelfx/core/sim.js` (src/vfx/pixelfx/core/sim.js)
+- `file:src/vfx/pixelfx/fx/arcane/_lib.js` (src/vfx/pixelfx/fx/arcane/_lib.js)
+- `file:src/vfx/pixelfx/fx/arcane/arcane-missiles.js` (src/vfx/pixelfx/fx/arcane/arcane-missiles.js)
+- `file:src/vfx/pixelfx/fx/arcane/star-fall.js` (src/vfx/pixelfx/fx/arcane/star-fall.js)
+- `file:src/vfx/pixelfx/fx/explosions/_lib.js` (src/vfx/pixelfx/fx/explosions/_lib.js)
