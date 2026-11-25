@@ -54,6 +54,7 @@
 {"created": "2026-11-25T15:03:54.153043+00:00", "dst": "decision:20261125144603-selfhosted-vietnamese-pixel-ui", "note": "", "schema_version": 1, "src": "file:.brain/nodes.jsonl", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:07:11.188224+00:00", "dst": "file:DEV_LOG.md", "note": "", "schema_version": 1, "src": "file:.github/copilot-instructions.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T15:42:53.673128+00:00", "dst": "file:package.json", "note": "", "schema_version": 1, "src": "file:.github/workflows/deploy-pages.yml", "type": "depends_on", "weight": 1.0}
+{"created": "2026-11-25T16:30:55.936132+00:00", "dst": "file:vite.config.ts", "note": "", "schema_version": 1, "src": "file:.github/workflows/deploy-pages.yml", "type": "depends_on", "weight": 1.0}
 {"created": "2026-11-25T14:07:10.887944+00:00", "dst": "file:DEV_LOG.md", "note": "", "schema_version": 1, "src": "file:AGENTS.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:07:11.334098+00:00", "dst": "file:DEV_LOG.md", "note": "", "schema_version": 1, "src": "file:CLAUDE.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:30:13.212983+00:00", "dst": "decision:20261125142812-epic-pixelgrid-title-screen", "note": "", "schema_version": 1, "src": "file:DEV_LOG.md", "type": "relates_to", "weight": 1.0}

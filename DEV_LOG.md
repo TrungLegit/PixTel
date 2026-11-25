@@ -40,6 +40,17 @@
 
 ## Nhật Ký Cập Nhật (Newest First)
 
+### [2026-11-25 23:31] — TrungLegit (AI) — Sửa lỗi deploy GitHub Pages (`Found 0 artifact(s)`)
+- **Commit / Branch:** `main`
+- **Giai đoạn / Version:** `PIXTEL v2.7` — CI/CD GitHub Pages Fix
+- **Đã làm (Done):**
+  - Tách workflow [.github/workflows/deploy-pages.yml](.github/workflows/deploy-pages.yml) thành 2 job riêng (`build` và `deploy` với `needs: build`) và đặt `cancel-in-progress: false` để tránh race condition khi tra cứu artifact ngay sau khi upload trong cùng 1 job.
+  - Nâng cấp bộ Pages Actions lên bản mới tương thích Node 24 (`actions/configure-pages@v6`, `actions/upload-pages-artifact@v5`, `actions/deploy-pages@v5`) để khắc phục lỗi `No artifacts named "github-pages" were found`.
+- **File chính đã sửa / thêm:** `.github/workflows/deploy-pages.yml`, `DEV_LOG.md`
+- **Kiểm tra (Verified):** Chuẩn bị chạy CI `npm test` + `npm run build` + `deploy-pages@v5` và kiểm tra trực tiếp `https://trunglegit.github.io/PixTel/`.
+- **Lưu ý / Handoff (Breaking changes / Đang dở):** Không có.
+- **Gợi ý bước tiếp theo (Next Steps):** Xác nhận job `Deploy PIXTEL to GitHub Pages` xanh hoàn toàn và mở `https://trunglegit.github.io/PixTel/`.
+
 ### [2026-11-25 23:10] — Antigravity — Quay lại Video/GIF demo `PIXTEL v2.7` & làm mới ảnh bìa README
 - **Commit / Branch:** `main` (tiếp nối `bc4923c`)
 - **Giai đoạn / Version:** `PIXTEL v2.7` — Video/GIF Demo & Media Refresh
