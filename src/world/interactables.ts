@@ -1,6 +1,7 @@
 import { CLASS_ALTAR_POS, TILE_SIZE, TOWN_NPCS, WAYPOINTS } from "../data/worldConfig";
 import { ITEMS } from "../data/items";
-import type { NpcDef, WaypointDef } from "../data/types";
+import { LORE_TABLETS } from "../data/lore";
+import type { LoreTabletDef, NpcDef, WaypointDef } from "../data/types";
 import type { ChestEntity, GroundLootEntity } from "./entities";
 import type { ColorRestorationSystem } from "../graphics/colorRestoration";
 
@@ -8,6 +9,7 @@ export type InteractableTarget =
   | { kind: "npc"; npc: NpcDef; x: number; y: number; prompt: string; dist: number }
   | { kind: "altar"; x: number; y: number; prompt: string; dist: number }
   | { kind: "waypoint"; wp: WaypointDef; unlocked: boolean; x: number; y: number; prompt: string; dist: number }
+  | { kind: "lore"; lore: LoreTabletDef; read: boolean; x: number; y: number; prompt: string; dist: number }
   | { kind: "chest"; chest: ChestEntity; x: number; y: number; prompt: string; dist: number }
   | { kind: "loot"; loot: GroundLootEntity; x: number; y: number; prompt: string; dist: number };
 
@@ -21,7 +23,8 @@ export function findNearestInteractable(
   py: number,
   colorSys: ColorRestorationSystem,
   chests: ChestEntity[],
-  groundLoot: GroundLootEntity[]
+  groundLoot: GroundLootEntity[],
+  discoveredLore?: ReadonlySet<string>
 ): InteractableTarget | null {
   let best: InteractableTarget | null = null;
   let bestScore = Infinity;
@@ -76,6 +79,26 @@ export function findNearestInteractable(
     );
   }
 
+  // 3b. Ancient Lore Tablets (Bia Ký Lăng Kính)
+  for (const lore of LORE_TABLETS) {
+    const x = lore.tx * TILE_SIZE + 8;
+    const y = lore.ty * TILE_SIZE + 8;
+    const dist = Math.hypot(px - x, py - y);
+    const read = discoveredLore ? discoveredLore.has(lore.id) : false;
+    consider(
+      {
+        kind: "lore",
+        lore,
+        read,
+        x,
+        y,
+        prompt: read ? `[F] Đọc lại Bia Ký: ${lore.title}` : `[F] ★ GIẢI MÃ BIA KÝ: ${lore.title}`,
+        dist,
+      },
+      read ? 4 : -5
+    );
+  }
+
   // 4. Unlocked or Locked Chests
   for (const chest of chests) {
     if (chest.state === "opened") continue;
@@ -96,7 +119,7 @@ export function findNearestInteractable(
     );
   }
 
-  // 5. Ground Equipment Loot (gold & materials auto-pickup, equipment can be picked up with [F] or walking close)
+  // 5. Ground Equipment Loot
   for (const loot of groundLoot) {
     if (loot.kind !== "item" || !loot.item) continue;
     const def = ITEMS[loot.item.defId];

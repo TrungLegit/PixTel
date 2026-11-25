@@ -1,30 +1,15 @@
 import type {
   ClassId,
   ClassRewardKey,
+  ConsumableGroup,
   EquipSlot,
   ItemDef,
   ItemInstance,
+  ItemTier,
   Rarity,
   StatBonus,
 } from "./types";
-
-export const RARITY_INFO: Record<
-  Rarity,
-  { label: string; color: string; beamPreset: string; statMult: number }
-> = {
-  common: { label: "Thường", color: "#e6ecff", beamPreset: "beam-common", statMult: 1.0 },
-  uncommon: { label: "Hiếm Nhẹ", color: "#44ee88", beamPreset: "beam-uncommon", statMult: 1.25 },
-  rare: { label: "Quý Hiếm", color: "#38b6ff", beamPreset: "beam-rare", statMult: 1.55 },
-  epic: { label: "Sử Thi", color: "#c266ff", beamPreset: "beam-epic", statMult: 1.95 },
-  legendary: { label: "Huyền Thoại", color: "#ff9922", beamPreset: "beam-legendary", statMult: 2.5 },
-};
-
-export const SLOT_LABELS: Record<EquipSlot, string> = {
-  weapon: "Vũ Khí",
-  armor: "Áo Giáp",
-  ring: "Nhẫn",
-  chip: "Pix-Chip",
-};
+import { EQUIPMENT_ITEMS, RARITY_ENHANCE_MULT, STARTER_WEAPON_BY_CLASS, TIER_INFO } from "./equipments";
 
 export const CLASS_DISPLAY_NAMES: Record<ClassId, string> = {
   prism_knight: "Vệ Binh Lăng Kính",
@@ -33,973 +18,645 @@ export const CLASS_DISPLAY_NAMES: Record<ClassId, string> = {
   pixel_tinker: "Kỹ Sư Mạch Sáng",
 };
 
+export function resolveClassReward(classId: ClassId, key: ClassRewardKey): string {
+  if (key === "starter_weapon") {
+    return STARTER_WEAPON_BY_CLASS[classId] ?? "wpn_starter";
+  }
+  return "wpn_starter";
+}
+
+export function canClassEquip(def: ItemDef, classId: ClassId): boolean {
+  if (def.category !== "equipment") return false;
+  if (!def.requiredClass || def.requiredClass === "all") return true;
+  return def.requiredClass === classId;
+}
+
+export const RARITY_INFO: Record<
+  Rarity,
+  { label: string; color: string; beamPreset: string; statMult: number; enhanceMult: number; tier: ItemTier }
+> = {
+  common: {
+    label: "Thường",
+    color: "#e6ecff",
+    beamPreset: "beam-common",
+    statMult: 1.0,
+    enhanceMult: RARITY_ENHANCE_MULT.common,
+    tier: 1,
+  },
+  uncommon: {
+    label: "Hiếm Nhẹ",
+    color: "#44ee88",
+    beamPreset: "beam-uncommon",
+    statMult: 1.25,
+    enhanceMult: RARITY_ENHANCE_MULT.uncommon,
+    tier: 2,
+  },
+  rare: {
+    label: "Quý Hiếm",
+    color: "#38b6ff",
+    beamPreset: "beam-rare",
+    statMult: 1.55,
+    enhanceMult: RARITY_ENHANCE_MULT.rare,
+    tier: 3,
+  },
+  epic: {
+    label: "Sử Thi",
+    color: "#c266ff",
+    beamPreset: "beam-epic",
+    statMult: 1.95,
+    enhanceMult: RARITY_ENHANCE_MULT.epic,
+    tier: 4,
+  },
+  legendary: {
+    label: "Huyền Thoại",
+    color: "#ff9922",
+    beamPreset: "beam-legendary",
+    statMult: 2.5,
+    enhanceMult: RARITY_ENHANCE_MULT.legendary,
+    tier: 5,
+  },
+};
+
+export const SLOT_LABELS: Record<EquipSlot, string> = {
+  helmet: "Mũ",
+  armor: "Áo Giáp",
+  weapon: "Vũ Khí",
+  boots: "Giày",
+  accessory: "Phụ Kiện",
+};
+
+/** 4 nhóm bình thuốc thông minh cho phím nhanh [1]..[4] */
+export const CONSUMABLE_HOTKEY_GROUPS: readonly ConsumableGroup[] = [
+  "hp",
+  "stamina",
+  "power",
+  "aegis",
+];
+
+export const CONSUMABLE_GROUP_LABELS: Record<ConsumableGroup, { label: string; color: string }> = {
+  hp: { label: "Máu", color: "#ff5577" },
+  stamina: { label: "Thể Lực", color: "#44ee88" },
+  power: { label: "Cường Công", color: "#ffee44" },
+  aegis: { label: "Hộ Thuẫn", color: "#5ef2ff" },
+};
+
+export function getItemTier(def: ItemDef | undefined): ItemTier {
+  if (!def) return 1;
+  return def.tier ?? RARITY_INFO[def.rarity]?.tier ?? 1;
+}
+
+export function getTierBadge(def: ItemDef | undefined) {
+  return TIER_INFO[getItemTier(def)];
+}
+
 export const ITEMS: Record<string, ItemDef> = {
-  // === CONSUMABLES (Hotkeys 1-3) ===
+  // =========================================================================
+  // 12 VẬT PHẨM TIÊU THỤ ĐA TIER (T1 -> T5)
+  // =========================================================================
+  pot_hp_small: {
+    id: "pot_hp_small",
+    name: "Ống Máu Sơ Khai",
+    category: "consumable",
+    rarity: "common",
+    tier: 1,
+    iconColor: "#ff5577",
+    iconKind: "potion",
+    spriteKey: "pot_hp_t1",
+    visualColor: "#e6395a",
+    accentColor: "#ffc2d1",
+    desc: "[T1] Hồi ngay 25% HP tối đa. Phím tắt [1].",
+    sellPrice: 6,
+    buyPrice: 14,
+    consumableKind: "hp_potion",
+    consumableSpec: { group: "hp", hpPct: 0.25 },
+  },
   pot_hp: {
     id: "pot_hp",
     name: "Bình Máu Sắc Độ",
     category: "consumable",
-    rarity: "common",
+    rarity: "uncommon",
+    tier: 2,
     iconColor: "#ff3366",
-    desc: "Hồi ngay 45% HP tối đa. Phím tắt [1].",
+    iconKind: "potion",
+    spriteKey: "pot_hp_t2",
+    visualColor: "#ff3366",
+    accentColor: "#ffc2d1",
+    desc: "[T2] Hồi ngay 45% HP tối đa. Phím tắt [1].",
     sellPrice: 12,
     buyPrice: 28,
     consumableKind: "hp_potion",
+    consumableSpec: { group: "hp", hpPct: 0.45 },
+  },
+  pot_hp_greater: {
+    id: "pot_hp_greater",
+    name: "Lọ Máu Tinh Khiết",
+    category: "consumable",
+    rarity: "rare",
+    tier: 3,
+    iconColor: "#ff3870",
+    iconKind: "potion",
+    spriteKey: "pot_hp_t3",
+    visualColor: "#ff3870",
+    accentColor: "#ffffff",
+    desc: "[T3] Hồi ngay 70% HP tối đa & +15% Thể lực. Phím tắt [1].",
+    sellPrice: 24,
+    buyPrice: 54,
+    consumableKind: "hp_potion",
+    consumableSpec: { group: "hp", hpPct: 0.7, staminaPct: 0.15 },
+  },
+  pot_hp_supreme: {
+    id: "pot_hp_supreme",
+    name: "Bình Sinh Mệnh Hổ Phách",
+    category: "consumable",
+    rarity: "epic",
+    tier: 4,
+    iconColor: "#ff8833",
+    iconKind: "potion",
+    spriteKey: "pot_hp_t4",
+    visualColor: "#ff6622",
+    accentColor: "#ffe699",
+    desc: "[T4] Hồi đầy 100% HP & +50% Thể lực. Phím tắt [1].",
+    sellPrice: 44,
+    buyPrice: 98,
+    consumableKind: "hp_potion",
+    consumableSpec: { group: "hp", hpPct: 1.0, staminaPct: 0.5 },
+  },
+  pot_elixir_chroma: {
+    id: "pot_elixir_chroma",
+    name: "Thánh Dược Quang Phổ",
+    category: "consumable",
+    rarity: "legendary",
+    tier: 5,
+    iconColor: "#5ef2ff",
+    iconKind: "potion",
+    spriteKey: "pot_hp_t5",
+    visualColor: "#38b6ff",
+    accentColor: "#ffe066",
+    desc: "[T5] Hồi 100% HP/Thể lực, giải làm chậm, +25% Nộ [Q] & 1.5s Bất tử!",
+    sellPrice: 88,
+    consumableKind: "hp_potion",
+    consumableSpec: {
+      group: "hp",
+      hpPct: 1.0,
+      staminaPct: 1.0,
+      invulnSec: 1.5,
+      overdriveGain: 25,
+      cleanseSlow: true,
+    },
+  },
+
+  pot_stamina_minor: {
+    id: "pot_stamina_minor",
+    name: "Nước Khoáng Bạc Hà",
+    category: "consumable",
+    rarity: "common",
+    tier: 1,
+    iconColor: "#44ee88",
+    iconKind: "potion",
+    spriteKey: "pot_sta_t1",
+    visualColor: "#28b866",
+    accentColor: "#c8ffdf",
+    desc: "[T1] Hồi 60% Thể lực và +18% Tốc chạy trong 6s. Phím tắt [2].",
+    sellPrice: 8,
+    buyPrice: 18,
+    consumableKind: "stamina_elixir",
+    consumableSpec: { group: "stamina", staminaPct: 0.6, speedPct: 0.18, durationSec: 6 },
   },
   pot_stamina: {
     id: "pot_stamina",
     name: "Tinh Chất Thể Lực",
     category: "consumable",
     rarity: "uncommon",
+    tier: 2,
     iconColor: "#44ee88",
-    desc: "Hồi 100% Thể lực và +28% Tốc chạy trong 8s. Phím tắt [2].",
+    iconKind: "potion",
+    spriteKey: "pot_sta_t2",
+    visualColor: "#44ee88",
+    accentColor: "#c8ffdf",
+    desc: "[T2] Hồi 100% Thể lực và +28% Tốc chạy trong 8s. Phím tắt [2].",
     sellPrice: 16,
-    buyPrice: 38,
+    buyPrice: 35,
     consumableKind: "stamina_elixir",
+    consumableSpec: { group: "stamina", staminaPct: 1.0, speedPct: 0.28, durationSec: 8 },
+  },
+  pot_wind_surge: {
+    id: "pot_wind_surge",
+    name: "Linh Dược Thần Tốc",
+    category: "consumable",
+    rarity: "epic",
+    tier: 4,
+    iconColor: "#38f2ff",
+    iconKind: "potion",
+    spriteKey: "pot_sta_t4",
+    visualColor: "#28c8d9",
+    accentColor: "#ffffff",
+    desc: "[T4] Hồi 100% Thể lực, +42% Tốc chạy 12s & +20% Nộ Tuyệt Kỹ [Q]!",
+    sellPrice: 40,
+    buyPrice: 88,
+    consumableKind: "stamina_elixir",
+    consumableSpec: {
+      group: "stamina",
+      staminaPct: 1.0,
+      speedPct: 0.42,
+      durationSec: 12,
+      overdriveGain: 20,
+      cleanseSlow: true,
+    },
+  },
+
+  pot_might_brew: {
+    id: "pot_might_brew",
+    name: "Thuốc Cường Lực",
+    category: "consumable",
+    rarity: "uncommon",
+    tier: 2,
+    iconColor: "#ff9933",
+    iconKind: "potion",
+    spriteKey: "pot_atk_t2",
+    visualColor: "#e67220",
+    accentColor: "#ffe088",
+    desc: "[T2] +20% ATK và +8% Tỉ lệ Crit trong 10s. Phím tắt [3].",
+    sellPrice: 16,
+    buyPrice: 36,
+    consumableKind: "chroma_tonic",
+    consumableSpec: { group: "power", atkPct: 0.2, critBonus: 8, durationSec: 10 },
   },
   pot_tonic: {
     id: "pot_tonic",
     name: "Dược Phẩm Quang Phổ",
     category: "consumable",
     rarity: "rare",
+    tier: 3,
     iconColor: "#ffee44",
-    desc: "+30% ATK và +15% Tỉ lệ Crit trong 12s. Phím tắt [3].",
+    iconKind: "potion",
+    spriteKey: "pot_atk_t3",
+    visualColor: "#ffee44",
+    accentColor: "#ffffff",
+    desc: "[T3] +30% ATK và +15% Tỉ lệ Crit trong 12s. Phím tắt [3].",
     sellPrice: 25,
-    buyPrice: 60,
+    buyPrice: 55,
     consumableKind: "chroma_tonic",
+    consumableSpec: { group: "power", atkPct: 0.3, critBonus: 15, durationSec: 12 },
+  },
+  pot_overdrive_vial: {
+    id: "pot_overdrive_vial",
+    name: "Tinh Chất Quá Tải [Q]",
+    category: "consumable",
+    rarity: "legendary",
+    tier: 5,
+    iconColor: "#ff3388",
+    iconKind: "potion",
+    spriteKey: "pot_atk_t5",
+    visualColor: "#e6196b",
+    accentColor: "#ffe066",
+    desc: "[T5] Nạp +60% Nộ Tuyệt Kỹ [Q], +45% ATK & +22% Crit trong 14s!",
+    sellPrice: 72,
+    consumableKind: "chroma_tonic",
+    consumableSpec: { group: "power", atkPct: 0.45, critBonus: 22, overdriveGain: 60, durationSec: 14 },
+  },
+  pot_coating: {
+    id: "pot_coating",
+    name: "Dầu Phủ Quang Phổ",
+    category: "consumable",
+    rarity: "rare",
+    tier: 4,
+    iconColor: "#ff66d8",
+    iconKind: "potion",
+    visualColor: "#e639b8",
+    accentColor: "#78f9ff",
+    desc: "[T4] Phủ nguyên tố xoay vòng lên mọi đòn đánh & +20% Sát thương Nguyên Tố trong 25s. Phím tắt [4].",
+    sellPrice: 28,
+    buyPrice: 60,
+    consumableKind: "chroma_coating",
+    consumableSpec: { group: "aegis", durationSec: 25 },
+  },
+  charm_undying: {
+    id: "charm_undying",
+    name: "Bùa Hộ Mệnh Bất Diệt",
+    category: "consumable",
+    rarity: "epic",
+    tier: 4,
+    iconColor: "#ffe066",
+    iconKind: "totem",
+    visualColor: "#f0b429",
+    accentColor: "#44ee88",
+    desc: "Để trong Túi sẽ tự vỡ khi chịu đòn chí tử: chặn cái chết, hồi ngay 40% HP, 100% Thể lực & bất tử 1.5s!",
+    sellPrice: 65,
+    buyPrice: 160,
+    consumableKind: "undying_charm",
+  },
+  pot_aegis_flask: {
+    id: "pot_aegis_flask",
+    name: "Bình Hộ Thuẫn Pha Lê",
+    category: "consumable",
+    rarity: "rare",
+    tier: 3,
+    iconColor: "#5ef2ff",
+    iconKind: "potion",
+    spriteKey: "pot_def_t3",
+    visualColor: "#2299e6",
+    accentColor: "#c8fbff",
+    desc: "[T3] Kích hoạt Khiên Lăng Kính 6s (-35% sát thương nhận & +12 DEF). Phím tắt [4].",
+    sellPrice: 28,
+    buyPrice: 62,
+    consumableSpec: { group: "aegis", defPct: 0.35, shieldSec: 6, durationSec: 8 },
   },
 
-  // === MATERIALS ===
-  mat_glitch_core: {
-    id: "mat_glitch_core",
-    name: "Lõi Glitch",
-    category: "material",
-    rarity: "common",
-    iconColor: "#ff55aa",
-    desc: "Rơi từ quái Glitchborn. Nguyên liệu cốt lõi cho Ma Trận Luyện Khí.",
-    sellPrice: 8,
-    buyPrice: 24,
-  },
+  // =========================================================================
+  // NGUYÊN LIỆU RÈN & CHẾ TẠO (T1 -> T5)
+  // =========================================================================
   mat_iron_ore: {
     id: "mat_iron_ore",
     name: "Quặng Sắt Xám",
     category: "material",
     rarity: "common",
+    tier: 1,
     iconColor: "#9aa6ba",
-    desc: "Khai thác từ mỏ quặng. Nguyên liệu rèn vũ khí, giáp & luyện ma trận.",
+    iconKind: "ore",
+    spriteKey: "mat_iron_ore",
+    visualColor: "#758299",
+    accentColor: "#dce4f2",
+    desc: "Khai thác từ mỏ quặng. Nguyên liệu rèn vũ khí và cường hóa.",
     sellPrice: 7,
+    buyPrice: 20,
+  },
+  mat_glitch_core: {
+    id: "mat_glitch_core",
+    name: "Lõi Glitch",
+    category: "material",
+    rarity: "common",
+    tier: 1,
+    iconColor: "#ff55aa",
+    iconKind: "core",
+    spriteKey: "mat_glitch_core",
+    visualColor: "#e63990",
+    accentColor: "#ffb8dc",
+    desc: "Rơi từ quái Glitchborn. Dùng để cường hóa và chế tạo tại Thợ Rèn.",
+    sellPrice: 8,
     buyPrice: 22,
+  },
+  mat_prism_shard: {
+    id: "mat_prism_shard",
+    name: "Mảnh Lăng Kính",
+    category: "material",
+    rarity: "uncommon",
+    tier: 2,
+    iconColor: "#5ef2ff",
+    iconKind: "shard",
+    spriteKey: "mat_prism_shard",
+    visualColor: "#2cc8e8",
+    accentColor: "#ffffff",
+    desc: "Thu được khi phân rã trang bị trong Túi đồ. Dùng cường hóa & chế tạo.",
+    sellPrice: 15,
+    buyPrice: 38,
   },
   mat_quartz_shard: {
     id: "mat_quartz_shard",
     name: "Mảnh Thạch Anh",
     category: "material",
-    rarity: "uncommon",
+    rarity: "rare",
+    tier: 3,
     iconColor: "#4be8ff",
-    desc: "Khai thác tại Rừng Thạch Anh. Dùng chế tạo & luyện trang bị Lam/Tím.",
+    iconKind: "shard",
+    spriteKey: "mat_quartz_shard",
+    visualColor: "#1da3cc",
+    accentColor: "#b8fbff",
+    desc: "Khai thác tại Rừng Thạch Anh. Dùng chế tạo trang bị T3 & T4.",
     sellPrice: 14,
-    buyPrice: 44,
+    buyPrice: 40,
   },
   mat_amber_gem: {
     id: "mat_amber_gem",
     name: "Mảnh Hổ Phách",
     category: "material",
-    rarity: "rare",
+    rarity: "epic",
+    tier: 4,
     iconColor: "#ffb833",
-    desc: "Tinh thể nóng rực từ Hầm Mỏ Hổ Phách. Dùng luyện cấp cao & chế tạo.",
+    iconKind: "shard",
+    spriteKey: "mat_amber_gem",
+    visualColor: "#d97818",
+    accentColor: "#fff099",
+    desc: "Tinh thể nóng rực từ Hầm Mỏ Hổ Phách. Dùng cường hóa & rèn đồ T4–T5.",
     sellPrice: 24,
   },
   mat_void_prism: {
     id: "mat_void_prism",
     name: "Lăng Kính Hư Vô",
     category: "material",
-    rarity: "epic",
+    rarity: "legendary",
+    tier: 5,
     iconColor: "#c866ff",
-    desc: "Tinh thể hiếm từ Boss & Phế Tích Vô Sắc. Đúc thần khí Huyền Thoại.",
+    iconKind: "shard",
+    spriteKey: "mat_void_prism",
+    visualColor: "#8c33d9",
+    accentColor: "#f0ccff",
+    desc: "Tinh thể cực hiếm từ Boss & Phế Tích Vô Sắc. Đúc Thần Khí Tier 5.",
     sellPrice: 55,
   },
-  mat_matrix_rune: {
-    id: "mat_matrix_rune",
-    name: "Bùa Ma Trận",
+
+  // --- 4 Chroma Pigments (for +5 Elemental Infusion at Prism Forge) ---
+  mat_pigment_red: {
+    id: "mat_pigment_red",
+    name: "Bột Chu Sa Lửa",
     category: "material",
     rarity: "rare",
-    iconColor: "#38f2ff",
-    desc: "Xúc tác đặt vào đỉnh Ma Trận Luyện Khí tại Thợ Rèn Kael, tăng +15% tỉ lệ thành công.",
+    iconColor: "#ff4433",
+    iconKind: "pigment",
+    visualColor: "#e63222",
+    accentColor: "#ffaa66",
+    pigmentElement: "fire",
+    desc: "Sắc tố Đỏ tinh luyện. Dùng tại Lò Rèn để nhuộm hệ LỬA cho trang bị từ +5 trở lên.",
+    sellPrice: 22,
+    buyPrice: 65,
+  },
+  mat_pigment_cyan: {
+    id: "mat_pigment_cyan",
+    name: "Bột Lam Băng Tinh",
+    category: "material",
+    rarity: "rare",
+    iconColor: "#38e8ff",
+    iconKind: "pigment",
+    visualColor: "#1cb8e0",
+    accentColor: "#c8fbff",
+    pigmentElement: "ice",
+    desc: "Sắc tố Lam tinh luyện. Dùng tại Lò Rèn để nhuộm hệ BĂNG cho trang bị từ +5 trở lên.",
+    sellPrice: 22,
+    buyPrice: 65,
+  },
+  mat_pigment_green: {
+    id: "mat_pigment_green",
+    name: "Bột Lục Bào Tử",
+    category: "material",
+    rarity: "rare",
+    iconColor: "#44ee88",
+    iconKind: "pigment",
+    visualColor: "#24b862",
+    accentColor: "#b8ffd8",
+    pigmentElement: "nature",
+    desc: "Sắc tố Lục tinh luyện. Dùng tại Lò Rèn để nhuộm hệ MỘC/ĐỘC cho trang bị từ +5 trở lên.",
+    sellPrice: 22,
+    buyPrice: 65,
+  },
+  mat_pigment_gold: {
+    id: "mat_pigment_gold",
+    name: "Bột Hoàng Quang Điện",
+    category: "material",
+    rarity: "rare",
+    tier: 3,
+    iconColor: "#ffee44",
+    iconKind: "pigment",
+    visualColor: "#e6b81c",
+    accentColor: "#ffffff",
+    pigmentElement: "volt",
+    desc: "Sắc tố Lôi tinh luyện. Dùng tại Lò Rèn để nhuộm hệ LÔI cho trang bị +5 (+8% ELEM, -5% CD [E]).",
+    sellPrice: 22,
+    buyPrice: 65,
+  },
+  mat_pigment_void: {
+    id: "mat_pigment_void",
+    name: "Bột Hắc Tinh Hư Không",
+    category: "material",
+    rarity: "epic",
+    tier: 4,
+    iconColor: "#b266ff",
+    iconKind: "pigment",
+    visualColor: "#7a2ce0",
+    accentColor: "#f0ccff",
+    pigmentElement: "void",
+    desc: "Sắc tố Hư Không cô đặc. Dùng tại Lò Rèn để nhuộm hệ HƯ KHÔNG cho trang bị +5 (+8% ELEM, -6% CD [E], hút/xóa buff).",
     sellPrice: 28,
-    buyPrice: 75,
+    buyPrice: 80,
   },
-
-  // =========================================================================
-  // CLASS-EXCLUSIVE WEAPONS (5 Rarities x 4 Classes = 20 Weapons)
-  // =========================================================================
-
-  // --- PRISM KNIGHT (Kiếm & Khiên) ---
-  wpn_knight_iron: {
-    id: "wpn_knight_iron",
-    name: "Kiếm Sắt Khởi Nguyên",
-    category: "equipment",
-    rarity: "common",
-    slot: "weapon",
-    iconColor: "#cfd8e6",
-    desc: "Thanh kiếm & khiên thép đơn giản mở khóa Tam Liên Trảm & Khiên Phản Đòn.",
-    sellPrice: 18,
-    allowedClasses: ["prism_knight"],
-    visualTier: "common",
-    baseStats: { atk: 9, def: 2, crit: 3 },
-    grantsSkillE: {
-      variant: "knight_shield_beam",
-      name: "Khiên Phản Đòn",
-      desc: "Giơ khiên chặn sát thương 1.05s & bắn trả tia laser lăng kính.",
-    },
-  },
-  wpn_knight_meadow: {
-    id: "wpn_knight_meadow",
-    name: "Kiếm Thảo Nguyên Ngọc",
-    category: "equipment",
-    rarity: "uncommon",
-    slot: "weapon",
-    iconColor: "#44ee88",
-    desc: "Thanh bảo kiếm ngọc lục bảo tăng công thủ toàn diện cho Vệ Binh.",
-    sellPrice: 40,
-    allowedClasses: ["prism_knight"],
-    visualTier: "uncommon",
-    baseStats: { atk: 16, def: 4, maxHp: 20, crit: 5 },
-    grantsSkillE: {
-      variant: "knight_shield_beam",
-      name: "Khiên Lục Bảo",
-      desc: "Giơ khiên chặn đòn 1.05s & phản công bằng tia Quang Phổ Lục.",
-    },
-  },
-  wpn_knight_quartz: {
-    id: "wpn_knight_quartz",
-    name: "Đại Kiếm Thạch Anh",
-    category: "equipment",
-    rarity: "rare",
-    slot: "weapon",
-    iconColor: "#38b6ff",
-    desc: "Kiếm & khiên tinh thể Thạch Anh mở khóa tuyệt chiêu Chấn Địa Khiên.",
-    sellPrice: 85,
-    allowedClasses: ["prism_knight"],
-    visualTier: "rare",
-    baseStats: { atk: 26, def: 7, maxHp: 40, crit: 8 },
-    grantsSkillE: {
-      variant: "knight_quake_aegis",
-      name: "Chấn Địa Khiên",
-      desc: "Bật khiên hộ thể đồng thời dậm khiên tạo sóng chấn động AoE đẩy lùi quái!",
-    },
-  },
-  wpn_knight_amber: {
-    id: "wpn_knight_amber",
-    name: "Trọng Kiếm Hổ Phách",
-    category: "equipment",
+  mat_pigment_chroma: {
+    id: "mat_pigment_chroma",
+    name: "Bột Tinh Quang Sắc Độ",
+    category: "material",
     rarity: "epic",
-    slot: "weapon",
-    iconColor: "#c266ff",
-    desc: "Rèn từ hổ phách dung nham, mỗi nhát chém nặng tựa thiên thạch.",
-    sellPrice: 175,
-    allowedClasses: ["prism_knight"],
-    visualTier: "epic",
-    baseStats: { atk: 40, def: 11, maxHp: 75, crit: 12 },
-    grantsSkillE: {
-      variant: "knight_quake_aegis",
-      name: "Chấn Địa Dung Nham",
-      desc: "Bật khiên phản đòn & kích nổ địa chấn dung nham diện rộng!",
-    },
+    tier: 4,
+    iconColor: "#ff66c4",
+    iconKind: "pigment",
+    visualColor: "#e0389e",
+    accentColor: "#ffe066",
+    pigmentElement: "chroma",
+    desc: "Sắc tố Thất Sắc tinh khiết. Nhuộm hệ SẮC ĐỘ cho trang bị +5 (+12% ELEM & đánh trúng hồi Stamina/HP).",
+    sellPrice: 30,
+    buyPrice: 85,
   },
-  wpn_knight_legend: {
-    id: "wpn_knight_legend",
-    name: "Thánh Kiếm Thất Sắc",
-    category: "equipment",
-    rarity: "legendary",
-    slot: "weapon",
-    iconColor: "#ff9922",
-    desc: "Thần binh tối thượng của Vệ Binh Lăng Kính — khai mở Thái Dương Lăng Kính.",
-    sellPrice: 390,
-    allowedClasses: ["prism_knight"],
-    visualTier: "legendary",
-    baseStats: { atk: 60, def: 16, maxHp: 120, crit: 18, spd: 8 },
-    grantsSkillE: {
-      variant: "knight_solar_prism",
-      name: "Thái Dương Lăng Kính",
-      desc: "Giơ Thánh Khiên bất khả xâm phạm & phóng quạt 3 tia laser cầu vồng xuyên phá!",
-    },
-  },
-
-  // --- CHROMA MAGE (Trượng Phép) ---
-  wpn_mage_twig: {
-    id: "wpn_mage_twig",
-    name: "Trượng Gỗ Sắc Độ",
-    category: "equipment",
-    rarity: "common",
-    slot: "weapon",
-    iconColor: "#cfd8e6",
-    desc: "Cây trượng phép nhập môn giúp xoay vòng Tam Sắc Nguyên Tố & Vòng Xoáy.",
-    sellPrice: 18,
-    allowedClasses: ["chroma_mage"],
-    visualTier: "common",
-    baseStats: { atk: 10, maxHp: 10, crit: 4 },
-    grantsSkillE: {
-      variant: "mage_chroma_vortex",
-      name: "Vòng Xoáy Sắc Màu",
-      desc: "Tạo xoáy năng lượng hút quái vào tâm, gây sát thương & gắn ấn nguyên tố.",
-    },
-  },
-  wpn_mage_meadow: {
-    id: "wpn_mage_meadow",
-    name: "Trượng Sinh Khí Thảo Nguyên",
-    category: "equipment",
-    rarity: "uncommon",
-    slot: "weapon",
-    iconColor: "#44ee88",
-    desc: "Khuếch đại ma lực nguyên tố và tăng độ ổn định của vòng xoáy.",
-    sellPrice: 40,
-    allowedClasses: ["chroma_mage"],
-    visualTier: "uncommon",
-    baseStats: { atk: 17, maxHp: 22, crit: 7, spd: 4 },
-    grantsSkillE: {
-      variant: "mage_chroma_vortex",
-      name: "Vòng Xoáy Thảo Nguyên",
-      desc: "Tạo xoáy năng lượng hút quái mạnh hơn & gắn ấn nguyên tố liên tục.",
-    },
-  },
-  wpn_mage_quartz: {
-    id: "wpn_mage_quartz",
-    name: "Quyền Trượng Băng Tinh",
-    category: "equipment",
+  mat_pigment_wind: {
+    id: "mat_pigment_wind",
+    name: "Bột Phong Linh Ngọc",
+    category: "material",
     rarity: "rare",
-    slot: "weapon",
-    iconColor: "#38b6ff",
-    desc: "Tinh thể băng Thạch Anh khai mở kỹ năng Bão Tuyết Thạch Anh.",
-    sellPrice: 85,
-    allowedClasses: ["chroma_mage"],
-    visualTier: "rare",
-    baseStats: { atk: 28, maxHp: 35, crit: 10, spd: 6 },
-    grantsSkillE: {
-      variant: "mage_frost_nova",
-      name: "Bão Tuyết Thạch Anh",
-      desc: "Kích nổ Frost Nova quanh bản thân, đóng băng & làm chậm mọi kẻ địch gần kề!",
-    },
+    tier: 3,
+    iconColor: "#5ef2d6",
+    iconKind: "pigment",
+    visualColor: "#24b89e",
+    accentColor: "#e0fff9",
+    pigmentElement: "wind",
+    desc: "Sắc tố Phong Linh. Nhuộm hệ GIÓ cho trang bị +5 (+8% ELEM, +6 SPD, +8 Thể lực & khuếch tán nguyên tố).",
+    sellPrice: 24,
+    buyPrice: 70,
   },
-  wpn_mage_amber: {
-    id: "wpn_mage_amber",
-    name: "Pháp Trượng Thiên Hỏa",
-    category: "equipment",
-    rarity: "epic",
-    slot: "weapon",
-    iconColor: "#c266ff",
-    desc: "Lõi hổ phách cháy rực giúp giải phóng chuỗi Bão Tuyết & Thiêu Đốt cực mạnh.",
-    sellPrice: 175,
-    allowedClasses: ["chroma_mage"],
-    visualTier: "epic",
-    baseStats: { atk: 43, maxHp: 55, crit: 14, spd: 8 },
-    grantsSkillE: {
-      variant: "mage_frost_nova",
-      name: "Băng Hỏa Giao Thoa",
-      desc: "Bùng nổ Frost Nova diện rộng kèm lửa thiêu kích hoạt Phản Ứng Nguyên Tố!",
-    },
-  },
-  wpn_mage_legend: {
-    id: "wpn_mage_legend",
-    name: "Thánh Trượng Tinh Tú",
-    category: "equipment",
-    rarity: "legendary",
-    slot: "weapon",
-    iconColor: "#ff9922",
-    desc: "Cổ vật ma pháp tối thượng — triệu hồi Hố Đen Quang Phổ nghiền nát chiến trường.",
-    sellPrice: 390,
-    allowedClasses: ["chroma_mage"],
-    visualTier: "legendary",
-    baseStats: { atk: 65, maxHp: 85, crit: 20, spd: 12 },
-    grantsSkillE: {
-      variant: "mage_astral_collapse",
-      name: "Hố Đen Quang Phổ",
-      desc: "Triệu hồi siêu xoáy hút quái kết hợp thiên thạch giáng nổ tức thì!",
-    },
-  },
-
-  // --- BIT ROGUE (Song Đao) ---
-  wpn_rogue_rust: {
-    id: "wpn_rogue_rust",
-    name: "Song Đao Điểm Ảnh",
-    category: "equipment",
-    rarity: "common",
-    slot: "weapon",
-    iconColor: "#cfd8e6",
-    desc: "Cặp đao gọn nhẹ mở khóa phóng phi tiêu & bước nhảy Frame-Skip.",
-    sellPrice: 18,
-    allowedClasses: ["bit_rogue"],
-    visualTier: "common",
-    baseStats: { atk: 8, crit: 6, spd: 5 },
-    grantsSkillE: {
-      variant: "rogue_frame_skip",
-      name: "Frame-Skip",
-      desc: "Lướt xuyên quái bất tử ngắn, để lại tàn ảnh nhiễu glitch phát nổ.",
-    },
-  },
-  wpn_rogue_meadow: {
-    id: "wpn_rogue_meadow",
-    name: "Song Đao Lục Bảo",
-    category: "equipment",
-    rarity: "uncommon",
-    slot: "weapon",
-    iconColor: "#44ee88",
-    desc: "Lưỡi đao sắc bén tăng tốc độ áp sát và tỷ lệ chí mạng.",
-    sellPrice: 40,
-    allowedClasses: ["bit_rogue"],
-    visualTier: "uncommon",
-    baseStats: { atk: 14, crit: 10, spd: 8 },
-    grantsSkillE: {
-      variant: "rogue_frame_skip",
-      name: "Frame-Skip Cực Tốc",
-      desc: "Lướt bất tử nhanh hơn, tàn ảnh nổ sát thương chí mạng.",
-    },
-  },
-  wpn_rogue_quartz: {
-    id: "wpn_rogue_quartz",
-    name: "Song Đao Pha Lê Lam",
-    category: "equipment",
+  mat_pigment_quake: {
+    id: "mat_pigment_quake",
+    name: "Bột Địa Chấn Nham",
+    category: "material",
     rarity: "rare",
-    slot: "weapon",
-    iconColor: "#38b6ff",
-    desc: "Đao pha lê trong suốt mở khóa Ảnh Sát Đột Kích.",
-    sellPrice: 85,
-    allowedClasses: ["bit_rogue"],
-    visualTier: "rare",
-    baseStats: { atk: 24, crit: 14, spd: 12 },
-    grantsSkillE: {
-      variant: "rogue_shadow_ambush",
-      name: "Ảnh Sát Đột Kích",
-      desc: "Frame-Skip để lại bom tàn ảnh đồng thời phóng quạt 3 phi tiêu chí mạng!",
-    },
-  },
-  wpn_rogue_amber: {
-    id: "wpn_rogue_amber",
-    name: "Song Nhận Hổ Phách",
-    category: "equipment",
-    rarity: "epic",
-    slot: "weapon",
-    iconColor: "#c266ff",
-    desc: "Cặp đao săn mồi rực lửa với khả năng dứt điểm chí mạng kinh hoàng.",
-    sellPrice: 175,
-    allowedClasses: ["bit_rogue"],
-    visualTier: "epic",
-    baseStats: { atk: 37, crit: 19, spd: 15, maxHp: 35 },
-    grantsSkillE: {
-      variant: "rogue_shadow_ambush",
-      name: "Huyết Ảnh Đột Kích",
-      desc: "Frame-Skip phóng 3 phi tiêu xuyên phá + bom tàn ảnh sát thương cực đại!",
-    },
-  },
-  wpn_rogue_legend: {
-    id: "wpn_rogue_legend",
-    name: "Song Kiếm Hư Không",
-    category: "equipment",
-    rarity: "legendary",
-    slot: "weapon",
-    iconColor: "#ff9922",
-    desc: "Thần khí sát thủ — mở khóa Liên Ảnh Diệt Sắc xé toạc màn hình.",
-    sellPrice: 390,
-    allowedClasses: ["bit_rogue"],
-    visualTier: "legendary",
-    baseStats: { atk: 56, crit: 26, spd: 20, maxHp: 60 },
-    grantsSkillE: {
-      variant: "rogue_phantom_blitz",
-      name: "Liên Ảnh Diệt Sắc",
-      desc: "Lướt xuyên không phóng 5 phi tiêu chí mạng + bom tàn ảnh khuếch đại!",
-    },
+    tier: 3,
+    iconColor: "#ff9933",
+    iconKind: "pigment",
+    visualColor: "#cc6614",
+    accentColor: "#ffe28a",
+    pigmentElement: "quake",
+    desc: "Sắc tố Địa Mạch. Nhuộm hệ CHẤN ĐỘNG cho trang bị +5 (+8% ELEM, +15% lực phá Bleach Shield Boss).",
+    sellPrice: 25,
+    buyPrice: 72,
   },
 
-  // --- PIXEL TINKER (Súng Hạt) ---
-  wpn_tinker_pipe: {
-    id: "wpn_tinker_pipe",
-    name: "Súng Hạt Thô Sơ",
-    category: "equipment",
-    rarity: "common",
-    slot: "weapon",
-    iconColor: "#cfd8e6",
-    desc: "Khẩu súng mạch sáng cơ bản mở khóa bắn tầm xa & Compile — Trụ Pixel.",
-    sellPrice: 18,
-    allowedClasses: ["pixel_tinker"],
-    visualTier: "common",
-    baseStats: { atk: 9, maxHp: 15, crit: 3 },
-    grantsSkillE: {
-      variant: "tinker_compile_turret",
-      name: "Compile — Trụ Pixel",
-      desc: "Biên dịch Trụ Bắn tự động ngắm quái (tối đa 2 trụ).",
-    },
-  },
-  wpn_tinker_meadow: {
-    id: "wpn_tinker_meadow",
-    name: "Súng Mạch Lục Quang",
-    category: "equipment",
-    rarity: "uncommon",
-    slot: "weapon",
-    iconColor: "#44ee88",
-    desc: "Cải tiến nòng đồng thau giúp đường đạn ổn định & tăng độ bền trụ.",
-    sellPrice: 40,
-    allowedClasses: ["pixel_tinker"],
-    visualTier: "uncommon",
-    baseStats: { atk: 15, maxHp: 30, crit: 6, spd: 4 },
-    grantsSkillE: {
-      variant: "tinker_compile_turret",
-      name: "Compile — Trụ Lục Quang",
-      desc: "Biên dịch Trụ Bắn tự động với tốc độ nhắm nhanh hơn.",
-    },
-  },
-  wpn_tinker_quartz: {
-    id: "wpn_tinker_quartz",
-    name: "Pháo Điện Từ Thạch Anh",
-    category: "equipment",
+  // --- 4 Boss Cores ---
+  mat_warden_crest: {
+    id: "mat_warden_crest",
+    name: "Ấn Chiến Thần Vệ Thạch",
+    category: "material",
     rarity: "rare",
-    slot: "weapon",
-    iconColor: "#38b6ff",
-    desc: "Tích hợp lõi Thạch Anh mở khóa kỹ năng Trụ Sấm Thạch Anh.",
-    sellPrice: 85,
-    allowedClasses: ["pixel_tinker"],
-    visualTier: "rare",
-    baseStats: { atk: 25, maxHp: 50, crit: 9, spd: 6 },
-    grantsSkillE: {
-      variant: "tinker_shock_mortar",
-      name: "Trụ Sấm Thạch Anh",
-      desc: "Dựng trụ trong trạng thái Overclock tức thì & giật sóng EMP AoE!",
-    },
+    iconColor: "#66ccff",
+    iconKind: "core",
+    visualColor: "#3b78ad",
+    accentColor: "#ffe066",
+    desc: "Chiến ấn rơi từ Boss Hình Thiên Vệ Thạch (Đồng Cỏ Xám). Dùng rèn Đại Phủ & Dây Chuyền.",
+    sellPrice: 45,
   },
-  wpn_tinker_amber: {
-    id: "wpn_tinker_amber",
-    name: "Súng Quang Hổ Phách",
-    category: "equipment",
+  mat_crystal_heart: {
+    id: "mat_crystal_heart",
+    name: "Trái Tim Pha Lê Lạnh",
+    category: "material",
     rarity: "epic",
-    slot: "weapon",
-    iconColor: "#c266ff",
-    desc: "Hỏa lực nhiệt hạch cao áp giúp trụ bắn liên thanh áp đảo đám đông.",
-    sellPrice: 175,
-    allowedClasses: ["pixel_tinker"],
-    visualTier: "epic",
-    baseStats: { atk: 39, maxHp: 75, crit: 13, spd: 8 },
-    grantsSkillE: {
-      variant: "tinker_shock_mortar",
-      name: "Trụ Sấm Hổ Phách",
-      desc: "Dựng trụ Overclock cường hóa kèm nổ điện từ diện rộng!",
-    },
+    iconColor: "#4be8ff",
+    iconKind: "shard",
+    visualColor: "#1a9cd6",
+    accentColor: "#ffffff",
+    desc: "Kết tinh tinh khiết từ Boss Cổ Thụ Blight Root. Dùng chế tạo Cổ Thư & trang bị Tím.",
+    sellPrice: 70,
   },
-  wpn_tinker_legend: {
-    id: "wpn_tinker_legend",
-    name: "Pháo Đài Hạt Alpha",
-    category: "equipment",
-    rarity: "legendary",
-    slot: "weapon",
+  mat_amber_fang: {
+    id: "mat_amber_fang",
+    name: "Nanh Cùng Kỳ Hổ Phách",
+    category: "material",
+    rarity: "epic",
     iconColor: "#ff9922",
-    desc: "Vũ khí tối thượng của Kỹ Sư — khai mở Pháo Đài Quang Phổ.",
-    sellPrice: 390,
-    allowedClasses: ["pixel_tinker"],
-    visualTier: "legendary",
-    baseStats: { atk: 58, maxHp: 110, crit: 18, spd: 12 },
-    grantsSkillE: {
-      variant: "tinker_prism_cannon",
-      name: "Pháo Đài Quang Phổ",
-      desc: "Dựng trụ Overclock & bắn thẳng một tia Pháo Lăng Kính xuyên toàn bộ quái!",
-    },
+    iconKind: "shard",
+    visualColor: "#d95b16",
+    accentColor: "#ffee66",
+    desc: "Chiếc nanh nóng rực của Boss Gilded Null. Dùng đúc Đĩa Quang Phổ & trang bị Huyền Thoại.",
+    sellPrice: 90,
+  },
+  mat_origin_star: {
+    id: "mat_origin_star",
+    name: "Ngôi Sao Khởi Nguyên",
+    category: "material",
+    rarity: "legendary",
+    iconColor: "#ff9922",
+    iconKind: "shard",
+    visualColor: "#ffe066",
+    accentColor: "#78f9ff",
+    desc: "Mảnh lõi Thất Sắc giải phóng sau khi thanh tẩy World Boss The Eraser!",
+    sellPrice: 220,
   },
 
-  // =========================================================================
-  // CLASS-EXCLUSIVE ARMORS (5 Rarities x 4 Classes = 20 Armors)
-  // =========================================================================
-
-  // --- PRISM KNIGHT ARMORS ---
-  arm_knight_common: {
-    id: "arm_knight_common",
-    name: "Giáp Sắt Tân Binh",
-    category: "equipment",
-    rarity: "common",
-    slot: "armor",
-    iconColor: "#b8c0d4",
-    desc: "Bộ giáp thép căn bản cho Vệ Binh Lăng Kính.",
-    sellPrice: 18,
-    allowedClasses: ["prism_knight"],
-    visualTier: "common",
-    baseStats: { def: 5, maxHp: 35 },
-  },
-  arm_knight_uncommon: {
-    id: "arm_knight_uncommon",
-    name: "Giáp Vệ Binh Thảo Nguyên",
-    category: "equipment",
-    rarity: "uncommon",
-    slot: "armor",
-    iconColor: "#44ee88",
-    desc: "Áo giáp xanh rèn kèm gai phản lực nhẹ.",
-    sellPrice: 40,
-    allowedClasses: ["prism_knight"],
-    visualTier: "uncommon",
-    baseStats: { def: 9, maxHp: 75, spd: 3 },
-    passiveSkill: { id: "thorns_reflect", name: "Giáp Gai Quang Phổ", desc: "Phản lại 25% sát thương cận chiến vào kẻ tấn công." },
-  },
-  arm_knight_rare: {
-    id: "arm_knight_rare",
-    name: "Chiến Giáp Thạch Anh",
-    category: "equipment",
-    rarity: "rare",
-    slot: "armor",
-    iconColor: "#38b6ff",
-    desc: "Tấm giáp tinh thể khúc xạ đòn đánh & phản đòn mạnh mẽ.",
-    sellPrice: 86,
-    allowedClasses: ["prism_knight"],
-    visualTier: "rare",
-    baseStats: { def: 15, maxHp: 135, atk: 5 },
-    passiveSkill: { id: "thorns_reflect", name: "Giáp Gai Pha Lê", desc: "Phản lại 25% sát thương cận chiến vào kẻ tấn công." },
-  },
-  arm_knight_epic: {
-    id: "arm_knight_epic",
-    name: "Thánh Giáp Hổ Phách",
-    category: "equipment",
-    rarity: "epic",
-    slot: "armor",
-    iconColor: "#c266ff",
-    desc: "Áo giáp nặng bất khả xâm phạm của các Hiệp Sĩ Hổ Phách.",
-    sellPrice: 180,
-    allowedClasses: ["prism_knight"],
-    visualTier: "epic",
-    baseStats: { def: 24, maxHp: 225, atk: 10 },
-    passiveSkill: { id: "thorns_reflect", name: "Giáp Gai Nham Thạch", desc: "Phản lại 25% sát thương cận chiến vào kẻ tấn công." },
-  },
-  arm_knight_legend: {
-    id: "arm_knight_legend",
-    name: "Thần Giáp Lăng Kính",
-    category: "equipment",
-    rarity: "legendary",
-    slot: "armor",
-    iconColor: "#ff9922",
-    desc: "Áo giáp huyền thoại phát hào quang vương giả & trường phản chấn.",
-    sellPrice: 380,
-    allowedClasses: ["prism_knight"],
-    visualTier: "legendary",
-    baseStats: { def: 36, maxHp: 350, atk: 16, spd: 6 },
-    passiveSkill: { id: "thorns_reflect", name: "Hào Quang Phản Chấn", desc: "Phản lại 25% sát thương cận chiến vào kẻ tấn công." },
-  },
-
-  // --- CHROMA MAGE ARMORS ---
-  arm_mage_common: {
-    id: "arm_mage_common",
-    name: "Áo Choàng Học Đồ",
-    category: "equipment",
-    rarity: "common",
-    slot: "armor",
-    iconColor: "#b8c0d4",
-    desc: "Mũ và áo choàng ma thuật cơ bản của Pháp Sư Sắc Độ.",
-    sellPrice: 18,
-    allowedClasses: ["chroma_mage"],
-    visualTier: "common",
-    baseStats: { def: 3, maxHp: 25, atk: 3 },
-  },
-  arm_mage_uncommon: {
-    id: "arm_mage_uncommon",
-    name: "Pháp Bào Thảo Nguyên",
-    category: "equipment",
-    rarity: "uncommon",
-    slot: "armor",
-    iconColor: "#44ee88",
-    desc: "Dệt từ sợi lá ánh sáng, tăng uy lực Phản Ứng Nguyên Tố.",
-    sellPrice: 40,
-    allowedClasses: ["chroma_mage"],
-    visualTier: "uncommon",
-    baseStats: { def: 6, maxHp: 55, atk: 6, spd: 4 },
-    passiveSkill: { id: "arcane_surge", name: "Cộng Hưởng Nguyên Tố", desc: "+25% sát thương Phản Ứng Nguyên Tố & hồi nhanh Tuyệt Kỹ." },
-  },
-  arm_mage_rare: {
-    id: "arm_mage_rare",
-    name: "Pháp Bào Thạch Anh",
-    category: "equipment",
-    rarity: "rare",
-    slot: "armor",
-    iconColor: "#38b6ff",
-    desc: "Trang phục pháp sư khảm tinh thể lam bảo hộ.",
-    sellPrice: 86,
-    allowedClasses: ["chroma_mage"],
-    visualTier: "rare",
-    baseStats: { def: 10, maxHp: 95, atk: 12, crit: 5 },
-    passiveSkill: { id: "arcane_surge", name: "Mạch Phép Thạch Anh", desc: "+25% sát thương Phản Ứng Nguyên Tố & hồi nhanh Tuyệt Kỹ." },
-  },
-  arm_mage_epic: {
-    id: "arm_mage_epic",
-    name: "Huyền Bào Hổ Phách",
-    category: "equipment",
-    rarity: "epic",
-    slot: "armor",
-    iconColor: "#c266ff",
-    desc: "Áo choàng đại pháp sư rực rỡ năng lượng hổ phách.",
-    sellPrice: 180,
-    allowedClasses: ["chroma_mage"],
-    visualTier: "epic",
-    baseStats: { def: 15, maxHp: 155, atk: 20, crit: 8 },
-    passiveSkill: { id: "arcane_surge", name: "Bùng Nổ Nguyên Tố", desc: "+25% sát thương Phản Ứng Nguyên Tố & hồi nhanh Tuyệt Kỹ." },
-  },
-  arm_mage_legend: {
-    id: "arm_mage_legend",
-    name: "Thánh Bào Tinh Vân",
-    category: "equipment",
-    rarity: "legendary",
-    slot: "armor",
-    iconColor: "#ff9922",
-    desc: "Áo choàng huyền thoại tối cao chứa đựng tinh hoa vạn sắc.",
-    sellPrice: 380,
-    allowedClasses: ["chroma_mage"],
-    visualTier: "legendary",
-    baseStats: { def: 22, maxHp: 245, atk: 30, crit: 12, spd: 8 },
-    passiveSkill: { id: "arcane_surge", name: "Siêu Cộng Hưởng", desc: "+25% sát thương Phản Ứng Nguyên Tố & hồi nhanh Tuyệt Kỹ." },
-  },
-
-  // --- BIT ROGUE ARMORS ---
-  arm_rogue_common: {
-    id: "arm_rogue_common",
-    name: "Áo Trùm Điểm Ảnh",
-    category: "equipment",
-    rarity: "common",
-    slot: "armor",
-    iconColor: "#b8c0d4",
-    desc: "Bộ đồ ẩn thân nhẹ cùng khăn quàng đặc trưng của Sát Thủ.",
-    sellPrice: 18,
-    allowedClasses: ["bit_rogue"],
-    visualTier: "common",
-    baseStats: { def: 3, maxHp: 22, spd: 6 },
-  },
-  arm_rogue_uncommon: {
-    id: "arm_rogue_uncommon",
-    name: "Giáp Da Thảo Nguyên",
-    category: "equipment",
-    rarity: "uncommon",
-    slot: "armor",
-    iconColor: "#44ee88",
-    desc: "Nhẹ nhàng linh hoạt, giảm hồi chiêu Dash [Space].",
-    sellPrice: 40,
-    allowedClasses: ["bit_rogue"],
-    visualTier: "uncommon",
-    baseStats: { def: 6, maxHp: 50, spd: 10, crit: 4 },
-    passiveSkill: { id: "shadow_step", name: "Bước Nhảy Bóng Tối", desc: "Giảm 22% hồi chiêu Dash [Space]." },
-  },
-  arm_rogue_rare: {
-    id: "arm_rogue_rare",
-    name: "Y Phục Thạch Anh",
-    category: "equipment",
-    rarity: "rare",
-    slot: "armor",
-    iconColor: "#38b6ff",
-    desc: "Khăn & giáp nhẹ dệt sợi quang học tối ưu né tránh.",
-    sellPrice: 86,
-    allowedClasses: ["bit_rogue"],
-    visualTier: "rare",
-    baseStats: { def: 10, maxHp: 88, spd: 14, crit: 8 },
-    passiveSkill: { id: "shadow_step", name: "Ảnh Bộ Thạch Anh", desc: "Giảm 22% hồi chiêu Dash [Space]." },
-  },
-  arm_rogue_epic: {
-    id: "arm_rogue_epic",
-    name: "Hắc Giáp Hổ Phách",
-    category: "equipment",
-    rarity: "epic",
-    slot: "armor",
-    iconColor: "#c266ff",
-    desc: "Áo giáp sát thủ cao cấp tăng mạnh tốc độ và chí mạng.",
-    sellPrice: 180,
-    allowedClasses: ["bit_rogue"],
-    visualTier: "epic",
-    baseStats: { def: 15, maxHp: 140, atk: 12, spd: 18, crit: 12 },
-    passiveSkill: { id: "shadow_step", name: "Hư Ảnh Bộ", desc: "Giảm 22% hồi chiêu Dash [Space]." },
-  },
-  arm_rogue_legend: {
-    id: "arm_rogue_legend",
-    name: "Ảo Giáp Đoạt Mệnh",
-    category: "equipment",
-    rarity: "legendary",
-    slot: "armor",
-    iconColor: "#ff9922",
-    desc: "Thánh y huyền thoại biến Sát Thủ thành bóng ma bất khả bắt kịp.",
-    sellPrice: 380,
-    allowedClasses: ["bit_rogue"],
-    visualTier: "legendary",
-    baseStats: { def: 22, maxHp: 215, atk: 22, spd: 24, crit: 18 },
-    passiveSkill: { id: "shadow_step", name: "Vô Ảnh Bộ", desc: "Giảm 22% hồi chiêu Dash [Space]." },
-  },
-
-  // --- PIXEL TINKER ARMORS ---
-  arm_tinker_common: {
-    id: "arm_tinker_common",
-    name: "Áo Kỹ Sư Đồng Thau",
-    category: "equipment",
-    rarity: "common",
-    slot: "armor",
-    iconColor: "#b8c0d4",
-    desc: "Mũ phi công, kính bảo hộ & ba-lô năng lượng của Kỹ Sư Mạch Sáng.",
-    sellPrice: 18,
-    allowedClasses: ["pixel_tinker"],
-    visualTier: "common",
-    baseStats: { def: 4, maxHp: 30 },
-  },
-  arm_tinker_uncommon: {
-    id: "arm_tinker_uncommon",
-    name: "Giáp Mạch Thảo Nguyên",
-    category: "equipment",
-    rarity: "uncommon",
-    slot: "armor",
-    iconColor: "#44ee88",
-    desc: "Tích hợp mạch nano tự sửa giúp tăng 35% máu Trụ & hồi máu nhẹ.",
-    sellPrice: 40,
-    allowedClasses: ["pixel_tinker"],
-    visualTier: "uncommon",
-    baseStats: { def: 8, maxHp: 68, atk: 3 },
-    passiveSkill: { id: "nano_repair", name: "Mạch Tự Sửa Nano", desc: "+35% HP Trụ Pixel & hồi máu nhẹ liên tục." },
-  },
-  arm_tinker_rare: {
-    id: "arm_tinker_rare",
-    name: "Giáp Cơ Khí Thạch Anh",
-    category: "equipment",
-    rarity: "rare",
-    slot: "armor",
-    iconColor: "#38b6ff",
-    desc: "Bộ giáp kỹ thuật gia cố bằng lõi tinh thể Thạch Anh.",
-    sellPrice: 86,
-    allowedClasses: ["pixel_tinker"],
-    visualTier: "rare",
-    baseStats: { def: 13, maxHp: 118, atk: 8, spd: 5 },
-    passiveSkill: { id: "nano_repair", name: "Nano Thạch Anh", desc: "+35% HP Trụ Pixel & hồi máu nhẹ liên tục." },
-  },
-  arm_tinker_epic: {
-    id: "arm_tinker_epic",
-    name: "Giáp Lò Phản Ứng",
-    category: "equipment",
-    rarity: "epic",
-    slot: "armor",
-    iconColor: "#c266ff",
-    desc: "Trang bị lò phản ứng Hổ Phách sau lưng cấp nguồn cho mọi khí tài.",
-    sellPrice: 180,
-    allowedClasses: ["pixel_tinker"],
-    visualTier: "epic",
-    baseStats: { def: 20, maxHp: 190, atk: 15, spd: 8 },
-    passiveSkill: { id: "nano_repair", name: "Lò Tự Phục Hồi", desc: "+35% HP Trụ Pixel & hồi máu nhẹ liên tục." },
-  },
-  arm_tinker_legend: {
-    id: "arm_tinker_legend",
-    name: "Thần Giáp Kiến Tạo",
-    category: "equipment",
-    rarity: "legendary",
-    slot: "armor",
-    iconColor: "#ff9922",
-    desc: "Bộ giáp tối thượng hợp nhất cơ khí và quang phổ vĩnh hằng.",
-    sellPrice: 380,
-    allowedClasses: ["pixel_tinker"],
-    visualTier: "legendary",
-    baseStats: { def: 28, maxHp: 290, atk: 24, spd: 12, crit: 10 },
-    passiveSkill: { id: "nano_repair", name: "Tái Tạo Quang Phổ", desc: "+35% HP Trụ Pixel & hồi máu nhẹ liên tục." },
-  },
-
-  // =========================================================================
-  // UNIVERSAL RINGS (All Classes, visual aura cuff + passive bonuses)
-  // =========================================================================
-  rng_copper: {
-    id: "rng_copper",
-    name: "Nhẫn Đồng Cũ",
-    category: "equipment",
-    rarity: "common",
-    slot: "ring",
-    iconColor: "#d4b08c",
-    desc: "Chiếc nhẫn đơn sơ tăng nhẹ sát thương & chí mạng.",
-    sellPrice: 14,
-    visualTier: "common",
-    baseStats: { atk: 4, crit: 3 },
-  },
-  rng_breeze: {
-    id: "rng_breeze",
-    name: "Nhẫn Gió Xanh",
-    category: "equipment",
-    rarity: "uncommon",
-    slot: "ring",
-    iconColor: "#44ee88",
-    desc: "Giúp bước chân thanh thoát và ra đòn sắc bén hơn.",
-    sellPrice: 34,
-    visualTier: "uncommon",
-    baseStats: { spd: 10, crit: 7, atk: 4 },
-  },
-  rng_quartz_eye: {
-    id: "rng_quartz_eye",
-    name: "Nhẫn Mắt Pha Lê",
-    category: "equipment",
-    rarity: "rare",
-    slot: "ring",
-    iconColor: "#38b6ff",
-    desc: "Mỗi đòn Chí Mạng giúp hút lại 4% sinh lực.",
-    sellPrice: 74,
-    visualTier: "rare",
-    baseStats: { atk: 10, crit: 12, spd: 6 },
-    passiveSkill: { id: "ring_lifesteal", name: "Hút Huyết Chí Mạng", desc: "Đánh Crit hồi 4% Max HP." },
-  },
-  rng_amber_heart: {
-    id: "rng_amber_heart",
-    name: "Nhẫn Tâm Hổ Phách",
-    category: "equipment",
-    rarity: "epic",
-    slot: "ring",
-    iconColor: "#c266ff",
-    desc: "Kích nổ sóng hỏa lực mỗi khi hạ gục kẻ địch & hút máu khi Crit.",
-    sellPrice: 155,
-    visualTier: "epic",
-    baseStats: { atk: 18, maxHp: 75, crit: 14 },
-    passiveSkill: { id: "ring_nova_kill", name: "Hổ Phách Bộc Phá", desc: "Hút 4% HP khi Crit & kích nổ AoE khi hạ địch." },
-  },
-  rng_spectrum: {
-    id: "rng_spectrum",
-    name: "Vòng Quang Phổ Vĩnh Hằng",
-    category: "equipment",
-    rarity: "legendary",
-    slot: "ring",
-    iconColor: "#ff9922",
-    desc: "Cổ vật 7 sắc màu tối thượng hồi máu khi Crit, bộc phá & tăng mạnh toàn bộ chỉ số.",
-    sellPrice: 340,
-    visualTier: "legendary",
-    baseStats: { atk: 28, crit: 20, spd: 14, maxHp: 110 },
-    passiveSkill: { id: "ring_nova_kill", name: "Quang Phổ Bất Diệt", desc: "Hút 4% HP khi Crit & kích nổ AoE khi hạ địch." },
-  },
-
-  // =========================================================================
-  // UNIVERSAL PIX-CHIPS (Unlock & Evolve Ultimate [Q]!)
-  // =========================================================================
-  chp_basic: {
-    id: "chp_basic",
-    name: "Pix-Chip 8-Bit",
-    category: "equipment",
-    rarity: "common",
-    slot: "chip",
-    iconColor: "#a8b4cc",
-    desc: "Vi mạch điểm ảnh kích hoạt lõi Tuyệt Kỹ [Q] cho mọi Class.",
-    sellPrice: 18,
-    visualTier: "common",
-    baseStats: { spd: 5, maxHp: 20, atk: 3 },
-    grantsSkillQ: {
-      variant: "ult_standard",
-      name: "Tuyệt Kỹ Chuẩn",
-      desc: "Mở khóa kỹ năng Tuyệt Kỹ [Q] nguyên bản của Class khi đầy 100% Overdrive.",
-    },
-  },
-  chp_overclock: {
-    id: "chp_overclock",
-    name: "Pix-Chip Ép Xung",
-    category: "equipment",
-    rarity: "uncommon",
-    slot: "chip",
-    iconColor: "#44ee88",
-    desc: "Tăng 25% tốc độ tích tụ năng lượng Tuyệt Kỹ [Q] & tăng tốc ra đòn.",
-    sellPrice: 40,
-    visualTier: "uncommon",
-    baseStats: { atk: 8, crit: 8, spd: 7 },
-    grantsSkillQ: {
-      variant: "ult_overclock",
-      name: "Tuyệt Kỹ Ép Xung",
-      desc: "Mở khóa [Q] & tăng +25% tốc độ hồi thanh Overdrive.",
-    },
-  },
-  chp_prism_core: {
-    id: "chp_prism_core",
-    name: "Pix-Chip Lõi Quang",
-    category: "equipment",
-    rarity: "rare",
-    slot: "chip",
-    iconColor: "#38b6ff",
-    desc: "Cường hóa Tuyệt Kỹ [Q] +25% uy lực & hồi ngay 15% HP khi kích hoạt!",
-    sellPrice: 85,
-    visualTier: "rare",
-    baseStats: { atk: 14, def: 6, maxHp: 55, crit: 9 },
-    grantsSkillQ: {
-      variant: "ult_cataclysm",
-      name: "Tuyệt Kỹ Hồi Sinh",
-      desc: "Mở khóa [Q] (+25% uy lực) & hồi ngay 15% Max HP khi thi triển!",
-    },
-  },
-  chp_root_pulse: {
-    id: "chp_root_pulse",
-    name: "Pix-Chip Cổ Thụ",
-    category: "equipment",
-    rarity: "epic",
-    slot: "chip",
-    iconColor: "#c266ff",
-    desc: "Kết tinh từ Boss Blight Root — cường hóa [Q] +40% uy lực & sóng xung kích.",
-    sellPrice: 175,
-    visualTier: "epic",
-    baseStats: { atk: 22, def: 11, maxHp: 110, crit: 12 },
-    grantsSkillQ: {
-      variant: "ult_cataclysm",
-      name: "Tuyệt Kỹ Cổ Thụ",
-      desc: "Mở khóa [Q] (+40% uy lực), nổ sóng chấn động & hồi 18% HP khi dùng!",
-    },
-  },
-  chp_eraser_zero: {
-    id: "chp_eraser_zero",
-    name: "Pix-Chip Alpha-Chroma",
-    category: "equipment",
-    rarity: "legendary",
-    slot: "chip",
-    iconColor: "#ff9922",
-    desc: "Mảnh chip tối thượng tăng +65% uy lực [Q], hồi 25% HP & phóng bão ánh sáng!",
-    sellPrice: 390,
-    visualTier: "legendary",
-    baseStats: { atk: 32, def: 15, maxHp: 165, crit: 18, spd: 12 },
-    grantsSkillQ: {
-      variant: "ult_sovereign",
-      name: "Tuyệt Kỹ Alpha-Chroma",
-      desc: "Mở khóa [Q] (+65% uy lực), bùng nổ cầu vồng AoE & hồi 25% Max HP!",
-    },
-  },
+  // === ALL 5-SLOT RPG EQUIPMENT (from equipments.ts) ===
+  ...EQUIPMENT_ITEMS,
 };
 
+/** Kho hàng của Thương Nhân Mira (gồm tiêu thụ T1-T4, vũ khí T1-T2 các class & 8 loại Bột Sắc Tố) */
 export const MERCHANT_STOCK = [
+  "pot_hp_small",
   "pot_hp",
+  "pot_hp_greater",
+  "pot_hp_supreme",
+  "pot_stamina_minor",
   "pot_stamina",
+  "pot_wind_surge",
+  "pot_might_brew",
   "pot_tonic",
+  "pot_aegis_flask",
+  "pot_coating",
+  "charm_undying",
+  "wpn_meadow_edge",
+  "wpn_meadow_wand",
+  "wpn_leaf_daggers",
+  "wpn_volt_blaster",
+  "mat_pigment_red",
+  "mat_pigment_cyan",
+  "mat_pigment_green",
+  "mat_pigment_gold",
+  "mat_pigment_wind",
+  "mat_pigment_quake",
+  "mat_pigment_void",
+  "mat_pigment_chroma",
   "mat_iron_ore",
   "mat_glitch_core",
   "mat_quartz_shard",
-  "mat_matrix_rune",
 ];
-
-const CLASS_REWARD_MAP: Record<ClassId, Record<ClassRewardKey, string>> = {
-  prism_knight: {
-    starter_weapon: "wpn_knight_iron",
-    uncommon_weapon: "wpn_knight_meadow",
-    uncommon_armor: "arm_knight_uncommon",
-    rare_weapon: "wpn_knight_quartz",
-    epic_weapon: "wpn_knight_amber",
-    legendary_weapon: "wpn_knight_legend",
-  },
-  chroma_mage: {
-    starter_weapon: "wpn_mage_twig",
-    uncommon_weapon: "wpn_mage_meadow",
-    uncommon_armor: "arm_mage_uncommon",
-    rare_weapon: "wpn_mage_quartz",
-    epic_weapon: "wpn_mage_amber",
-    legendary_weapon: "wpn_mage_legend",
-  },
-  bit_rogue: {
-    starter_weapon: "wpn_rogue_rust",
-    uncommon_weapon: "wpn_rogue_meadow",
-    uncommon_armor: "arm_rogue_uncommon",
-    rare_weapon: "wpn_rogue_quartz",
-    epic_weapon: "wpn_rogue_amber",
-    legendary_weapon: "wpn_rogue_legend",
-  },
-  pixel_tinker: {
-    starter_weapon: "wpn_tinker_pipe",
-    uncommon_weapon: "wpn_tinker_meadow",
-    uncommon_armor: "arm_tinker_uncommon",
-    rare_weapon: "wpn_tinker_quartz",
-    epic_weapon: "wpn_tinker_amber",
-    legendary_weapon: "wpn_tinker_legend",
-  },
-};
-
-export function resolveClassReward(classId: ClassId, key: ClassRewardKey): string {
-  return CLASS_REWARD_MAP[classId]?.[key] ?? "wpn_knight_iron";
-}
-
-export function canClassEquip(def: ItemDef, classId: ClassId): boolean {
-  if (def.category !== "equipment") return false;
-  if (!def.allowedClasses || def.allowedClasses.length === 0) return true;
-  return def.allowedClasses.includes(classId);
-}
 
 let uidSeq = 1;
 export function createItemInstance(defId: string, qty = 1, enhanceLevel = 0): ItemInstance {
@@ -1008,40 +665,176 @@ export function createItemInstance(defId: string, qty = 1, enhanceLevel = 0): It
     defId,
     qty,
     enhanceLevel,
+    pityBonus: 0,
   };
 }
 
-/** Computes effective stats of an equipment instance including +0..+10 enhancement & Matrix substats. */
-export function getItemEffectiveStats(inst: ItemInstance): Required<StatBonus> {
-  const def = ITEMS[inst.defId];
-  const b = def?.baseStats ?? {};
-  const m = inst.bonusStats ?? {};
-  const mult = 1 + inst.enhanceLevel * 0.16;
-  return {
-    atk: Math.round((b.atk ?? 0) * mult) + (def?.slot === "weapon" ? inst.enhanceLevel * 2 : 0) + (m.atk ?? 0),
-    def: Math.round((b.def ?? 0) * mult) + (def?.slot === "armor" ? inst.enhanceLevel * 1 : 0) + (m.def ?? 0),
-    maxHp: Math.round((b.maxHp ?? 0) * mult) + (def?.slot === "armor" ? inst.enhanceLevel * 9 : 0) + (m.maxHp ?? 0),
-    spd: Math.round((b.spd ?? 0) * (1 + inst.enhanceLevel * 0.06)) + (m.spd ?? 0),
-    crit: Math.round((b.crit ?? 0) + (inst.enhanceLevel >= 5 ? 3 : 0) + (inst.enhanceLevel >= 8 ? 4 : 0) + (m.crit ?? 0)),
-  };
+export interface NormalizedEquipStats {
+  atk: number;
+  def: number;
+  maxHp: number;
+  spd: number;
+  crit: number;
+  elementBonus: number;
+  maxStamina: number;
+  staminaCostPct: number;
+  poiseBreakPct: number;
+  skillCdPct: number;
 }
 
 /**
- * Picks a random equipment item of the given rarity.
- * When `preferredClassId` is passed, biases 60% toward items usable by that class while
- * keeping 40% exciting off-class drops!
+ * Computes effective stats of an equipment instance including rarity-weighted +0..+10 scaling
+ * AND breakthrough milestones (+3 Tempered, +5 8-Element Socket Resonance, +7 Enchanted Aura, +10 Prismatic Awakening).
  */
-export function pickRandomEquipByRarity(rarity: Rarity, preferredClassId?: ClassId): string {
-  const all = Object.values(ITEMS).filter(
-    (it) => it.category === "equipment" && it.rarity === rarity
-  );
-  if (all.length === 0) return "wpn_knight_meadow";
+export function getItemEffectiveStats(inst: ItemInstance): NormalizedEquipStats {
+  const def = ITEMS[inst.defId];
+  const b: StatBonus = def?.baseStats ?? {};
+  const rMult = def ? RARITY_INFO[def.rarity].enhanceMult : 1.0;
+  const lv = Math.max(0, inst.enhanceLevel);
+  const mult = 1 + lv * 0.14 * rMult;
 
-  if (preferredClassId && Math.random() < 0.6) {
-    const usable = all.filter((it) => canClassEquip(it, preferredClassId));
-    if (usable.length > 0) {
-      return usable[Math.floor(Math.random() * usable.length)].id;
+  const baseCrit = b.critRate ?? b.crit ?? 0;
+  const baseSpd = b.moveSpeed ?? b.spd ?? 0;
+  const baseElem = b.elementBonus ?? 0;
+
+  let maxStamina = b.maxStamina ?? 0;
+  let staminaCostPct = b.staminaCostPct ?? 0;
+  let poiseBreakPct = b.poiseBreakPct ?? 0;
+  let skillCdPct = b.skillCdPct ?? 0;
+
+  // +3 Breakthrough: Tempered Edge / Stride
+  if (lv >= 3) {
+    if (def?.slot === "weapon") poiseBreakPct += 10;
+    if (def?.slot === "boots") maxStamina += 6;
+  }
+
+  // +5 Breakthrough: 8-Element Chroma Socket Resonance!
+  let infusedBonusElem = 0;
+  let infAtk = 0;
+  let infHp = 0;
+  let infSpd = 0;
+  let infCrit = 0;
+  if (lv >= 5 && inst.infusedElement) {
+    infusedBonusElem = inst.infusedElement === "chroma" ? 12 : 8;
+    if (inst.infusedElement === "fire") infAtk += 4;
+    else if (inst.infusedElement === "ice") infCrit += 4;
+    else if (inst.infusedElement === "nature") infHp += 20;
+    else if (inst.infusedElement === "volt") skillCdPct -= 5;
+    else if (inst.infusedElement === "void") skillCdPct -= 6;
+    else if (inst.infusedElement === "wind") {
+      infSpd += 6;
+      maxStamina += 8;
+    } else if (inst.infusedElement === "quake") {
+      poiseBreakPct += 15;
     }
   }
-  return all[Math.floor(Math.random() * all.length)].id;
+
+  // +7 Breakthrough: Enchanted Aura
+  if (lv >= 7) {
+    if (def?.slot === "weapon") staminaCostPct -= 15;
+    if (def?.slot === "boots") maxStamina += 15;
+    if (def?.slot === "accessory") skillCdPct -= 10;
+  }
+  // +10 Breakthrough: Prismatic Awakening
+  if (lv >= 10) {
+    if (def?.slot === "weapon") poiseBreakPct += 20;
+    maxStamina += 5;
+  }
+
+  const bonus = inst.bonusStats ?? {};
+  const mAtk = bonus.atk ?? 0;
+  const mDef = bonus.def ?? 0;
+  const mHp = bonus.maxHp ?? 0;
+  const mSpd = bonus.spd ?? bonus.moveSpeed ?? 0;
+  const mCrit = bonus.crit ?? bonus.critRate ?? 0;
+
+  return {
+    atk:
+      Math.round((b.atk ?? 0) * mult) +
+      infAtk +
+      mAtk +
+      (def?.slot === "weapon" ? lv * 2 + (lv >= 10 ? 8 : 0) : 0),
+    def:
+      Math.round((b.def ?? 0) * mult) +
+      mDef +
+      (def?.slot === "armor" || def?.slot === "helmet" ? lv * 1 + (lv >= 3 ? 2 : 0) : 0),
+    maxHp:
+      Math.round((b.maxHp ?? 0) * mult) +
+      infHp +
+      mHp +
+      (def?.slot === "armor" ? lv * 8 : def?.slot === "helmet" ? lv * 5 : 0) +
+      (lv >= 3 && (def?.slot === "armor" || def?.slot === "helmet") ? 15 : 0),
+    spd: Math.round(baseSpd * (1 + lv * 0.06)) + infSpd + mSpd + (def?.slot === "boots" && lv >= 5 ? 3 : 0),
+    crit: Math.round(baseCrit + infCrit + mCrit + (lv >= 5 ? 3 : 0) + (lv >= 8 ? 4 : 0) + (lv >= 10 ? 3 : 0)),
+    elementBonus:
+      Math.round(baseElem * (1 + lv * 0.08)) +
+      (lv >= 5 && baseElem > 0 ? 3 : 0) +
+      infusedBonusElem +
+      (lv >= 10 ? 10 : 0),
+    maxStamina,
+    staminaCostPct,
+    poiseBreakPct,
+    skillCdPct,
+  };
+}
+
+/** Returns human-readable breakthrough milestone description for an item at +3/+5/+7/+10. */
+export function getItemMilestoneSummary(inst: ItemInstance): string[] {
+  const def = ITEMS[inst.defId];
+  if (!def || def.category !== "equipment") return [];
+  const lv = inst.enhanceLevel;
+  const notes: string[] = [];
+  notes.push(
+    `${lv >= 3 ? "★" : "○"} [+3 Tôi Luyện]: ${
+      def.slot === "weapon"
+        ? "+10% Phá Giáp Trắng Boss"
+        : def.slot === "boots"
+          ? "+6 Thể Lực Tối Đa"
+          : "+15 HP & +2 DEF"
+    }`
+  );
+  notes.push(
+    `${lv >= 5 ? "★" : "○"} [+5 Khe 8 Sắc Tố]: Nhuộm 1 trong 8 Hệ (Hỏa/Băng/Mộc/Lôi/Hư Không/Sắc Độ/Gió/Chấn Động)`
+  );
+  notes.push(
+    `${lv >= 7 ? "★" : "○"} [+7 Hào Quang]: ${
+      def.slot === "weapon"
+        ? "-15% Thể lực Tụ Lực & Hào quang"
+        : def.slot === "boots"
+          ? "+15 Thể Lực Tối Đa"
+          : def.slot === "accessory"
+            ? "-10% Hồi chiêu Kỹ năng [E]"
+            : "Tăng cường kháng chấn"
+    }`
+  );
+  notes.push(
+    `${lv >= 10 ? "★" : "○"} [+10 Thức Tỉnh Lăng Kính]: +10% ELEM, +3% Crit${
+      def.slot === "weapon" ? ", N3/Tụ Lực kích Khúc Xạ Cầu Vồng (Prism)" : ""
+    }`
+  );
+  return notes;
+}
+
+/** Returns how many Prism Shards an equipment item yields when dismantled. */
+export function getDismantleShardYield(inst: ItemInstance): number {
+  const def = ITEMS[inst.defId];
+  if (!def || def.category !== "equipment") return 0;
+  const base =
+    def.dismantleShards ??
+    ({ common: 1, uncommon: 2, rare: 4, epic: 8, legendary: 15 }[def.rarity] || 1);
+  return base + Math.floor(inst.enhanceLevel * 0.85);
+}
+
+export function pickRandomEquipByRarity(rarity: Rarity, preferredClassId?: ClassId): string {
+  const pool = Object.values(ITEMS).filter(
+    (it) => it.category === "equipment" && it.rarity === rarity
+  );
+  if (pool.length === 0) return "wpn_meadow_edge";
+  if (preferredClassId && Math.random() < 0.6) {
+    const matching = pool.filter((it) => canClassEquip(it, preferredClassId));
+    if (matching.length > 0) {
+      return matching[Math.floor(Math.random() * matching.length)].id;
+    }
+  }
+  return pool[Math.floor(Math.random() * pool.length)].id;
 }

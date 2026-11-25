@@ -61,8 +61,16 @@ export class ClassSelectUI {
       if (this.switchingMode) {
         this.game.switchClassInTown(this.selectedId);
       } else {
-        this.game.startNewGame(this.selectedId);
+        const chk = document.getElementById("chk-newbie-guide") as HTMLInputElement | null;
+        const enableGuide = chk ? chk.checked : true;
+        this.game.startNewGame(this.selectedId, enableGuide);
       }
+    });
+
+    document.getElementById("btn-open-tutorial")?.addEventListener("click", () => {
+      sfx.unlock();
+      sfx.playUiClick();
+      this.game.openTutorialFromTitle();
     });
 
     this.continueBtn.addEventListener("click", () => {
@@ -187,17 +195,20 @@ export class ClassSelectUI {
     this.root.classList.remove("hidden");
 
     const startBtn = document.getElementById("btn-start-adventure")!;
+    const guideWrap = document.getElementById("newbie-guide-wrap");
     if (switching) {
       this.selectClass(this.game.player.classId);
       this.titleSubEl.textContent = "ĐÀI ĐỔI CLASS — Chọn nhân vật mới (giữ nguyên cấp độ, trang bị & nhiệm vụ)";
       startBtn.textContent = "ĐỔI SANG CLASS NÀY";
       this.continueBtn.classList.add("hidden");
       this.closeBtn.classList.remove("hidden");
+      guideWrap?.classList.add("hidden");
     } else {
       this.titleSubEl.textContent = "THẾ GIỚI MỞ 16-BIT ACTION RPG — Đánh thức Trụ Sắc Màu & tiêu diệt The Eraser";
       startBtn.textContent = "BẮT ĐẦU PHIÊU LƯU MỚI";
       this.continueBtn.classList.toggle("hidden", !this.game.saveSys.hasSave());
       this.closeBtn.classList.add("hidden");
+      guideWrap?.classList.remove("hidden");
     }
 
     if (!this.rafId) {

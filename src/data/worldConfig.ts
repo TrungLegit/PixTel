@@ -328,32 +328,35 @@ export const TOWN_NPCS: NpcDef[] = [
   {
     id: "npc_elder",
     name: "Trưởng Làng Elian",
-    role: "Nhiệm Vụ Chính & Phụ",
+    role: "Biên Niên Sử & Nhiệm Vụ Chính",
     kind: "elder",
     tx: 80,
     ty: 78,
     accent: "#ffe066",
-    greeting: "Chào Chroma-Walker! Thế giới đang bị Nhiễu Trắng nuốt chửng. Hãy kích hoạt các Trụ Sắc Màu và đánh bại The Eraser!",
+    greeting:
+      "Mừng ngươi thức tỉnh, Chroma-Walker! Thế giới Aethel-16 đang phai thành tro trắng dưới tay giao thức The Eraser của Kiến Trúc Sư Vaelor. Hãy giải mã các Bia Ký cổ, đánh thức 9 Trụ Sắc Màu và giành lại bầu trời 16-bit!",
   },
   {
     id: "npc_blacksmith",
     name: "Thợ Rèn Lăng Kính Kael",
-    role: "Cường Hóa & Chế Tạo",
+    role: "Cường Hóa Pity · Khảm Sắc Tố +5",
     kind: "blacksmith",
     tx: 74,
     ty: 78,
     accent: "#ff8844",
-    greeting: "Mang Quặng và Lõi Glitch tới đây! Lò Lăng Kính có thể cường hóa trang bị lên +10 hoặc đúc thần khí Huyền Thoại!",
+    greeting:
+      "Đôi mắt ta đã hiến dâng sắc màu cho chiếc Đe Lăng Kính này để vũ khí của ngươi không bao giờ vỡ nát! Đập thất bại sẽ tích tụ Nhiệt Cộng Hưởng tăng tỉ lệ lần sau, và lên +5 ta sẽ nhuộm Nguyên Tố lên lưỡi gươm cho ngươi!",
   },
   {
     id: "npc_merchant",
-    name: "Thương Nhân Mira",
-    role: "Cửa Hàng Vật Phẩm",
+    name: "Thương Nhân Sắc Độ Mira",
+    role: "Dược Phẩm · Dầu Phủ & Bột Sắc Tố",
     kind: "merchant",
     tx: 86,
     ty: 78,
     accent: "#44ee88",
-    greeting: "Đừng quên dự trữ Bình Máu [1], Tinh Chất Thể Lực [2] và Dược Phẩm Quang Phổ [3] trước khi khám phá vùng đất mới nhé!",
+    greeting:
+      "Ta cất giữ những lọ Dầu Phủ Quang Phổ [4], Bột Sắc Tố hiếm và cả Bùa Hộ Mệnh Bất Diệt! Dù ngươi thuộc Class nào, chỉ cần phủ dầu lên vũ khí là có thể kích nổ chuỗi Phản Ứng Nguyên Tố đấy!",
   },
 ];
 
@@ -376,7 +379,7 @@ export const WAYPOINTS: WaypointDef[] = [
 
 // Enemy Camps & Boss Arenas (patrol + aggro + leash + respawn + locked chests)
 export const WORLD_CAMPS: CampDef[] = [
-  // Meadow (Lv 1-5) — starter camps close to west/north gate!
+  // Meadow (Lv 1-6) — starter camps + Meadow Boss Xing Warden!
   {
     id: "camp_meadow_1",
     biome: "meadow",
@@ -406,6 +409,16 @@ export const WORLD_CAMPS: CampDef[] = [
     hasLockedChest: true,
     chestRarity: "rare",
     respawnSec: 38,
+  },
+  {
+    id: "camp_meadow_boss",
+    biome: "meadow",
+    tx: 16,
+    ty: 18,
+    enemies: [{ typeId: "boss_xing_warden", count: 1 }, { typeId: "ash_hopper", count: 2 }],
+    hasLockedChest: true,
+    chestRarity: "rare",
+    respawnSec: 60,
   },
   // Quartz Forest (Lv 5-10)
   {
@@ -541,6 +554,12 @@ export function getBiomeAtTile(tx: number, ty: number): BiomeId {
 }
 
 export const BOSS_ARENAS: Record<string, { cx: number; cy: number; radius: number; label: string }> = {
+  boss_xing_warden: {
+    cx: 16 * TILE_SIZE + 8,
+    cy: 18 * TILE_SIZE + 8,
+    radius: 9 * TILE_SIZE,
+    label: "LÃNH ĐỊA XING WARDEN",
+  },
   boss_blight_root: {
     cx: 138 * TILE_SIZE + 8,
     cy: 20 * TILE_SIZE + 8,

@@ -4,11 +4,7 @@ export type BiomeId = "town" | "meadow" | "quartz" | "amber" | "ruins";
 
 export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
 
-export type EquipSlot = "weapon" | "armor" | "ring" | "chip";
-
-export type ItemCategory = "equipment" | "material" | "consumable";
-
-export type ElementType = "fire" | "ice" | "poison";
+export type ItemTier = 1 | 2 | 3 | 4 | 5;
 
 export type StatAllocKey = "str" | "vit" | "agi" | "crt";
 
@@ -24,29 +20,7 @@ export interface HeroVisualLoadout {
   weaponEnhance: number;
 }
 
-export type WeaponSkillVariant =
-  | "knight_shield_beam"
-  | "knight_quake_aegis"
-  | "knight_solar_prism"
-  | "mage_chroma_vortex"
-  | "mage_frost_nova"
-  | "mage_astral_collapse"
-  | "rogue_frame_skip"
-  | "rogue_shadow_ambush"
-  | "rogue_phantom_blitz"
-  | "tinker_compile_turret"
-  | "tinker_shock_mortar"
-  | "tinker_prism_cannon";
-
-export type ChipUltVariant = "ult_standard" | "ult_overclock" | "ult_cataclysm" | "ult_sovereign";
-
-export type ClassRewardKey =
-  | "starter_weapon"
-  | "uncommon_weapon"
-  | "uncommon_armor"
-  | "rare_weapon"
-  | "epic_weapon"
-  | "legendary_weapon";
+export type ClassRewardKey = "starter_weapon";
 
 export interface ActiveBossLock {
   bossUid: number;
@@ -57,31 +31,164 @@ export interface ActiveBossLock {
   radius: number;
 }
 
+export type ConsumableGroup = "hp" | "stamina" | "power" | "aegis";
+
+export interface ConsumableSpec {
+  group: ConsumableGroup;
+  hpPct?: number;
+  staminaPct?: number;
+  speedPct?: number;
+  atkPct?: number;
+  critBonus?: number;
+  defPct?: number;
+  shieldSec?: number;
+  invulnSec?: number;
+  overdriveGain?: number;
+  durationSec?: number;
+  cleanseSlow?: boolean;
+}
+
+export type EquipSlot = "weapon" | "helmet" | "armor" | "boots" | "accessory";
+
+export const EQUIP_SLOTS: readonly EquipSlot[] = [
+  "helmet",
+  "armor",
+  "weapon",
+  "boots",
+  "accessory",
+];
+
+export type ItemType = "equipment" | "material" | "consumable";
+export type ItemCategory = ItemType;
+
+export type ItemIconKind =
+  | "sword"
+  | "axe"
+  | "staff"
+  | "dagger"
+  | "gun"
+  | "helmet"
+  | "armor"
+  | "boots"
+  | "accessory"
+  | "amulet"
+  | "book"
+  | "disc"
+  | "totem"
+  | "pigment"
+  | "potion"
+  | "ore"
+  | "shard"
+  | "core";
+
+export type EquipVisualShape =
+  | "hood"
+  | "visor"
+  | "crest"
+  | "crown"
+  | "halo"
+  | "tunic"
+  | "mail"
+  | "plate"
+  | "aegis"
+  | "mantle"
+  | "leather"
+  | "strider"
+  | "greaves"
+  | "treads"
+  | "void_step"
+  | "blade"
+  | "greatsword"
+  | "halberd"
+  | "staff"
+  | "daggers"
+  | "carbine"
+  | "sovereign"
+  | "ring_orb"
+  | "chip_orb"
+  | "halo_orb";
+
+export interface EquipVisualStyle {
+  outline: string;
+  primary: string;
+  accent: string;
+  shape: EquipVisualShape;
+  offsetX?: number;
+  offsetY?: number;
+}
+
+export type InfusableElement =
+  | "fire"
+  | "ice"
+  | "nature"
+  | "volt"
+  | "void"
+  | "chroma"
+  | "wind"
+  | "quake";
+
+export type CanonicalElement = InfusableElement | "prism";
+export type ElementType = CanonicalElement | "poison";
+
+export type EquipPassiveId =
+  | "guard_breaker"
+  | "reaction_amp"
+  | "orbit_grimoire"
+  | "stamina_flow"
+  | "void_siphon"
+  | "wind_dancer"
+  | "chroma_blessing"
+  | "quake_impact";
+
 export interface StatBonus {
   atk?: number;
   def?: number;
   maxHp?: number;
   spd?: number;
   crit?: number; // percentage points, e.g. 5 = +5%
+  critRate?: number; // alias for crit
+  moveSpeed?: number; // alias for spd
+  elementBonus?: number; // % bonus elemental & skill damage
+  maxStamina?: number; // bonus max stamina capacity
+  staminaCostPct?: number; // negative = reduced stamina cost (e.g. -15)
+  poiseBreakPct?: number; // % bonus Bleach Shield break damage
+  skillCdPct?: number; // negative = faster [E] cooldown
 }
 
 export interface ItemDef {
   id: string;
   name: string;
-  category: ItemCategory;
+  category: ItemType;
   rarity: Rarity;
+  tier?: ItemTier;
   slot?: EquipSlot;
   iconColor: string;
+  iconKind?: ItemIconKind;
+  spriteKey?: string;
+  paperDollKey?: string;
+  capeKey?: string;
+  visualColor?: string;
+  accentColor?: string;
+  visualStyle?: EquipVisualStyle;
+  requiredClass?: ClassId | "all";
+  biomeTheme?: BiomeId;
+  setId?: string;
+  dismantleShards?: number;
   desc: string;
+  lore?: string;
+  passiveId?: EquipPassiveId;
+  passiveDesc?: string;
+  pigmentElement?: InfusableElement;
   sellPrice: number;
   buyPrice?: number;
   baseStats?: StatBonus;
-  consumableKind?: "hp_potion" | "stamina_elixir" | "chroma_tonic";
-  allowedClasses?: ClassId[];
-  visualTier?: GearVisualTier;
-  grantsSkillE?: { variant: WeaponSkillVariant; name: string; desc: string };
-  grantsSkillQ?: { variant: ChipUltVariant; name: string; desc: string };
-  passiveSkill?: { id: string; name: string; desc: string };
+  consumableKind?:
+    | "hp_potion"
+    | "stamina_elixir"
+    | "chroma_tonic"
+    | "chroma_coating"
+    | "undying_charm";
+  consumableSpec?: ConsumableSpec;
 }
 
 export interface ItemInstance {
@@ -89,8 +196,9 @@ export interface ItemInstance {
   defId: string;
   qty: number;
   enhanceLevel: number; // +0 .. +10 for equipment
-  pityBonus?: number;
-  bonusStats?: StatBonus;
+  pityBonus?: number; // accumulated failstack % bonus (+0..+100)
+  infusedElement?: InfusableElement; // unlocked at +5 via Chroma Pigments
+  bonusStats?: StatBonus; // awakened substats rolled on Matrix Forge +1 success
 }
 
 export interface RecipeDef {
@@ -106,25 +214,30 @@ export type QuestObjectiveKind =
   | "kill_any"
   | "mine_resource"
   | "enhance_item"
+  | "infuse_item"
   | "activate_waypoint"
-  | "open_chest";
+  | "open_chest"
+  | "read_lore"
+  | "trigger_reaction";
 
 export interface QuestObjectiveDef {
   id: string;
   kind: QuestObjectiveKind;
-  targetId?: string; // enemyId or biomeId
+  targetId?: string; // enemyId, biomeId, or loreId
   required: number;
   label: string;
 }
 
 export interface QuestDef {
   id: string;
+  chapter?: string;
   title: string;
   giverNpcId: string;
   prereqQuestId?: string;
   repeatable?: boolean;
   isMain?: boolean;
   summary: string;
+  loreNote?: string;
   dialogueStart: string;
   dialogueActive: string;
   dialogueComplete: string;
@@ -144,6 +257,22 @@ export interface QuestProgress {
   state: QuestState;
   counts: Record<string, number>;
   completions: number;
+}
+
+export interface LoreTabletDef {
+  id: string;
+  chapter: string;
+  title: string;
+  biome: BiomeId;
+  tx: number;
+  ty: number;
+  author: string;
+  accent: string;
+  excerpt: string;
+  body: string[];
+  rewardXp: number;
+  rewardGold: number;
+  rewardItem?: { defId: string; qty: number };
 }
 
 export interface WaypointDef {
@@ -206,7 +335,18 @@ export interface EnemyDef {
   gold: [number, number];
   isBoss?: boolean;
   isWorldBoss?: boolean;
-  ai: "melee" | "ranged" | "flanker" | "bruiser" | "boss_root" | "boss_amber" | "boss_eraser";
+  bleachShield?: number;
+  elementAffinity?: CanonicalElement;
+  elementWeakness?: CanonicalElement;
+  ai:
+    | "melee"
+    | "ranged"
+    | "flanker"
+    | "bruiser"
+    | "boss_warden"
+    | "boss_root"
+    | "boss_amber"
+    | "boss_eraser";
   lootMaterials: { defId: string; chance: number }[];
   equipDropChance: number;
   minRarity: Rarity;
@@ -225,19 +365,22 @@ export interface SaveDataV2 {
     xpNext: number;
     gold: number;
     overdrive: number;
+    statPoints?: number;
+    allocatedStats?: AllocatedStats;
     respawnWaypointId: string;
-    statPoints: number;
-    allocatedStats: AllocatedStats;
   };
   equipment: Partial<Record<EquipSlot, ItemInstance>>;
   bag: ItemInstance[];
   unlockedWaypoints: string[];
   openedChests: string[];
+  discoveredLore?: string[];
+  tutorialCompleted?: boolean;
   quests: Record<string, QuestProgress>;
   stats: {
     kills: number;
     mined: number;
     chestsOpened: number;
     bossesDefeated: number;
+    reactionsTriggered?: number;
   };
 }

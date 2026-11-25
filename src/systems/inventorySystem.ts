@@ -1,66 +1,132 @@
+import { getClassDef } from "../data/classes";
+import { SET_BONUSES, STARTER_WEAPON_BY_CLASS, type SetBonusDef } from "../data/equipments";
 import {
-  CLASS_DISPLAY_NAMES,
+  CONSUMABLE_HOTKEY_GROUPS,
   ITEMS,
-  canClassEquip,
   createItemInstance,
+  getDismantleShardYield,
   getItemEffectiveStats,
+  getItemTier,
+  type NormalizedEquipStats,
 } from "../data/items";
-import type {
-  ClassId,
-  EquipSlot,
-  GearVisualTier,
-  HeroVisualLoadout,
-  ItemDef,
-  ItemInstance,
-  StatBonus,
+import {
+  EQUIP_SLOTS,
+  type ClassId,
+  type ConsumableGroup,
+  type EquipSlot,
+  type ItemInstance,
 } from "../data/types";
+import type { PlayerEntity } from "../world/entities";
 
-export const MAX_BAG_SLOTS = 32;
+export const MAX_BAG_SLOTS = 40;
 
 export const HOTKEY_CONSUMABLES: readonly string[] = [
   "pot_hp",
   "pot_stamina",
   "pot_tonic",
+  "pot_coating",
 ];
 
+export interface ActiveSetStatus {
+  def: SetBonusDef;
+  count: number;
+  twoActive: boolean;
+  fourActive: boolean;
+}
+
 /**
- * Manages player gold, 4 equipment slots, 32-slot bag, class-restriction rules,
- * stat calculations, visual hero loadout, and 1-3 quick consumables.
+ * Recomputes total player stats (maxHp, atk, def, spd, crit, elementBonus, maxStamina, passives)
+ * from base class stats + level progression + equipped gear + enhancement milestones + Set Bonuses.
+ */
+export function recalculatePlayerStats(
+  player: PlayerEntity,
+  inv: InventorySystem,
+  preserveHpRatio = true
+) {
+  const prevMax = Math.max(1, player.maxHp);
+  const ratio = player.hp / prevMax;
+  const cdef = getClassDef(player.classId);
+  const eq = inv.getTotalEquipBonuses();
+  const sets = inv.getActiveSetBonusStats();
+  const lv = player.level - 1;
+  const alloc = player.allocatedStats ?? { str: 0, vit: 0, agi: 0, crt: 0 };
+
+  player.maxHp = cdef.baseStats.hp + lv * 14 + alloc.vit * 18 + eq.maxHp + sets.maxHp;
+  player.atk = cdef.baseStats.atk + lv * 2 + alloc.str * 3 + eq.atk + sets.atk;
+  player.def = cdef.baseStats.def + lv * 1 + alloc.vit * 1 + eq.def + sets.def;
+  player.spd = Math.round(cdef.baseStats.spd + alloc.agi * 2.5 + eq.spd + sets.spd);
+  player.crit = Math.min(95, Math.round((cdef.baseStats.crit + alloc.crt * 1.5 + eq.crit + sets.crit) * 10) / 10);
+  player.critMult = Number((cdef.baseStats.critMult + alloc.crt * 0.03).toFixed(2));
+  player.elementBonus = eq.elementBonus + sets.elementBonus;
+
+  player.maxStamina = Math.max(100, 100 + eq.maxStamina + sets.maxStamina);
+  player.stamina = preserveHpRatio
+    ? Math.min(player.maxStamina, player.stamina)
+    : player.maxStamina;
+  player.staminaCostPct = Math.max(-45, eq.staminaCostPct + sets.staminaCostPct);
+  player.poiseBreakPct = eq.poiseBreakPct + sets.poiseBreakPct;
+  player.skillCdPct = Math.max(-40, eq.skillCdPct + sets.skillCdPct);
+
+  const passives = inv.getActivePassives();
+  player.hasOrbitGrimoire = passives.has("orbit_grimoire");
+  player.hasReactionAmp = passives.has("reaction_amp");
+  player.hasVoidSiphon = passives.has("void_siphon");
+  player.hasWindDancer = passives.has("wind_dancer");
+  player.hasChromaBlessing = passives.has("chroma_blessing");
+  player.hasQuakeImpact = passives.has("quake_impact");
+
+  if (preserveHpRatio) {
+    player.hp = Math.min(player.maxHp, Math.max(1, Math.round(ratio * player.maxHp)));
+  } else {
+    player.hp = player.maxHp;
+  }
+}
+
+/**
+ * Manages player gold, 5 equipment slots (helmet, armor, weapon, boots, accessory),
+ * 32-slot bag, stat comparisons, active set bonuses, dismantling, and smart 1-4 consumables.
  */
 export class InventorySystem {
   gold = 30;
   equipment: Partial<Record<EquipSlot, ItemInstance>> = {};
   bag: ItemInstance[] = [];
 
-  /** Fresh adventurers start bare-handed & unarmored with only 2 HP potions and 30G! */
-  resetStarterKit() {
+  resetStarterKit(_classId: ClassId = "prism_knight") {
     this.gold = 30;
     this.equipment = {};
     this.bag = [createItemInstance("pot_hp", 2, 0)];
   }
 
+  /**
+   * Loads saved gold, equipment, and bag.
+   * Automatically migrates legacy v2 saves that used `"ring"` / `"chip"` slots into `"accessory"`.
+   */
   loadState(
     gold: number,
-    equipment: Partial<Record<EquipSlot, ItemInstance>>,
+    equipment: Record<string, ItemInstance | undefined>,
     bag: ItemInstance[]
   ) {
     this.gold = Math.max(0, Math.floor(gold));
     this.equipment = {};
-    for (const slot of ["weapon", "armor", "ring", "chip"] as EquipSlot[]) {
+    this.bag = bag.filter((b) => ITEMS[b.defId]).map((b) => ({ ...b }));
+
+    for (const slot of EQUIP_SLOTS) {
       const it = equipment[slot];
       if (it && ITEMS[it.defId]) {
-        this.equipment[slot] = {
-          ...it,
-          bonusStats: it.bonusStats ? { ...it.bonusStats } : undefined,
-        };
+        this.equipment[slot] = { ...it };
       }
     }
-    this.bag = bag
-      .filter((b) => ITEMS[b.defId])
-      .map((b) => ({
-        ...b,
-        bonusStats: b.bonusStats ? { ...b.bonusStats } : undefined,
-      }));
+
+    // Migrate legacy "ring" and "chip" slots safely
+    for (const legacySlot of ["ring", "chip"] as const) {
+      const legacyItem = equipment[legacySlot];
+      if (!legacyItem || !ITEMS[legacyItem.defId]) continue;
+      if (!this.equipment.accessory) {
+        this.equipment.accessory = { ...legacyItem };
+      } else if (this.bag.length < MAX_BAG_SLOTS) {
+        this.bag.push({ ...legacyItem });
+      }
+    }
   }
 
   addItem(defId: string, qty = 1, enhanceLevel = 0): boolean {
@@ -92,10 +158,7 @@ export class InventorySystem {
       return this.addItem(inst.defId, inst.qty, 0);
     }
     if (this.bag.length >= MAX_BAG_SLOTS) return false;
-    this.bag.push({
-      ...inst,
-      bonusStats: inst.bonusStats ? { ...inst.bonusStats } : undefined,
-    });
+    this.bag.push({ ...inst });
     return true;
   }
 
@@ -121,7 +184,7 @@ export class InventorySystem {
   }
 
   findByUid(uid: string): { location: "bag" | EquipSlot; item: ItemInstance } | null {
-    for (const slot of ["weapon", "armor", "ring", "chip"] as EquipSlot[]) {
+    for (const slot of EQUIP_SLOTS) {
       const eq = this.equipment[slot];
       if (eq && eq.uid === uid) return { location: slot, item: eq };
     }
@@ -130,29 +193,27 @@ export class InventorySystem {
     return null;
   }
 
-  canEquip(item: ItemInstance, classId: ClassId): { ok: boolean; reason?: string } {
+  equipFromBag(
+    uid: string,
+    playerClassId?: ClassId
+  ): { ok: boolean; slot?: EquipSlot; reason?: string } {
+    const idx = this.bag.findIndex((b) => b.uid === uid);
+    if (idx < 0) return { ok: false, reason: "Không tìm thấy vật phẩm trong túi." };
+    const item = this.bag[idx];
     const def = ITEMS[item.defId];
     if (!def || def.category !== "equipment" || !def.slot) {
       return { ok: false, reason: "Vật phẩm này không thể trang bị." };
     }
-    if (!canClassEquip(def, classId)) {
-      const reqNames = (def.allowedClasses ?? [])
-        .map((c) => CLASS_DISPLAY_NAMES[c] ?? c)
-        .join(", ");
-      return { ok: false, reason: `Chỉ dành cho Class: ${reqNames}!` };
+
+    if (
+      playerClassId &&
+      def.requiredClass &&
+      def.requiredClass !== "all" &&
+      def.requiredClass !== playerClassId
+    ) {
+      const reqName = getClassDef(def.requiredClass).vnName;
+      return { ok: false, reason: `Chỉ dành cho Class ${reqName}!` };
     }
-    return { ok: true };
-  }
-
-  equipFromBag(uid: string, classId: ClassId): { ok: boolean; reason?: string } {
-    const idx = this.bag.findIndex((b) => b.uid === uid);
-    if (idx < 0) return { ok: false, reason: "Không tìm thấy vật phẩm trong túi." };
-    const item = this.bag[idx];
-    const check = this.canEquip(item, classId);
-    if (!check.ok) return check;
-
-    const def = ITEMS[item.defId];
-    if (!def.slot) return { ok: false, reason: "Không rõ vị trí trang bị." };
 
     const prev = this.equipment[def.slot];
     this.equipment[def.slot] = item;
@@ -161,7 +222,7 @@ export class InventorySystem {
     } else {
       this.bag.splice(idx, 1);
     }
-    return { ok: true };
+    return { ok: true, slot: def.slot };
   }
 
   unequipSlot(slot: EquipSlot): boolean {
@@ -173,20 +234,40 @@ export class InventorySystem {
     return true;
   }
 
-  /** Moves any equipped items incompatible with `classId` safely back into the bag on class switch. */
+  getEquippedDef(slot: EquipSlot) {
+    const eq = this.equipment[slot];
+    return eq ? ITEMS[eq.defId] : undefined;
+  }
+
+  /** Moves any equipped gear incompatible with `classId` safely back into the bag on Class Altar switch. */
   unequipIncompatibleForClass(classId: ClassId): string[] {
     const removed: string[] = [];
-    for (const slot of ["weapon", "armor", "ring", "chip"] as EquipSlot[]) {
+    for (const slot of EQUIP_SLOTS) {
       const eq = this.equipment[slot];
       if (!eq) continue;
       const def = ITEMS[eq.defId];
-      if (!def || !canClassEquip(def, classId)) {
+      if (!def) continue;
+      if (def.requiredClass && def.requiredClass !== "all" && def.requiredClass !== classId) {
         this.bag.push(eq);
         delete this.equipment[slot];
-        removed.push(def?.name ?? eq.defId);
+        removed.push(def.name);
       }
     }
     return removed;
+  }
+
+  dismantleBagItem(uid: string): { ok: boolean; shards: number; itemName: string; reason?: string } {
+    const idx = this.bag.findIndex((b) => b.uid === uid);
+    if (idx < 0) return { ok: false, shards: 0, itemName: "", reason: "Không tìm thấy vật phẩm." };
+    const item = this.bag[idx];
+    const def = ITEMS[item.defId];
+    if (!def || def.category !== "equipment") {
+      return { ok: false, shards: 0, itemName: def?.name ?? "", reason: "Chỉ có thể phân rã trang bị." };
+    }
+    const shards = getDismantleShardYield(item);
+    this.bag.splice(idx, 1);
+    this.addItem("mat_prism_shard", shards, 0);
+    return { ok: true, shards, itemName: def.name };
   }
 
   sellBagItem(uid: string): number {
@@ -195,7 +276,7 @@ export class InventorySystem {
     const item = this.bag[idx];
     const def = ITEMS[item.defId];
     if (!def) return 0;
-    const unitVal = def.sellPrice + item.enhanceLevel * 14;
+    const unitVal = def.sellPrice + item.enhanceLevel * 12;
     this.gold += unitVal;
     if (item.qty > 1) {
       item.qty -= 1;
@@ -207,7 +288,7 @@ export class InventorySystem {
 
   getAllEquipmentInstances(): { slotLabel: string; equipped: boolean; item: ItemInstance }[] {
     const out: { slotLabel: string; equipped: boolean; item: ItemInstance }[] = [];
-    for (const slot of ["weapon", "armor", "ring", "chip"] as EquipSlot[]) {
+    for (const slot of EQUIP_SLOTS) {
       const eq = this.equipment[slot];
       if (eq) out.push({ slotLabel: slot, equipped: true, item: eq });
     }
@@ -220,9 +301,31 @@ export class InventorySystem {
     return out;
   }
 
-  getTotalEquipBonuses(): Required<StatBonus> {
-    const sum: Required<StatBonus> = { atk: 0, def: 0, maxHp: 0, spd: 0, crit: 0 };
-    for (const slot of ["weapon", "armor", "ring", "chip"] as EquipSlot[]) {
+  getActivePassives(): Set<string> {
+    const set = new Set<string>();
+    for (const slot of EQUIP_SLOTS) {
+      const eq = this.equipment[slot];
+      if (!eq) continue;
+      const def = ITEMS[eq.defId];
+      if (def?.passiveId) set.add(def.passiveId);
+    }
+    return set;
+  }
+
+  getTotalEquipBonuses(): NormalizedEquipStats {
+    const sum: NormalizedEquipStats = {
+      atk: 0,
+      def: 0,
+      maxHp: 0,
+      spd: 0,
+      crit: 0,
+      elementBonus: 0,
+      maxStamina: 0,
+      staminaCostPct: 0,
+      poiseBreakPct: 0,
+      skillCdPct: 0,
+    };
+    for (const slot of EQUIP_SLOTS) {
       const eq = this.equipment[slot];
       if (!eq) continue;
       const st = getItemEffectiveStats(eq);
@@ -231,19 +334,35 @@ export class InventorySystem {
       sum.maxHp += st.maxHp;
       sum.spd += st.spd;
       sum.crit += st.crit;
+      sum.elementBonus += st.elementBonus;
+      sum.maxStamina += st.maxStamina;
+      sum.staminaCostPct += st.staminaCostPct;
+      sum.poiseBreakPct += st.poiseBreakPct;
+      sum.skillCdPct += st.skillCdPct;
     }
     return sum;
   }
 
   /** Returns stat delta if `candidate` were equipped in place of current slot item. */
-  compareWithEquipped(candidate: ItemInstance): Required<StatBonus> | null {
+  compareWithEquipped(candidate: ItemInstance): NormalizedEquipStats | null {
     const def = ITEMS[candidate.defId];
     if (!def || def.category !== "equipment" || !def.slot) return null;
     const candStats = getItemEffectiveStats(candidate);
     const cur = this.equipment[def.slot];
     if (!cur) return candStats;
     if (cur.uid === candidate.uid) {
-      return { atk: 0, def: 0, maxHp: 0, spd: 0, crit: 0 };
+      return {
+        atk: 0,
+        def: 0,
+        maxHp: 0,
+        spd: 0,
+        crit: 0,
+        elementBonus: 0,
+        maxStamina: 0,
+        staminaCostPct: 0,
+        poiseBreakPct: 0,
+        skillCdPct: 0,
+      };
     }
     const curStats = getItemEffectiveStats(cur);
     return {
@@ -252,6 +371,11 @@ export class InventorySystem {
       maxHp: candStats.maxHp - curStats.maxHp,
       spd: candStats.spd - curStats.spd,
       crit: candStats.crit - curStats.crit,
+      elementBonus: candStats.elementBonus - curStats.elementBonus,
+      maxStamina: candStats.maxStamina - curStats.maxStamina,
+      staminaCostPct: candStats.staminaCostPct - curStats.staminaCostPct,
+      poiseBreakPct: candStats.poiseBreakPct - curStats.poiseBreakPct,
+      skillCdPct: candStats.skillCdPct - curStats.skillCdPct,
     };
   }
 
@@ -259,31 +383,89 @@ export class InventorySystem {
     return this.equipment.weapon?.enhanceLevel ?? 0;
   }
 
-  getEquippedDef(slot: EquipSlot): ItemDef | null {
-    const it = this.equipment[slot];
-    return it ? (ITEMS[it.defId] ?? null) : null;
-  }
-
-  hasPassive(passiveId: string): boolean {
-    for (const slot of ["weapon", "armor", "ring", "chip"] as EquipSlot[]) {
-      const def = this.getEquippedDef(slot);
-      if (def?.passiveSkill?.id === passiveId) return true;
+  /** Returns active Set Bonuses for any equipped setId >= 2 pieces. */
+  getActiveSetBonuses(): ActiveSetStatus[] {
+    const counts: Record<string, number> = {};
+    for (const slot of EQUIP_SLOTS) {
+      const eq = this.equipment[slot];
+      const def = eq ? ITEMS[eq.defId] : undefined;
+      if (def?.setId && SET_BONUSES[def.setId]) {
+        counts[def.setId] = (counts[def.setId] ?? 0) + 1;
+      }
     }
-    return false;
+    const out: ActiveSetStatus[] = [];
+    for (const [setId, count] of Object.entries(counts)) {
+      const def = SET_BONUSES[setId];
+      if (!def || count < 2) continue;
+      out.push({
+        def,
+        count,
+        twoActive: count >= 2,
+        fourActive: count >= 4,
+      });
+    }
+    return out;
   }
 
-  getVisualLoadout(): HeroVisualLoadout {
-    const tierOf = (slot: EquipSlot): GearVisualTier => {
-      const def = this.getEquippedDef(slot);
-      if (!def) return "none";
-      return def.visualTier ?? def.rarity;
+  getActiveSetBonusStats(): NormalizedEquipStats {
+    const sum: NormalizedEquipStats = {
+      atk: 0,
+      def: 0,
+      maxHp: 0,
+      spd: 0,
+      crit: 0,
+      elementBonus: 0,
+      maxStamina: 0,
+      staminaCostPct: 0,
+      poiseBreakPct: 0,
+      skillCdPct: 0,
     };
-    return {
-      weaponTier: tierOf("weapon"),
-      armorTier: tierOf("armor"),
-      ringTier: tierOf("ring"),
-      chipTier: tierOf("chip"),
-      weaponEnhance: this.getWeaponEnhanceLevel(),
-    };
+    for (const st of this.getActiveSetBonuses()) {
+      const apply = (b: { atk?: number; def?: number; maxHp?: number; spd?: number; crit?: number; elementBonus?: number }) => {
+        sum.atk += b.atk ?? 0;
+        sum.def += b.def ?? 0;
+        sum.maxHp += b.maxHp ?? 0;
+        sum.spd += b.spd ?? 0;
+        sum.crit += b.crit ?? 0;
+        sum.elementBonus += b.elementBonus ?? 0;
+      };
+      if (st.twoActive) apply(st.def.twoPiece);
+      if (st.fourActive) apply(st.def.fourPiece);
+    }
+    return sum;
+  }
+
+  /** Finds the highest-tier consumable available in bag matching a hotkey group (hp/stamina/power/aegis). */
+  findBestConsumableForGroup(group: ConsumableGroup): string | null {
+    let bestId: string | null = null;
+    let bestTier = -1;
+    for (const b of this.bag) {
+      if (b.qty <= 0) continue;
+      const def = ITEMS[b.defId];
+      if (!def || def.category !== "consumable") continue;
+      const g = def.consumableSpec?.group;
+      if (g !== group) continue;
+      const t = getItemTier(def);
+      if (t > bestTier) {
+        bestTier = t;
+        bestId = def.id;
+      }
+    }
+    return bestId;
+  }
+
+  countConsumableGroup(group: ConsumableGroup): number {
+    let total = 0;
+    for (const b of this.bag) {
+      const def = ITEMS[b.defId];
+      if (def?.category === "consumable" && def.consumableSpec?.group === group) {
+        total += b.qty;
+      }
+    }
+    return total;
+  }
+
+  getHotkeyGroupForSlot(slot1Based: 1 | 2 | 3 | 4): ConsumableGroup {
+    return CONSUMABLE_HOTKEY_GROUPS[slot1Based - 1] ?? "hp";
   }
 }

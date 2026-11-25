@@ -1,5 +1,25 @@
-import { CLASS_DISPLAY_NAMES, ITEMS, RARITY_INFO, SLOT_LABELS, canClassEquip, getItemEffectiveStats } from "../data/items";
+import {
+  CLASS_DISPLAY_NAMES,
+  ITEMS,
+  RARITY_INFO,
+  SLOT_LABELS,
+  canClassEquip,
+  getItemEffectiveStats,
+  getItemMilestoneSummary,
+  getTierBadge,
+  type NormalizedEquipStats,
+} from "../data/items";
 import { FORGE_RECIPES } from "../data/recipes";
+import { INFUSABLE_ELEMENTS } from "../data/elements";
+import type { InfusableElement } from "../data/types";
+import { onCodixelReady } from "../graphics/codixelAtlas";
+import {
+  CATALYST_BONUS_PCT,
+  CATALYST_SHARD_COST,
+  ELEMENT_DISPLAY,
+  INFUSE_GOLD_COST,
+} from "../systems/forgeSystem";
+import { uiRarityFx } from "../vfx/uiRarityFx";
 import { createFrame, clearFrame, createFx, PAL } from "../vfx/pixelfx/core/index.js";
 import { PIXELFX_MODS } from "../vfx/vfxManager";
 import type { PixelfxFrame, PixelfxInstance } from "../vfx/pixelfxTypes";
@@ -8,13 +28,20 @@ import { sfx } from "../audio/chiptuneSynth";
 
 const CHANNEL_DURATION = 1.25;
 
+interface MatrixFlashSummary {
+  ok: boolean;
+  label: string;
+  deltaText: string;
+  bonusText?: string;
+}
+
 /**
- * Blacksmith Rune Matrix Forge Modal ("Ma Trận Luyện Khí"):
- * - Interactive geometric rune array with rotating rings, orbiting crystal nodes, and optional Catalyst slot.
- * - Clicking "Khai Triển Ma Trận" initiates a 1.25s channeling convergence animation before rolling +1 & bonus substats.
- * - Success bursts golden/prismatic shockwaves and awakens/scales random bonus substats.
- * - Failure triggers crimson matrix shatter VFX, keeps gear safe, and builds +8% Pity Resonance.
- * - Tab 2 ("Chế Tạo"): Filterable by player's current class or All Classes with compatibility indicators.
+ * Blacksmith Ma Trận Luyện Khí (Prism Rune Forge Modal):
+ * - Animated 240x176 geometric Rune Matrix Array with channeling convergence,
+ *   random substat awakening (+ATK/DEF/HP/SPD/CRIT) on +1, & shatter failure VFX
+ * - Safe +0 -> +10 Enhancement with Pity Bar, Prism Catalyst (+15%), Milestone Previews,
+ *   and +5 Chroma Pigment 8-Element Infusion Socket
+ * - Craft Tab with Archetype / Boss-Core Recipes & Class Compatibility Filter
  */
 export class ForgeModalUI {
   private game: PixTelOpenWorldGame;
@@ -27,17 +54,15 @@ export class ForgeModalUI {
   private useCatalyst = false;
   private resultMsg = "";
   private resultOk = true;
-  private lastRolledBonus = "";
-  private lastBeforeAfter: { beforeAtk: number; afterAtk: number; beforeDef: number; afterDef: number; beforeHp: number; afterHp: number; beforeCrit: number; afterCrit: number } | null = null;
+  private lastFlash: MatrixFlashSummary | null = null;
 
-  // Rune Matrix animation state
   private matrixPhase: "idle" | "channeling" | "success" | "fail" = "idle";
+  private matrixProgress = 0;
   private matrixTimer = 0;
-  private matrixClock = 0;
-  private pendingUid: string | null = null;
-  private pendingCatalyst = false;
+  private matrixRot = 0;
+  private matrixTargetUid: string | null = null;
+  private matrixUseCatalyst = false;
 
-  // Live pixelfx + Canvas Matrix Engine
   private fxCanvas: HTMLCanvasElement;
   private fxCtx: CanvasRenderingContext2D;
   private colorCanvas: HTMLCanvasElement;
@@ -98,16 +123,21 @@ export class ForgeModalUI {
       this.tab = "craft";
       this.render();
     });
+
+    onCodixelReady(() => {
+      if (!this.root.classList.contains("hidden")) {
+        this.render();
+      }
+    });
   }
 
   show() {
     this.root.classList.remove("hidden");
     this.resultMsg = "";
-    this.lastRolledBonus = "";
-    this.lastBeforeAfter = null;
+    this.lastFlash = null;
     this.matrixPhase = "idle";
+    this.matrixProgress = 0;
     this.matrixTimer = 0;
-    this.pendingUid = null;
     const equips = this.game.inv.getAllEquipmentInstances();
     if (!this.selectedUid && equips.length > 0) {
       this.selectedUid = equips[0].item.uid;
@@ -118,300 +148,116 @@ export class ForgeModalUI {
 
   hide() {
     this.matrixPhase = "idle";
-    this.matrixTimer = 0;
-    this.pendingUid = null;
+    this.matrixProgress = 0;
+    this.matrixTargetUid = null;
     this.root.classList.add("hidden");
   }
 
-  private _spawnFxMod(key: string, x: number, y: number, palette: string[]) {
-    const mod = PIXELFX_MODS[key];
-    if (!mod) return;
-    this.activeFx.push(
-      createFx(mod, {
-        x,
-        y,
-        palette,
-        seed: (Math.random() * 9999) | 0,
-      })
-    );
-  }
-
-  private _burstOutcomeFx(success: boolean) {
+  private _burstSparks(success: boolean) {
     const cx = this.fxCanvas.width / 2;
     const cy = this.fxCanvas.height / 2 + 4;
-    if (success) {
-      this._spawnFxMod("holy/holy-pillar", cx, cy + 8, PAL.gold);
-      this._spawnFxMod("pickups/collect-burst", cx, cy, PAL.cyber);
-      this._spawnFxMod("impacts/parry", cx, cy, PAL.gold);
-    } else {
-      this._spawnFxMod("impacts/hit-spark", cx, cy, PAL.blood);
-      this._spawnFxMod("explosions/small-explosion", cx, cy + 2, PAL.blood);
-      this._spawnFxMod("lightning/zap-hit", cx, cy, PAL.fire);
+    const primaryMod = PIXELFX_MODS[success ? "impacts/parry" : "impacts/hit-spark"];
+    if (primaryMod) {
+      this.activeFx.push(
+        createFx(primaryMod, {
+          x: cx,
+          y: cy,
+          palette: success ? PAL.gold : PAL.blood,
+          seed: (Math.random() * 9999) | 0,
+        })
+      );
+    }
+    if (success && PIXELFX_MODS["pickups/collect-burst"]) {
+      this.activeFx.push(
+        createFx(PIXELFX_MODS["pickups/collect-burst"], {
+          x: cx,
+          y: cy,
+          palette: PAL.cyber,
+          seed: (Math.random() * 9999) | 0,
+        })
+      );
+    }
+    if (success && PIXELFX_MODS["holy/holy-pillar"]) {
+      this.activeFx.push(
+        createFx(PIXELFX_MODS["holy/holy-pillar"], {
+          x: cx,
+          y: cy + 16,
+          palette: PAL.gold,
+          seed: (Math.random() * 9999) | 0,
+        })
+      );
+    }
+    if (!success && PIXELFX_MODS["explosions/small-explosion"]) {
+      this.activeFx.push(
+        createFx(PIXELFX_MODS["explosions/small-explosion"], {
+          x: cx,
+          y: cy,
+          palette: PAL.blood,
+          seed: (Math.random() * 9999) | 0,
+        })
+      );
     }
   }
 
+  private _formatStatDelta(before?: NormalizedEquipStats, after?: NormalizedEquipStats): string {
+    if (!before || !after) return "";
+    const parts: string[] = [];
+    if (after.atk !== before.atk) parts.push(`ATK ${before.atk}→${after.atk}`);
+    if (after.def !== before.def) parts.push(`DEF ${before.def}→${after.def}`);
+    if (after.maxHp !== before.maxHp) parts.push(`HP ${before.maxHp}→${after.maxHp}`);
+    if (after.crit !== before.crit) parts.push(`CRIT ${before.crit}%→${after.crit}%`);
+    if (after.spd !== before.spd) parts.push(`SPD ${before.spd}→${after.spd}`);
+    if (after.elementBonus !== before.elementBonus) {
+      parts.push(`ELEM ${before.elementBonus}%→${after.elementBonus}%`);
+    }
+    return parts.join(" · ");
+  }
+
   private _resolveChanneling() {
-    const uid = this.pendingUid;
-    const useCat = this.pendingCatalyst;
-    this.pendingUid = null;
+    const uid = this.matrixTargetUid;
+    this.matrixTargetUid = null;
     if (!uid) {
       this.matrixPhase = "idle";
       this.render();
       return;
     }
 
-    const res = this.game.forge.enhanceItem(uid, this.game.inv, this.game.quests, useCat);
+    const res = this.game.forge.enhanceItem(
+      uid,
+      this.game.inv,
+      this.game.quests,
+      this.matrixUseCatalyst
+    );
     this.resultMsg = res.message;
     this.resultOk = res.succeeded;
-    this.lastRolledBonus = res.rolledBonusText ?? "";
-    if (res.beforeStats && res.afterStats) {
-      this.lastBeforeAfter = {
-        beforeAtk: res.beforeStats.atk,
-        afterAtk: res.afterStats.atk,
-        beforeDef: res.beforeStats.def,
-        afterDef: res.afterStats.def,
-        beforeHp: res.beforeStats.maxHp,
-        afterHp: res.afterStats.maxHp,
-        beforeCrit: res.beforeStats.crit,
-        afterCrit: res.afterStats.crit,
-      };
-    } else {
-      this.lastBeforeAfter = null;
-    }
 
     if (res.ok) {
-      this._burstOutcomeFx(res.succeeded);
+      const def = res.item ? ITEMS[res.item.defId] : undefined;
+      this.lastFlash = {
+        ok: res.succeeded,
+        label: def
+          ? `${def.name} ${res.item!.enhanceLevel > 0 ? `+${res.item!.enhanceLevel}` : ""}`
+          : "Trang bị",
+        deltaText: this._formatStatDelta(res.beforeStats, res.afterStats),
+        bonusText: res.rolledBonusText,
+      };
+      this.matrixPhase = res.succeeded ? "success" : "fail";
+      this.matrixTimer = 1.65;
+      this._burstSparks(res.succeeded);
       if (res.succeeded) {
-        this.matrixPhase = "success";
-        this.matrixTimer = 1.65;
         sfx.playForgeSuccess();
         this.game.recalcPlayerStats(true);
-        this.game.saveGame(false);
         this.game.refreshHud();
-      } else {
-        this.matrixPhase = "fail";
-        this.matrixTimer = 1.55;
-        sfx.playMatrixShatter();
         this.game.saveGame(false);
+      } else {
+        sfx.playMatrixShatter();
+        this.game.refreshHud();
       }
     } else {
       this.matrixPhase = "idle";
       sfx.playForgeFail();
     }
     this.render();
-  }
-
-  private _drawRuneMatrix(ctx: CanvasRenderingContext2D, w: number, h: number) {
-    const shake =
-      this.matrixPhase === "channeling" && this.matrixTimer < 0.45
-        ? Math.round((Math.random() - 0.5) * 3)
-        : this.matrixPhase === "fail" && this.matrixTimer > 0.95
-          ? Math.round((Math.random() - 0.5) * 5)
-          : 0;
-
-    const cx = Math.round(w / 2) + shake;
-    const cy = Math.round(h / 2 + 4) + shake;
-    const R = 60;
-    const rInner = 34;
-
-    // 1. Background & faint pixel rune grid
-    ctx.fillStyle = this.matrixPhase === "fail" ? "#190a12" : this.matrixPhase === "success" ? "#16140c" : "#0b0915";
-    ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = "rgba(110, 90, 170, 0.10)";
-    for (let gx = 0; gx < w; gx += 16) ctx.fillRect(gx, 0, 1, h);
-    for (let gy = 0; gy < h; gy += 16) ctx.fillRect(0, gy, w, 1);
-
-    // Get currently selected item & recipe nodes
-    const found = this.selectedUid ? this.game.inv.findByUid(this.selectedUid) : null;
-    const selDef = found ? ITEMS[found.item.defId] : null;
-    const enhanceInfo =
-      this.tab === "enhance" && found ? this.game.forge.getEnhanceInfo(found.item, this.game.inv, this.useCatalyst) : null;
-
-    const spinRate =
-      this.matrixPhase === "channeling"
-        ? 2.8
-        : this.matrixPhase === "success"
-          ? 1.4
-          : this.matrixPhase === "fail"
-            ? 0.25
-            : 0.42;
-
-    const angle = this.matrixClock * spinRate;
-    const colOuter =
-      this.matrixPhase === "success"
-        ? "#ffe066"
-        : this.matrixPhase === "fail"
-          ? "#ff3355"
-          : this.matrixPhase === "channeling"
-            ? "#7ef7ff"
-            : "#6d52b3";
-    const colInner =
-      this.matrixPhase === "success"
-        ? "#44ee88"
-        : this.matrixPhase === "fail"
-          ? "#ff7744"
-          : this.matrixPhase === "channeling"
-            ? "#ff77ff"
-            : "#4389c9";
-
-    // 2. Outer Matrix Circle & Octagon
-    ctx.save();
-    ctx.strokeStyle = colOuter;
-    ctx.lineWidth = this.matrixPhase === "channeling" ? 2 : 1.5;
-    if (this.matrixPhase === "fail") {
-      ctx.setLineDash([5, 5]);
-    }
-    ctx.beginPath();
-    ctx.arc(cx, cy, R, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(cx, cy, R - 6, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Spinning Hexagram (2 triangles)
-    ctx.setLineDash([]);
-    ctx.strokeStyle = colInner;
-    ctx.lineWidth = 1;
-    for (let tri = 0; tri < 2; tri++) {
-      ctx.beginPath();
-      for (let i = 0; i <= 3; i++) {
-        const a = (tri === 0 ? angle : -angle) + (i * Math.PI * 2) / 3 + tri * (Math.PI / 3);
-        const px = cx + Math.cos(a) * (R - 11);
-        const py = cy + Math.sin(a) * (R - 11);
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      }
-      ctx.stroke();
-    }
-
-    // Inner rune ring
-    ctx.strokeStyle = colOuter;
-    ctx.beginPath();
-    ctx.arc(cx, cy, rInner, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
-
-    // 3. Channeling convergence beam progression
-    const chProgress = this.matrixPhase === "channeling" ? Math.min(1, 1 - this.matrixTimer / CHANNEL_DURATION) : 0;
-
-    // Material satellite nodes + optional top Catalyst apex node
-    const mats = enhanceInfo?.materials ?? [];
-    const nodeAngles = [-Math.PI * 0.78, -Math.PI * 0.22, Math.PI * 0.22, Math.PI * 0.78];
-    for (let i = 0; i < Math.min(mats.length, nodeAngles.length); i++) {
-      const m = mats[i];
-      const have = this.game.inv.countItem(m.defId);
-      const ok = have >= m.qty;
-      const na = nodeAngles[i] + (this.matrixPhase === "channeling" ? this.matrixClock * 1.4 : Math.sin(this.matrixClock * 1.1) * 0.04);
-      const nx = Math.round(cx + Math.cos(na) * R);
-      const ny = Math.round(cy + Math.sin(na) * R);
-
-      if (this.matrixPhase === "channeling" && ok) {
-        ctx.strokeStyle = i % 2 === 0 ? "#4be8ff" : "#ffe066";
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(nx, ny);
-        ctx.lineTo(cx, cy);
-        ctx.stroke();
-        const bx = Math.round(nx + (cx - nx) * chProgress);
-        const by = Math.round(ny + (cy - ny) * chProgress);
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(bx - 2, by - 2, 4, 4);
-      }
-
-      ctx.fillStyle = "#100c1c";
-      ctx.fillRect(nx - 6, ny - 6, 12, 12);
-      ctx.fillStyle = ok ? ITEMS[m.defId]?.iconColor ?? "#44ee88" : "#40384f";
-      ctx.fillRect(nx - 4, ny - 4, 8, 8);
-      ctx.strokeStyle = ok ? "#44ee88" : "#ff4466";
-      ctx.strokeRect(nx - 6, ny - 6, 12, 12);
-    }
-
-    // Top Apex Catalyst Node (Bùa Ma Trận)
-    if (this.tab === "enhance") {
-      const catX = cx;
-      const catY = cy - R - 4;
-      const catActive = this.useCatalyst && (enhanceInfo?.hasCatalyst ?? false);
-      if (catActive && this.matrixPhase === "channeling") {
-        ctx.strokeStyle = "#e066ff";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(catX, catY);
-        ctx.lineTo(cx, cy);
-        ctx.stroke();
-      }
-      ctx.fillStyle = "#140b24";
-      ctx.fillRect(catX - 6, catY - 6, 12, 12);
-      ctx.fillStyle = catActive ? "#e066ff" : "#2f2640";
-      ctx.fillRect(catX - 4, catY - 4, 8, 8);
-      ctx.strokeStyle = catActive ? "#ffbbff" : "#665285";
-      ctx.strokeRect(catX - 6, catY - 6, 12, 12);
-    }
-
-    // 4. Center Core Item Glyph
-    const corePulse = Math.round(Math.sin(this.matrixClock * (this.matrixPhase === "channeling" ? 14 : 4)) * 2);
-    const coreR = 16 + (this.matrixPhase === "channeling" ? Math.round(chProgress * 4) : 0) + corePulse;
-    ctx.fillStyle =
-      this.matrixPhase === "success"
-        ? "rgba(255, 224, 102, 0.25)"
-        : this.matrixPhase === "fail"
-          ? "rgba(255, 51, 85, 0.25)"
-          : "rgba(75, 232, 255, 0.14)";
-    ctx.beginPath();
-    ctx.arc(cx, cy, Math.max(8, coreR), 0, Math.PI * 2);
-    ctx.fill();
-
-    // Draw center pixel equipment icon
-    const itemCol = selDef?.iconColor ?? "#8b98b8";
-    ctx.fillStyle = "#0e0c18";
-    ctx.fillRect(cx - 10, cy - 10, 20, 20);
-    ctx.fillStyle = RARITY_INFO[selDef?.rarity ?? "common"].color;
-    ctx.fillRect(cx - 9, cy - 9, 18, 18);
-    ctx.fillStyle = "#141224";
-    ctx.fillRect(cx - 7, cy - 7, 14, 14);
-    ctx.fillStyle = itemCol;
-    if (selDef?.slot === "weapon") {
-      // Sword / Wand / Dagger silhouette
-      ctx.fillRect(cx - 1, cy - 6, 2, 10);
-      ctx.fillRect(cx - 4, cy + 1, 8, 2);
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(cx - 1, cy - 6, 1, 8);
-    } else if (selDef?.slot === "armor") {
-      ctx.fillRect(cx - 5, cy - 4, 10, 8);
-      ctx.fillRect(cx - 3, cy - 5, 6, 2);
-    } else if (selDef?.slot === "ring") {
-      ctx.fillRect(cx - 4, cy - 4, 8, 8);
-      ctx.fillStyle = "#141224";
-      ctx.fillRect(cx - 2, cy - 2, 4, 4);
-      ctx.fillStyle = "#ffe066";
-      ctx.fillRect(cx - 1, cy - 5, 2, 2);
-    } else {
-      // Chip or fallback prism
-      ctx.fillRect(cx - 4, cy - 4, 8, 8);
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(cx - 2, cy - 2, 4, 4);
-    }
-
-    // Matrix Fracture lightning cracks on failure
-    if (this.matrixPhase === "fail") {
-      ctx.strokeStyle = "#ff4466";
-      ctx.lineWidth = 1.5;
-      for (let i = 0; i < 6; i++) {
-        const fa = i * 1.05 + 0.3;
-        ctx.beginPath();
-        ctx.moveTo(cx + Math.cos(fa) * 8, cy + Math.sin(fa) * 8);
-        ctx.lineTo(cx + Math.cos(fa + 0.14) * 32, cy + Math.sin(fa + 0.14) * 32);
-        ctx.lineTo(cx + Math.cos(fa - 0.12) * 56, cy + Math.sin(fa - 0.12) * 56);
-        ctx.stroke();
-      }
-    }
-
-    // Idle ambient floating sparks
-    if (Math.random() < (this.matrixPhase === "channeling" ? 0.55 : 0.15)) {
-      ctx.fillStyle = this.matrixPhase === "fail" ? "#ff3355" : this.matrixPhase === "success" ? "#ffe066" : "#5ef2ff";
-      const rx = cx + Math.round((Math.random() - 0.5) * 90);
-      const ry = cy + Math.round((Math.random() - 0.5) * 90);
-      ctx.fillRect(rx, ry, 2, 2);
-    }
   }
 
   private _startFxLoop() {
@@ -424,49 +270,247 @@ export class ForgeModalUI {
       }
       const dt = Math.min(0.05, Math.max(0.001, (now - this.lastT) / 1000));
       this.lastT = now;
-      this.matrixClock += dt;
 
       if (this.matrixPhase === "channeling") {
-        this.matrixTimer -= dt;
-        if (this.matrixTimer <= 0) {
+        this.matrixRot += dt * 3.4;
+        this.matrixProgress = Math.min(1, this.matrixProgress + dt / CHANNEL_DURATION);
+        if (Math.random() < 0.45 && PIXELFX_MODS["lightning/zap-hit"]) {
+          const ang = Math.random() * Math.PI * 2;
+          const r = (1 - this.matrixProgress) * 58 + 10;
+          this.activeFx.push(
+            createFx(PIXELFX_MODS["lightning/zap-hit"], {
+              x: this.fxCanvas.width / 2 + Math.cos(ang) * r,
+              y: this.fxCanvas.height / 2 + Math.sin(ang) * r,
+              palette: PAL.cyber,
+              seed: (Math.random() * 9999) | 0,
+            })
+          );
+        }
+        this._updateMatrixLegend();
+        if (this.matrixProgress >= 1) {
           this._resolveChanneling();
         }
-      } else if (this.matrixPhase === "success" || this.matrixPhase === "fail") {
-        this.matrixTimer -= dt;
-        if (this.matrixTimer <= 0) {
-          this.matrixPhase = "idle";
+      } else {
+        this.matrixRot += dt * 0.72;
+        if (this.matrixTimer > 0) {
+          this.matrixTimer = Math.max(0, this.matrixTimer - dt);
+          if (this.matrixTimer <= 0 && this.matrixPhase !== "idle") {
+            this.matrixPhase = "idle";
+            this._updateMatrixLegend();
+          }
         }
       }
 
-      const ctx = this.fxCtx;
-      const w = this.fxCanvas.width;
-      const h = this.fxCanvas.height;
-      this._drawRuneMatrix(ctx, w, h);
-
-      if (this.activeFx.length > 0) {
-        clearFrame(this.frame);
-        for (let i = this.activeFx.length - 1; i >= 0; i--) {
-          const fx = this.activeFx[i];
-          fx.update(dt);
-          fx.draw(this.frame, "back");
-          fx.draw(this.frame, "front");
-          if (fx.done()) this.activeFx.splice(i, 1);
-        }
-        this.colorU32.set(this.frame.color);
-        this.colorCtx.putImageData(this.colorImg, 0, 0);
-        ctx.drawImage(this.colorCanvas, 0, 0);
-
-        this.lightU32.set(this.frame.light);
-        this.lightCtx.putImageData(this.lightImg, 0, 0);
-        ctx.save();
-        ctx.globalCompositeOperation = "lighter";
-        ctx.drawImage(this.lightCanvas, 0, 0);
-        ctx.restore();
-      }
-
+      this._drawMatrixCanvas(dt);
       this.rafId = requestAnimationFrame(tick);
     };
     this.rafId = requestAnimationFrame(tick);
+  }
+
+  private _drawMatrixCanvas(dt: number) {
+    const ctx = this.fxCtx;
+    const w = this.fxCanvas.width;
+    const h = this.fxCanvas.height;
+    const cx = Math.floor(w / 2);
+    const cy = Math.floor(h / 2) + 4;
+
+    ctx.fillStyle = "#0e0b19";
+    ctx.fillRect(0, 0, w, h);
+
+    // Subtle anvil pedestal beneath matrix core
+    ctx.fillStyle = "#22263a";
+    ctx.fillRect(cx - 26, h - 16, 52, 7);
+    ctx.fillStyle = "#485275";
+    ctx.fillRect(cx - 18, h - 22, 36, 7);
+    ctx.fillStyle = "#7a8bb8";
+    ctx.fillRect(cx - 15, h - 22, 30, 2);
+
+    const sel = this.selectedUid ? this.game.inv.findByUid(this.selectedUid)?.item : undefined;
+    const selDef = sel ? ITEMS[sel.defId] : undefined;
+    const tierCol = selDef ? RARITY_INFO[selDef.rarity].color : "#5ef2ff";
+
+    let primaryCol = "#6b56c9";
+    let glowCol = "#5ef2ff";
+    if (this.matrixPhase === "channeling") {
+      primaryCol = "#5ef2ff";
+      glowCol = "#ffe066";
+    } else if (this.matrixPhase === "success") {
+      primaryCol = "#ffe066";
+      glowCol = "#44ee88";
+    } else if (this.matrixPhase === "fail") {
+      primaryCol = "#ff4466";
+      glowCol = "#ff8855";
+    }
+
+    // Outer rune circle
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.strokeStyle = primaryCol;
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = this.matrixPhase === "channeling" ? 0.92 : 0.52;
+    ctx.beginPath();
+    ctx.arc(0, 0, 56, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Inner counter-rotating ring + hexagram rune triangles
+    ctx.rotate(this.matrixRot);
+    ctx.strokeStyle = glowCol;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(0, 0, 39, 0, Math.PI * 2);
+    ctx.stroke();
+
+    for (let tri = 0; tri < 2; tri++) {
+      ctx.beginPath();
+      for (let i = 0; i < 3; i++) {
+        const a = (i * Math.PI * 2) / 3 + tri * Math.PI;
+        const px = Math.cos(a) * 52;
+        const py = Math.sin(a) * 52;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    }
+
+    // Channeling shockwave ring
+    if (this.matrixPhase === "channeling") {
+      const pulseR = 54 * (1 - this.matrixProgress);
+      ctx.strokeStyle = "#ffe066";
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+      ctx.arc(0, 0, Math.max(4, pulseR), 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (this.matrixPhase === "success" || this.matrixPhase === "fail") {
+      const waveT = 1 - Math.max(0, this.matrixTimer / 1.65);
+      ctx.strokeStyle = this.matrixPhase === "success" ? "#ffe066" : "#ff4466";
+      ctx.globalAlpha = Math.max(0, 1 - waveT);
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, 12 + waveT * 64, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // 4 Satellite Material Nodes + Apex Catalyst Prism Node
+    const satNodes = [
+      { x: cx - 64, y: cy - 36 },
+      { x: cx + 64, y: cy - 36 },
+      { x: cx - 64, y: cy + 36 },
+      { x: cx + 64, y: cy + 36 },
+    ];
+    for (const node of satNodes) {
+      if (this.matrixPhase === "channeling") {
+        ctx.strokeStyle = "#5ef2ff";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(node.x, node.y);
+        ctx.lineTo(
+          node.x + (cx - node.x) * this.matrixProgress,
+          node.y + (cy - node.y) * this.matrixProgress
+        );
+        ctx.stroke();
+      }
+      ctx.fillStyle = this.matrixPhase === "fail" ? "#5c2030" : "#1c2848";
+      ctx.fillRect(node.x - 6, node.y - 6, 12, 12);
+      ctx.strokeStyle = sel ? glowCol : "#4a5378";
+      ctx.strokeRect(node.x - 6, node.y - 6, 12, 12);
+    }
+
+    // Apex Catalyst Prism Node
+    const catX = cx;
+    const catY = cy - 66;
+    if (this.useCatalyst && this.matrixPhase === "channeling") {
+      ctx.strokeStyle = "#ffe066";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(catX, catY);
+      ctx.lineTo(catX, catY + (cy - catY) * this.matrixProgress);
+      ctx.stroke();
+    }
+    ctx.fillStyle = this.useCatalyst ? "#244f66" : "#181a2c";
+    ctx.fillRect(catX - 7, catY - 7, 14, 14);
+    ctx.strokeStyle = this.useCatalyst ? "#5ef2ff" : "#444c6e";
+    ctx.strokeRect(catX - 7, catY - 7, 14, 14);
+
+    // Center Altar Core Orb (colored by selected gear rarity & enhance glow)
+    const corePulse =
+      this.matrixPhase === "channeling" ? 12 + this.matrixProgress * 5 : 10 + Math.sin(this.matrixRot * 2) * 1.2;
+    ctx.fillStyle = tierCol;
+    ctx.globalAlpha = this.matrixPhase === "fail" ? 0.35 : 0.85;
+    ctx.beginPath();
+    ctx.arc(cx, cy, corePulse, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cx - 8, cy - 8, 16, 16);
+
+    // Idle embers
+    if (Math.random() < (this.matrixPhase === "channeling" ? 0.65 : 0.16)) {
+      ctx.fillStyle = this.matrixPhase === "fail" ? "#ff4466" : "#ff9933";
+      ctx.fillRect(
+        Math.round(cx + (Math.random() - 0.5) * 38),
+        h - 24 - Math.round(Math.random() * 14),
+        2,
+        2
+      );
+    }
+
+    // Composite pixelfx particle layer
+    if (this.activeFx.length > 0) {
+      clearFrame(this.frame);
+      for (let i = this.activeFx.length - 1; i >= 0; i--) {
+        const fx = this.activeFx[i];
+        fx.update(dt);
+        fx.draw(this.frame, "back");
+        fx.draw(this.frame, "front");
+        if (fx.done()) this.activeFx.splice(i, 1);
+      }
+      this.colorU32.set(this.frame.color);
+      this.colorCtx.putImageData(this.colorImg, 0, 0);
+      ctx.drawImage(this.colorCanvas, 0, 0);
+
+      this.lightU32.set(this.frame.light);
+      this.lightCtx.putImageData(this.lightImg, 0, 0);
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.drawImage(this.lightCanvas, 0, 0);
+      ctx.restore();
+    }
+  }
+
+  private _updateMatrixLegend() {
+    const sel = this.selectedUid ? this.game.inv.findByUid(this.selectedUid)?.item : undefined;
+    const def = sel ? ITEMS[sel.defId] : undefined;
+    const pity = sel?.pityBonus ?? 0;
+
+    let stateLine = `<span style="color:#9ba4bf">Trạng thái: <b>Tĩnh lặng — Chọn vật phẩm để tụ linh</b></span>`;
+    if (this.matrixPhase === "channeling") {
+      const pct = Math.round(this.matrixProgress * 100);
+      stateLine = `<span style="color:#5ef2ff">⏳ Đang tụ linh trận pháp... <b>${pct}%</b></span>`;
+    } else if (this.lastFlash) {
+      stateLine = this.lastFlash.ok
+        ? `<span style="color:#44ee88">✦ THÀNH CÔNG: ${this.lastFlash.label}</span>`
+        : `<span style="color:#ff7788">✖ PHẢN PHỆ: Bảo toàn trang bị!</span>`;
+    }
+
+    const deltaLine =
+      this.lastFlash && this.lastFlash.deltaText
+        ? `<div style="color:#ffe066;font-size:10px">${this.lastFlash.deltaText}</div>`
+        : "";
+    const bonusLine =
+      this.lastFlash && this.lastFlash.bonusText
+        ? `<div style="color:#5ef2ff;font-size:10px">${this.lastFlash.bonusText}</div>`
+        : "";
+
+    this.legendEl.innerHTML = `
+      <div>${stateLine}</div>
+      ${def ? `<div style="color:${RARITY_INFO[def.rarity].color}">Lõi Trận: <b>${def.name} +${sel!.enhanceLevel}</b></div>` : ""}
+      <div style="color:#ffe066">Bảo Hiểm Pity: <b>+${pity}%</b> · Xúc Tác: ${this.useCatalyst ? `<b style="color:#5ef2ff">BẬT (+${CATALYST_BONUS_PCT}%)</b>` : "Tắt"}</div>
+      ${deltaLine}
+      ${bonusLine}
+    `;
   }
 
   render() {
@@ -475,13 +519,7 @@ export class ForgeModalUI {
     document.getElementById("forge-tab-craft")!.classList.toggle("active", this.tab === "craft");
 
     const banner = this.resultMsg
-      ? `<div class="forge-msg ${this.resultOk ? "ok" : "fail"}">${this.resultMsg}${
-          this.lastRolledBonus ? `<div style="margin-top:3px;color:#ffe066">✨ Thức tỉnh dòng phụ: ${this.lastRolledBonus}</div>` : ""
-        }${
-          this.lastBeforeAfter
-            ? `<div style="margin-top:2px;font-size:11px;color:#d6f5e3">Biến đổi: ATK ${this.lastBeforeAfter.beforeAtk}→${this.lastBeforeAfter.afterAtk} · DEF ${this.lastBeforeAfter.beforeDef}→${this.lastBeforeAfter.afterDef} · HP ${this.lastBeforeAfter.beforeHp}→${this.lastBeforeAfter.afterHp}${this.lastBeforeAfter.afterCrit !== this.lastBeforeAfter.beforeCrit ? ` · CRIT ${this.lastBeforeAfter.beforeCrit}%→${this.lastBeforeAfter.afterCrit}%` : ""}</div>`
-            : ""
-        }</div>`
+      ? `<div class="forge-msg ${this.resultOk ? "ok" : "fail"}">${this.resultMsg}</div>`
       : "";
 
     if (this.tab === "enhance") {
@@ -492,121 +530,164 @@ export class ForgeModalUI {
     this._updateMatrixLegend();
   }
 
-  private _updateMatrixLegend() {
-    if (this.matrixPhase === "channeling") {
-      this.legendEl.innerHTML = `<b style="color:#5ef2ff">⏳ ĐANG TỤ LINH MA TRẬN...</b><span>Các nút nguyên liệu đang hội tụ năng lượng vào lõi!</span>`;
-      return;
-    }
-    if (this.tab === "craft") {
-      this.legendEl.innerHTML = `<b style="color:#ffe066">⚒ TRẬN PHÁP ĐÚC ĐỒ</b><span>Chọn bản thiết kế bên phải để hợp thành trang bị Lam / Tím / Cam.</span>`;
-      return;
-    }
-    const found = this.selectedUid ? this.game.inv.findByUid(this.selectedUid) : null;
-    if (!found) {
-      this.legendEl.innerHTML = `<span style="color:#9da8cc">Chưa có trang bị đặt vào tâm Ma Trận. Hãy nhận trang bị từ Nhiệm Vụ hoặc Quái Vật!</span>`;
-      return;
-    }
-    const item = found.item;
-    const def = ITEMS[item.defId];
-    const pity = item.pityBonus ?? 0;
-    const bonusEntries: string[] = [];
-    if (item.bonusStats?.atk) bonusEntries.push(`+${item.bonusStats.atk} ATK`);
-    if (item.bonusStats?.def) bonusEntries.push(`+${item.bonusStats.def} DEF`);
-    if (item.bonusStats?.maxHp) bonusEntries.push(`+${item.bonusStats.maxHp} HP`);
-    if (item.bonusStats?.spd) bonusEntries.push(`+${item.bonusStats.spd} SPD`);
-    if (item.bonusStats?.crit) bonusEntries.push(`+${item.bonusStats.crit}% CRIT`);
-
-    this.legendEl.innerHTML = `
-      <b style="color:${RARITY_INFO[def.rarity].color}">${def.name} ${item.enhanceLevel > 0 ? `+${item.enhanceLevel}` : ""}</b>
-      <div>Đỉnh Trận: <span style="color:${this.useCatalyst ? "#e066ff" : "#8b94b8"}">${this.useCatalyst ? "Bùa Ma Trận (+15%)" : "Trống"}</span></div>
-      <div>Cộng Hưởng Thất Bại: <b style="color:#5ef2ff">+${pity}%</b> (tối đa +40%)</div>
-      ${bonusEntries.length > 0 ? `<div style="color:#ffd76a">Dòng Phụ: ${bonusEntries.join(" · ")}</div>` : `<div style="color:#7e87a6">Thành công sẽ cuộn thêm dòng phụ ngẫu nhiên!</div>`}
-    `;
-  }
-
   private _renderEnhance(banner: string) {
+    const classId = this.game.player.classId;
     const equips = this.game.inv.getAllEquipmentInstances();
     if (!equips.some((e) => e.item.uid === this.selectedUid)) {
       this.selectedUid = equips[0]?.item.uid ?? null;
     }
+    const busy = this.matrixPhase === "channeling";
 
-    const listHtml =
-      equips.length === 0
-        ? `<div class="detail-empty">Chưa có trang bị nào. Hãy làm nhiệm vụ hoặc săn quái rớt đồ!</div>`
-        : equips
-            .map(({ item, equipped }) => {
-              const def = ITEMS[item.defId];
-              const col = RARITY_INFO[def.rarity].color;
-              const sel = item.uid === this.selectedUid ? "selected" : "";
-              const pityTag = (item.pityBonus ?? 0) > 0 ? `<span style="color:#5ef2ff;font-size:10px">+${item.pityBonus}%</span>` : "";
-              return `
-                <div class="forge-list-item ${sel}" data-pick="${item.uid}" style="border-color:${col}">
-                  <span class="item-swatch" style="background:${def.iconColor}"></span>
-                  <span style="color:${col};flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${def.name} ${item.enhanceLevel > 0 ? `+${item.enhanceLevel}` : ""}</span>
-                  ${pityTag}
-                  ${equipped ? `<span class="eq-badge">ĐANG MẶC</span>` : ""}
-                </div>
-              `;
-            })
-            .join("");
+    const listHtml = equips.length
+      ? equips
+          .map(({ item, equipped }) => {
+            const def = ITEMS[item.defId];
+            const col = RARITY_INFO[def.rarity].color;
+            const tInfo = getTierBadge(def);
+            const sel = item.uid === this.selectedUid ? "selected" : "";
+            const infBadge =
+              item.enhanceLevel >= 5 && item.infusedElement
+                ? `<span style="color:${ELEMENT_DISPLAY[item.infusedElement].color};font-size:10px">[${ELEMENT_DISPLAY[item.infusedElement].label}]</span>`
+                : "";
+            const classWarn = !canClassEquip(def, classId)
+              ? `<span class="class-req-bad">Khác Hệ</span>`
+              : "";
+            return `
+              <div class="forge-list-item rarity-${def.rarity} ${sel}" data-pick="${item.uid}" data-review-uid="${item.uid}" style="border-color:${col}">
+                <canvas class="px-item-icon" width="32" height="32" data-icon-def="${def.id}" data-icon-enh="${item.enhanceLevel}"></canvas>
+                <span class="tier-pill" style="color:${tInfo.color};background:${tInfo.bg}">${tInfo.badge}</span>
+                <span style="color:${col};flex:1">${def.name} ${item.enhanceLevel > 0 ? `+${item.enhanceLevel}` : ""} ${infBadge} ${classWarn}</span>
+                ${equipped ? `<span class="eq-badge">ĐANG MẶC</span>` : ""}
+              </div>
+            `;
+          })
+          .join("")
+      : `<div class="detail-empty">Chưa có trang bị để luyện! Nhặt từ Quái/Rương hoặc sang tab Chế Tạo.</div>`;
 
-    let rightHtml = `<div class="detail-empty">Chọn một món trang bị đặt vào tâm Ma Trận Luyện Khí.</div>`;
+    let rightHtml = `<div class="detail-empty">Chọn một món trang bị để đưa vào Ma Trận Luyện Khí.</div>`;
     if (this.selectedUid) {
       const found = this.game.inv.findByUid(this.selectedUid);
       if (found) {
         const item = found.item;
         const def = ITEMS[item.defId];
         const curSt = getItemEffectiveStats(item);
-        const nextSt = getItemEffectiveStats({ ...item, enhanceLevel: Math.min(10, item.enhanceLevel + 1) });
+        const nextSt = getItemEffectiveStats({
+          ...item,
+          enhanceLevel: Math.min(10, item.enhanceLevel + 1),
+        });
         const info = this.game.forge.getEnhanceInfo(item, this.game.inv, this.useCatalyst);
-        const catCount = this.game.inv.countItem("mat_matrix_rune");
-        if (!info.hasCatalyst && this.useCatalyst) {
-          this.useCatalyst = false;
-        }
+        const milestones = getItemMilestoneSummary(item)
+          .map((m) => `<div style="font-size:11px;color:${m.startsWith("★") ? "#ffe066" : "#8b95b5"}">${m}</div>`)
+          .join("");
 
         const matHtml = info.materials
           .map((m) => {
             const have = this.game.inv.countItem(m.defId);
             const ok = have >= m.qty;
-            return `<div class="mat-row ${ok ? "ok" : "miss"}">${ITEMS[m.defId]?.name}: ${have}/${m.qty}</div>`;
+            return `<div class="mat-row ${ok ? "ok" : "miss"}" data-review-def="${m.defId}">${ITEMS[m.defId]?.name}: ${have}/${m.qty}</div>`;
           })
           .join("");
 
-        const isBusy = this.matrixPhase === "channeling";
+        const shardHave = this.game.inv.countItem("mat_prism_shard");
+        const catalystRow =
+          item.enhanceLevel >= 3 && item.enhanceLevel < 10
+            ? `
+              <label style="display:flex;align-items:center;gap:6px;margin:6px 0;font-size:12px;color:#5ef2ff;cursor:pointer">
+                <input type="checkbox" id="chk-forge-catalyst" ${this.useCatalyst ? "checked" : ""} ${(shardHave < CATALYST_SHARD_COST && !this.useCatalyst) || busy ? "disabled" : ""} />
+                <span>Dùng Xúc Tác ${CATALYST_SHARD_COST} Mảnh Lăng Kính (+${CATALYST_BONUS_PCT}% tỉ lệ · Đang có: ${shardHave})</span>
+              </label>
+            `
+            : "";
+
+        const bs = item.bonusStats;
+        const bsParts: string[] = [];
+        if (bs?.atk) bsParts.push(`+${bs.atk} ATK`);
+        if (bs?.def) bsParts.push(`+${bs.def} DEF`);
+        if (bs?.maxHp) bsParts.push(`+${bs.maxHp} HP`);
+        if (bs?.spd) bsParts.push(`+${bs.spd} SPD`);
+        if (bs?.crit) bsParts.push(`+${bs.crit}% CRIT`);
+        const bonusBox = bsParts.length
+          ? `<div class="bonus-sub-box">✦ Dòng phụ Ma Trận đã thức tỉnh: <b>${bsParts.join(" · ")}</b></div>`
+          : `<div class="bonus-sub-box" style="color:#9ba4bf;border-color:#353954;background:#100f1e">✧ Luyện +1 thành công sẽ ngẫu nhiên thức tỉnh 1 dòng phụ (ATK / DEF / HP / SPD / CRIT)!</div>`;
+
+        let infuseHtml = "";
+        if (item.enhanceLevel >= 5) {
+          const curInf = item.infusedElement
+            ? `<b style="color:${ELEMENT_DISPLAY[item.infusedElement].color}">${ELEMENT_DISPLAY[item.infusedElement].label} (${ELEMENT_DISPLAY[item.infusedElement].bonusHint})</b>`
+            : `<span style="color:#9ba4bf">Chưa khảm</span>`;
+          const btns = INFUSABLE_ELEMENTS.map((el) => {
+            const meta = ELEMENT_DISPLAY[el];
+            const havePigment = this.game.inv.countItem(meta.pigmentId);
+            const canInf = havePigment >= 1 && this.game.inv.gold >= INFUSE_GOLD_COST && !busy;
+            return `
+              <button class="px-btn sm ${canInf ? "" : "disabled"}" data-infuse="${el}" data-review-def="${meta.pigmentId}" title="${meta.bonusHint}" style="border-color:${meta.color};color:${meta.color}">
+                ${meta.label} (${havePigment}/1)
+              </button>
+            `;
+          }).join("");
+          infuseHtml = `
+            <div style="margin-top:8px;padding:7px;background:#100e1c;border:1px solid #4a5275">
+              <div style="font-size:12px;font-weight:700;color:#5ef2ff;margin-bottom:3px">
+                ★ KHE NHUỘM 8 SẮC TỐ [+5] · Hiện tại: ${curInf}
+              </div>
+              <div style="font-size:10px;color:#9ba4bf;margin-bottom:5px">
+                Phí khảm/đổi hệ: ${INFUSE_GOLD_COST}G + 1 Bột Sắc Tố (Đạt +10 tự thức tỉnh thêm Hệ Lăng Kính!)
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:5px">${btns}</div>
+            </div>
+          `;
+        } else {
+          infuseHtml = `
+            <div style="margin-top:8px;padding:6px;background:#100e1c;border:1px dashed #353954;font-size:11px;color:#8b95b5">
+              🔒 Đạt cấp <b>+5</b> để mở khóa <b>Khe Nhuộm 8 Bột Sắc Tố Nguyên Tố</b>!
+            </div>
+          `;
+        }
+
+        const classReqLine =
+          def.requiredClass && def.requiredClass !== "all"
+            ? `<span class="${canClassEquip(def, classId) ? "class-req-ok" : "class-req-bad"}">Hệ: ${CLASS_DISPLAY_NAMES[def.requiredClass]}</span>`
+            : `<span class="class-req-ok">Đa hệ</span>`;
 
         rightHtml = `
           <div class="forge-detail">
-            <div style="color:${RARITY_INFO[def.rarity].color};font-size:14px;font-weight:700">
-              ${def.name} (+${item.enhanceLevel} → +${info.nextLevel})
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="color:${RARITY_INFO[def.rarity].color};font-size:15px;font-weight:700">
+                ${def.name} (+${item.enhanceLevel} → +${info.nextLevel})
+              </span>
+              ${classReqLine}
             </div>
             <div class="forge-sub">
-              ${def.slot ? SLOT_LABELS[def.slot] : ""} · Tỉ lệ gốc ${info.baseRate}%
-              ${info.pityBonus > 0 ? `+ <span style="color:#5ef2ff">${info.pityBonus}% Cộng Hưởng</span>` : ""}
-              ${info.catalystBoost > 0 ? `+ <span style="color:#e066ff">${info.catalystBoost}% Bùa</span>` : ""}
-              = <b style="color:#44ee88">${info.effectiveRate}%</b>
+              ${def.slot ? SLOT_LABELS[def.slot] : ""} · Tỉ lệ: <b style="color:#44ee88">${info.successRate}%</b>
+              ${info.pityBonus > 0 ? `<span style="color:#ffe066">(+Pity ${info.pityBonus}%)</span>` : ""}
+              · An toàn không mất đồ!
             </div>
+            ${def.passiveDesc ? `<div style="font-size:11px;color:#ff9922;margin:3px 0">${def.passiveDesc}</div>` : ""}
+            ${bonusBox}
             <div class="forge-stat-preview">
-              ${curSt.atk || nextSt.atk ? `<div>ATK: ${curSt.atk} → <b style="color:#44ee88">${nextSt.atk}</b> (+ngẫu nhiên dòng phụ!)</div>` : ""}
+              ${curSt.atk || nextSt.atk ? `<div>ATK: ${curSt.atk} → <b style="color:#44ee88">${nextSt.atk}</b></div>` : ""}
               ${curSt.def || nextSt.def ? `<div>DEF: ${curSt.def} → <b style="color:#44ee88">${nextSt.def}</b></div>` : ""}
               ${curSt.maxHp || nextSt.maxHp ? `<div>HP: ${curSt.maxHp} → <b style="color:#44ee88">${nextSt.maxHp}</b></div>` : ""}
-              ${curSt.spd || nextSt.spd ? `<div>SPD: ${curSt.spd} → <b style="color:#44ee88">${nextSt.spd}</b></div>` : ""}
               ${curSt.crit || nextSt.crit ? `<div>CRIT: ${curSt.crit}% → <b style="color:#44ee88">${nextSt.crit}%</b></div>` : ""}
+              ${curSt.spd || nextSt.spd ? `<div>SPD: ${curSt.spd} → <b style="color:#44ee88">${nextSt.spd}</b></div>` : ""}
+              ${curSt.elementBonus || nextSt.elementBonus ? `<div>ELEM: ${curSt.elementBonus}% → <b style="color:#44ee88">${nextSt.elementBonus}%</b></div>` : ""}
+              ${curSt.maxStamina || nextSt.maxStamina ? `<div>STAM: +${curSt.maxStamina} → <b style="color:#44ee88">+${nextSt.maxStamina}</b></div>` : ""}
+              ${curSt.poiseBreakPct || nextSt.poiseBreakPct ? `<div>PHÁ GIÁP: +${curSt.poiseBreakPct}% → <b style="color:#44ee88">+${nextSt.poiseBreakPct}%</b></div>` : ""}
+              ${curSt.skillCdPct || nextSt.skillCdPct ? `<div>CD [E]: -${curSt.skillCdPct}% → <b style="color:#44ee88">-${nextSt.skillCdPct}%</b></div>` : ""}
+            </div>
+            <div style="margin:5px 0;padding:5px 7px;background:#100e1c;border:1px solid #2d324d">
+              ${milestones}
             </div>
             <div class="forge-mats">
               <div class="mat-row ${this.game.inv.gold >= info.goldCost ? "ok" : "miss"}">Vàng: ${this.game.inv.gold}/${info.goldCost} G</div>
               ${matHtml}
             </div>
-            <label class="matrix-catalyst-toggle ${catCount <= 0 || isBusy ? "disabled" : ""}">
-              <input type="checkbox" id="chk-matrix-catalyst" ${this.useCatalyst && catCount > 0 ? "checked" : ""} ${catCount <= 0 || isBusy ? "disabled" : ""} />
-              <span>Khảm <b>Bùa Ma Trận</b> (+15% tỉ lệ) — Đang có: <b>${catCount}</b> (Mua tại Thương Nhân Mira)</span>
-            </label>
-            <div class="matrix-pity-bar">
-              Cộng Hưởng An Toàn: Nếu thất bại, trang bị KHÔNG bị mất — +8% tỉ lệ vĩnh viễn cho lần luyện sau!
-            </div>
-            <button class="px-btn ${info.canEnhance && !isBusy ? "primary" : "disabled"}" id="btn-do-enhance" ${isBusy ? "disabled" : ""}>
-              ${isBusy ? "⏳ ĐANG TỤ LINH MA TRẬN..." : `✡ KHAI TRIỂN MA TRẬN (+${info.nextLevel})`}
+            ${catalystRow}
+            <button class="px-btn ${info.canEnhance && !busy ? "primary" : "disabled"}" id="btn-do-enhance">
+              ${busy ? "⏳ ĐANG VẬN CHUYỂN LINH TRẬN..." : `✡ KÍCH HOẠT MA TRẬN LUYỆN (+${info.nextLevel})`}
             </button>
             ${info.reason ? `<div class="forge-reason">${info.reason}</div>` : ""}
+            ${infuseHtml}
           </div>
         `;
       }
@@ -619,6 +700,7 @@ export class ForgeModalUI {
         <div class="forge-panel">${rightHtml}</div>
       </div>
     `;
+    this._paintIcons();
 
     this.contentEl.querySelectorAll("[data-pick]").forEach((el) => {
       el.addEventListener("click", () => {
@@ -626,118 +708,138 @@ export class ForgeModalUI {
         sfx.playUiClick();
         this.selectedUid = (el as HTMLElement).dataset.pick ?? null;
         this.resultMsg = "";
-        this.lastRolledBonus = "";
-        this.lastBeforeAfter = null;
+        this.lastFlash = null;
         this.render();
       });
     });
 
-    this.contentEl.querySelector("#chk-matrix-catalyst")?.addEventListener("change", (ev) => {
+    this.contentEl.querySelector("#chk-forge-catalyst")?.addEventListener("change", (ev) => {
       if (this.matrixPhase === "channeling") return;
       sfx.playUiClick();
-      this.useCatalyst = (ev.target as HTMLInputElement).checked;
+      this.useCatalyst = (ev.currentTarget as HTMLInputElement).checked;
       this.render();
     });
 
     this.contentEl.querySelector("#btn-do-enhance")?.addEventListener("click", () => {
-      if (this.matrixPhase === "channeling" || !this.selectedUid) return;
+      if (!this.selectedUid || this.matrixPhase === "channeling") return;
       const found = this.game.inv.findByUid(this.selectedUid);
       if (!found) return;
       const info = this.game.forge.getEnhanceInfo(found.item, this.game.inv, this.useCatalyst);
       if (!info.canEnhance) {
-        sfx.playForgeFail();
-        this.resultMsg = info.reason ?? "Chưa đủ nguyên liệu hoặc vàng!";
+        this.resultMsg = info.reason ?? "Không đủ nguyên liệu hoặc vàng để kích hoạt trận pháp.";
         this.resultOk = false;
+        sfx.playForgeFail();
         this.render();
         return;
       }
-      // Begin Rune Matrix Channeling animation!
-      this.pendingUid = this.selectedUid;
-      this.pendingCatalyst = this.useCatalyst && info.hasCatalyst;
-      this.matrixPhase = "channeling";
-      this.matrixTimer = CHANNEL_DURATION;
+
       this.resultMsg = "";
-      this.lastRolledBonus = "";
-      this.lastBeforeAfter = null;
+      this.matrixTargetUid = this.selectedUid;
+      this.matrixUseCatalyst = this.useCatalyst;
+      this.matrixProgress = 0;
+      this.matrixPhase = "channeling";
       sfx.playMatrixChannel();
       this.render();
+    });
+
+    this.contentEl.querySelectorAll("[data-infuse]").forEach((el) => {
+      el.addEventListener("click", () => {
+        if (!this.selectedUid || this.matrixPhase === "channeling") return;
+        const elem = (el as HTMLElement).dataset.infuse as InfusableElement;
+        const res = this.game.forge.infuseElement(
+          this.selectedUid,
+          elem,
+          this.game.inv,
+          this.game.quests
+        );
+        this.resultMsg = res.message;
+        this.resultOk = res.succeeded;
+        if (res.succeeded) {
+          this.matrixPhase = "success";
+          this.matrixTimer = 1.4;
+          this._burstSparks(true);
+          sfx.playForgeSuccess();
+          this.game.recalcPlayerStats(true);
+          this.game.refreshHud();
+          this.game.saveGame(false);
+        } else {
+          sfx.playForgeFail();
+        }
+        this.render();
+      });
     });
   }
 
   private _renderCraft(banner: string) {
     const classId = this.game.player.classId;
-    const filtered = FORGE_RECIPES.filter((rec) => {
-      if (this.craftFilter === "all") return true;
-      const def = ITEMS[rec.resultDefId];
-      return !def.allowedClasses || def.allowedClasses.includes(classId);
-    });
+    const filtered =
+      this.craftFilter === "class"
+        ? FORGE_RECIPES.filter((r) => canClassEquip(ITEMS[r.resultDefId], classId))
+        : FORGE_RECIPES;
+
+    const filterBar = `
+      <div class="craft-filter-bar">
+        <button id="btn-craft-class" class="px-btn sm ${this.craftFilter === "class" ? "primary" : ""}">
+          Lọc: ${CLASS_DISPLAY_NAMES[classId]}
+        </button>
+        <button id="btn-craft-all" class="px-btn sm ${this.craftFilter === "all" ? "primary" : ""}">
+          Tất cả (${FORGE_RECIPES.length})
+        </button>
+      </div>
+    `;
 
     const cards = filtered
       .map((rec) => {
         const def = ITEMS[rec.resultDefId];
         const rInfo = RARITY_INFO[def.rarity];
+        const tInfo = getTierBadge(def);
         const check = this.game.forge.canCraft(rec, this.game.inv);
         const usable = canClassEquip(def, classId);
-        const classTag = def.allowedClasses?.length
-          ? usable
-            ? `<span class="class-req-ok">✓ Khớp Class</span>`
-            : `<span class="class-req-bad">✗ Chỉ: ${def.allowedClasses.map((c) => CLASS_DISPLAY_NAMES[c]).join(", ")}</span>`
-          : `<span class="class-req-ok">Mọi Class</span>`;
-        const skillNote = def.grantsSkillE
-          ? `<div style="color:#5ef2ff;font-size:10px">✦ Mở [E]: ${def.grantsSkillE.name}</div>`
-          : def.grantsSkillQ
-            ? `<div style="color:#ffe066;font-size:10px">✦ Tiến hóa [Q]: ${def.grantsSkillQ.name}</div>`
-            : def.passiveSkill
-              ? `<div style="color:#b8e4ff;font-size:10px">✦ Nội tại: ${def.passiveSkill.name}</div>`
-              : "";
+        const clsTag =
+          def.requiredClass && def.requiredClass !== "all"
+            ? `<span class="${usable ? "class-req-ok" : "class-req-bad"}">${CLASS_DISPLAY_NAMES[def.requiredClass]}</span>`
+            : `<span class="class-req-ok">Mọi Hệ</span>`;
+
         const mats = rec.materials
           .map((m) => {
             const have = this.game.inv.countItem(m.defId);
-            return `<span class="craft-mat ${have >= m.qty ? "ok" : "miss"}">${ITEMS[m.defId]?.name} ${have}/${m.qty}</span>`;
+            return `<span class="craft-mat ${have >= m.qty ? "ok" : "miss"}" data-review-def="${m.defId}">${ITEMS[m.defId]?.name} ${have}/${m.qty}</span>`;
           })
           .join("");
 
         return `
-          <div class="craft-card" style="border-color:${rInfo.color}">
+          <div class="craft-card rarity-${def.rarity}" data-review-def="${def.id}" style="border-color:${rInfo.color}">
             <div class="craft-head">
-              <span class="item-swatch" style="background:${def.iconColor}"></span>
-              <b style="color:${rInfo.color};font-size:12px">${def.name}</b>
+              <canvas class="px-item-icon" width="32" height="32" data-icon-def="${def.id}" data-icon-enh="0"></canvas>
+              <span class="tier-pill" style="color:${tInfo.color};background:${tInfo.bg}">${tInfo.badge}</span>
+              <b style="color:${rInfo.color}">${def.name}</b>
               <span class="craft-rarity" style="color:${rInfo.color}">[${rInfo.label}]</span>
+              ${clsTag}
             </div>
-            <div>${classTag}</div>
-            ${skillNote}
             <div class="craft-desc">${rec.desc}</div>
+            ${def.passiveDesc ? `<div style="font-size:11px;color:#ff9922;margin-bottom:4px">${def.passiveDesc}</div>` : ""}
             <div class="craft-mats">
               <span class="craft-mat ${this.game.inv.gold >= rec.goldCost ? "ok" : "miss"}">${rec.goldCost}G</span>
               ${mats}
             </div>
             <button class="px-btn ${check.ok ? "good" : "disabled"}" data-craft="${rec.id}">
-              ⚒ HỢP THÀNH
+              ⚒ CHẾ TẠO
             </button>
           </div>
         `;
       })
       .join("");
 
-    this.contentEl.innerHTML = `
-      ${banner}
-      <div class="craft-filter-bar">
-        <button class="px-btn sm ${this.craftFilter === "class" ? "active" : ""}" id="craft-filt-class">
-          Lọc: ${CLASS_DISPLAY_NAMES[classId]}
-        </button>
-        <button class="px-btn sm ${this.craftFilter === "all" ? "active" : ""}" id="craft-filt-all">
-          Tất cả (${FORGE_RECIPES.length})
-        </button>
-      </div>
-      <div class="craft-grid">${cards}</div>
-    `;
+    this.contentEl.innerHTML = `${banner}${filterBar}<div class="craft-grid">${cards}</div>`;
+    this._paintIcons();
 
-    this.contentEl.querySelector("#craft-filt-class")?.addEventListener("click", () => {
+    this.contentEl.querySelector("#btn-craft-class")?.addEventListener("click", () => {
       sfx.playUiClick();
       this.craftFilter = "class";
       this.render();
     });
-    this.contentEl.querySelector("#craft-filt-all")?.addEventListener("click", () => {
+
+    this.contentEl.querySelector("#btn-craft-all")?.addEventListener("click", () => {
       sfx.playUiClick();
       this.craftFilter = "all";
       this.render();
@@ -749,11 +851,12 @@ export class ForgeModalUI {
         const res = this.game.forge.craftRecipe(recId, this.game.inv);
         this.resultMsg = res.message;
         this.resultOk = res.succeeded;
-        this.lastRolledBonus = "";
-        this.lastBeforeAfter = null;
         if (res.succeeded) {
-          this._burstOutcomeFx(true);
+          this.matrixPhase = "success";
+          this.matrixTimer = 1.4;
+          this._burstSparks(true);
           sfx.playForgeSuccess();
+          this.game.refreshHud();
           this.game.saveGame(false);
         } else {
           sfx.playForgeFail();
@@ -761,5 +864,9 @@ export class ForgeModalUI {
         this.render();
       });
     });
+  }
+
+  private _paintIcons() {
+    uiRarityFx.syncContainer(this.contentEl);
   }
 }

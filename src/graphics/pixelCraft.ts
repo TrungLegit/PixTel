@@ -619,6 +619,31 @@ export class PixelBuf {
     return c;
   }
 
+  toBleachedCanvas(): HTMLCanvasElement {
+    const c = document.createElement("canvas");
+    c.width = this.w;
+    c.height = this.h;
+    const ctx = c.getContext("2d")!;
+    ctx.imageSmoothingEnabled = false;
+    const img = ctx.createImageData(this.w, this.h);
+    const dst = new Uint32Array(img.data.buffer);
+    for (let i = 0; i < this.px.length; i++) {
+      const p = this.px[i];
+      const a = p >>> 24;
+      if (a <= 128) continue;
+      const r = p & 0xff;
+      const g = (p >>> 8) & 0xff;
+      const b = (p >>> 16) & 0xff;
+      const lum = Math.round(r * 0.3 + g * 0.59 + b * 0.11);
+      const br = Math.min(255, Math.round(lum * 0.94 + 8));
+      const bg = Math.min(255, Math.round(lum * 0.96 + 10));
+      const bb = Math.min(255, Math.round(lum * 1.04 + 14));
+      dst[i] = ((a << 24) | (bb << 16) | (bg << 8) | br) >>> 0;
+    }
+    ctx.putImageData(img, 0, 0);
+    return c;
+  }
+
   toActor(): PixelfxActor {
     const maskData = new Uint8Array(this.w * this.h);
     const pixels = new Uint32Array(this.w * this.h);

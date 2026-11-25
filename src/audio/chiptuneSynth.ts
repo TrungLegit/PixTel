@@ -233,6 +233,44 @@ class ChiptuneSynth {
     if (!this.throttle("ui", 35)) return;
     this.tone(540, 720, 0.045, "square", 0.12);
   }
+
+  playBagOpen() {
+    this.tone(330, 440, 0.06, "triangle", 0.16, 0);
+    this.tone(494, 660, 0.08, "square", 0.14, 0.05);
+    this.noise(0.05, 0.08, 2200, 0.01);
+  }
+
+  playEquipWeapon() {
+    // Crisp metallic blade unsheathe sweep
+    this.tone(520, 1180, 0.09, "sawtooth", 0.18, 0);
+    this.tone(880, 1420, 0.11, "triangle", 0.18, 0.05);
+    this.noise(0.06, 0.12, 3600, 0);
+  }
+
+  playEquipArmor() {
+    // Heavy 16-bit armor / helmet / boots clank
+    this.tone(180, 110, 0.08, "square", 0.22, 0);
+    this.tone(320, 460, 0.09, "square", 0.16, 0.045);
+    this.noise(0.07, 0.15, 1400, 0.01);
+  }
+
+  playEquipAccessory() {
+    // Crystal chime for ring / charm
+    this.tone(659, 659, 0.07, "triangle", 0.18, 0);
+    this.tone(988, 1318, 0.14, "triangle", 0.2, 0.05);
+  }
+
+  playUnequip() {
+    this.tone(480, 290, 0.08, "triangle", 0.15, 0);
+  }
+
+  playDismantle() {
+    // Prism shatter + ascending crystal sparkles
+    this.noise(0.11, 0.2, 3200, 0);
+    this.tone(420, 210, 0.1, "sawtooth", 0.18, 0);
+    this.tone(740, 1046, 0.1, "triangle", 0.16, 0.07);
+    this.tone(988, 1480, 0.14, "triangle", 0.18, 0.13);
+  }
 }
 
 export const sfx = new ChiptuneSynth();

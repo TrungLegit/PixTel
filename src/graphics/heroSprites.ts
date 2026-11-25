@@ -35,6 +35,8 @@ function finalizeCharacter(
     left: flipped.toCanvas(),
     whiteRight: buf.toWhiteCanvas(),
     whiteLeft: flipped.toWhiteCanvas(),
+    bleachedRight: buf.toBleachedCanvas(),
+    bleachedLeft: flipped.toBleachedCanvas(),
     actor: buf.toActor(),
   };
 }

@@ -12,6 +12,7 @@ import * as frameSkipMod from "./pixelfx/fx/pixtel/frame-skip.js";
 import * as compileTurretMod from "./pixelfx/fx/pixtel/compile-turret.js";
 import * as bossTelegraphMod from "./pixelfx/fx/pixtel/boss-telegraph.js";
 import * as overdriveAuraMod from "./pixelfx/fx/pixtel/overdrive-aura.js";
+import * as rarityAuraMod from "./pixelfx/fx/pixtel/rarity-aura.js";
 
 // Melee & Combat pixelfx
 import * as swordSlashMod from "./pixelfx/fx/melee/sword-slash.js";
@@ -72,6 +73,7 @@ export const PIXELFX_MODS: Record<string, PixelfxModule> = {
   "pixtel/compile-turret": compileTurretMod,
   "pixtel/boss-telegraph": bossTelegraphMod,
   "pixtel/overdrive-aura": overdriveAuraMod,
+  "pixtel/rarity-aura": rarityAuraMod,
   "melee/sword-slash": swordSlashMod,
   "melee/double-slash": doubleSlashMod,
   "melee/heavy-cleave": heavyCleaveMod,
@@ -156,6 +158,9 @@ export const ATLAS_PRESETS: Record<string, { mod: PixelfxModule; opts: BakeOptio
   "portal-void": { mod: spawnPortalMod, opts: { options: { palette: PAL.arcane, width: 15 }, fps: 16, maxDuration: 1.5, downscale: 0.6 } },
   "death-poof": { mod: poofMod, opts: { options: { palette: PAL.smoke, stars: PAL.cyber }, fps: 18, maxDuration: 0.85, downscale: 0.5 } },
   "collect-burst": { mod: collectBurstMod, opts: { options: { palette: PAL.cyber }, fps: 20, maxDuration: 0.65, downscale: 0.48 } },
+  "collect-burst-rare": { mod: collectBurstMod, opts: { options: { palette: PAL.water }, fps: 20, maxDuration: 0.72, downscale: 0.56 } },
+  "collect-burst-epic": { mod: collectBurstMod, opts: { options: { palette: PAL.arcane }, fps: 20, maxDuration: 0.78, downscale: 0.62 } },
+  "collect-burst-legendary": { mod: collectBurstMod, opts: { options: { palette: PAL.volt }, fps: 22, maxDuration: 0.88, downscale: 0.72 } },
   "zap-hit": { mod: zapHitMod, opts: { options: { palette: PAL.cyber }, fps: 22, maxDuration: 0.6, downscale: 0.52 } },
   "heal-burst": { mod: healMod, opts: { options: { palette: PAL.heal }, fps: 18, maxDuration: 0.9, downscale: 0.55 } },
   "heal-aoe": { mod: healAoeMod, opts: { options: { palette: PAL.heal, reach: 44 }, fps: 16, maxDuration: 1.2, downscale: 0.52 } },
@@ -168,12 +173,15 @@ export const ATLAS_PRESETS: Record<string, { mod: PixelfxModule; opts: BakeOptio
   "chest-open": { mod: chestOpenMod, opts: { options: { palette: PAL.gold }, fps: 16, maxDuration: 1.6, downscale: 0.55 } },
   "forge-sparks": { mod: parryMod, opts: { options: { palette: PAL.gold }, fps: 22, downscale: 0.55 } },
 
-  // Rarity Loot Beams (pixelfx pickups/loot-beam!)
+  // Rarity Loot Beams & High-Rarity Auras (pixelfx pickups/loot-beam & pixtel/rarity-aura!)
   "beam-common": { mod: lootBeamMod, opts: { options: { palette: PAL.metal }, fps: 14, downscale: 0.36 } },
   "beam-uncommon": { mod: lootBeamMod, opts: { options: { palette: PAL.heal }, fps: 14, downscale: 0.42 } },
   "beam-rare": { mod: lootBeamMod, opts: { options: { palette: PAL.water }, fps: 14, downscale: 0.48 } },
   "beam-epic": { mod: lootBeamMod, opts: { options: { palette: PAL.arcane }, fps: 14, downscale: 0.54 } },
   "beam-legendary": { mod: lootBeamMod, opts: { options: { palette: PAL.volt }, fps: 16, downscale: 0.62 } },
+  "item-aura-rare": { mod: rarityAuraMod, opts: { options: { palette: PAL.water, tier: 3, radius: 13, seed: 31 }, fps: 16, downscale: 0.72 } },
+  "item-aura-epic": { mod: rarityAuraMod, opts: { options: { palette: PAL.arcane, tier: 4, radius: 14, seed: 47 }, fps: 18, downscale: 0.78 } },
+  "item-aura-legendary": { mod: rarityAuraMod, opts: { options: { palette: PAL.volt, tier: 5, radius: 15, seed: 73 }, fps: 20, downscale: 0.85 } },
 
   // Looping projectiles & pickups
   "proj-fireball": { mod: fireballMod, opts: { options: { palette: PAL.fire, radius: 5 }, fps: 18, downscale: 0.52 } },
@@ -351,9 +359,11 @@ export class VfxManager {
   warmup() {
     const eager = [
       "hit-cyan", "hit-fire", "hit-ice", "hit-poison", "hit-gold", "crit-gold",
-      "mine-hit", "death-poof", "collect-burst", "proj-fireball", "proj-icelance",
+      "mine-hit", "death-poof", "collect-burst", "collect-burst-rare", "collect-burst-epic", "collect-burst-legendary",
+      "proj-fireball", "proj-icelance",
       "proj-poison", "proj-laser", "proj-shuriken", "waypoint-pad",
       "beam-uncommon", "beam-rare", "beam-epic", "beam-legendary",
+      "item-aura-rare", "item-aura-epic", "item-aura-legendary",
     ];
     for (const k of eager) {
       const p = ATLAS_PRESETS[k];

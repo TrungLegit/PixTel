@@ -1,12 +1,38 @@
-import { ITEMS, getItemEffectiveStats } from "../data/items";
+import { ITEMS, getItemEffectiveStats, type NormalizedEquipStats } from "../data/items";
 import { FORGE_RECIPES } from "../data/recipes";
-import type { EquipSlot, ItemInstance, RecipeDef, Rarity, StatBonus } from "../data/types";
+import type { InfusableElement, ItemInstance, RecipeDef, StatBonus } from "../data/types";
 import type { InventorySystem } from "./inventorySystem";
 import type { QuestSystem } from "./questSystem";
 
 export const MAX_ENHANCE_LEVEL = 10;
+export const CATALYST_SHARD_COST = 2;
+export const CATALYST_BONUS_PCT = 15;
+export const INFUSE_GOLD_COST = 40;
 
-const BASE_SUCCESS_RATES = [95, 88, 80, 72, 64, 56, 48, 42, 36, 30];
+export const PIGMENT_IDS: readonly string[] = [
+  "mat_pigment_red",
+  "mat_pigment_cyan",
+  "mat_pigment_green",
+  "mat_pigment_gold",
+  "mat_pigment_void",
+  "mat_pigment_chroma",
+  "mat_pigment_wind",
+  "mat_pigment_quake",
+];
+
+export const ELEMENT_DISPLAY: Record<
+  InfusableElement,
+  { label: string; color: string; pigmentId: string; bonusHint: string }
+> = {
+  fire: { label: "HỎA", color: "#ff5533", pigmentId: "mat_pigment_red", bonusHint: "+8% ELEM, +4 ATK" },
+  ice: { label: "BĂNG", color: "#38e8ff", pigmentId: "mat_pigment_cyan", bonusHint: "+8% ELEM, +4% CRIT" },
+  nature: { label: "MỘC", color: "#44ee88", pigmentId: "mat_pigment_green", bonusHint: "+8% ELEM, +20 HP" },
+  volt: { label: "LÔI", color: "#ffee44", pigmentId: "mat_pigment_gold", bonusHint: "+8% ELEM, -5% CD [E]" },
+  void: { label: "HƯ KHÔNG", color: "#b266ff", pigmentId: "mat_pigment_void", bonusHint: "+8% ELEM, -6% CD [E]" },
+  chroma: { label: "SẮC ĐỘ", color: "#ff66c4", pigmentId: "mat_pigment_chroma", bonusHint: "+12% ELEM, Hồi lực" },
+  wind: { label: "GIÓ", color: "#5ef2d6", pigmentId: "mat_pigment_wind", bonusHint: "+8% ELEM, +6 SPD, +8 STAM" },
+  quake: { label: "CHẤN ĐỘNG", color: "#ff9933", pigmentId: "mat_pigment_quake", bonusHint: "+8% ELEM, +15% Phá Giáp" },
+};
 
 export interface EnhanceCostInfo {
   canEnhance: boolean;
@@ -15,10 +41,9 @@ export interface EnhanceCostInfo {
   materials: { defId: string; qty: number }[];
   baseRate: number;
   pityBonus: number;
-  catalystBoost: number;
-  effectiveRate: number;
-  successRate: number; // alias of effectiveRate
-  hasCatalyst: boolean;
+  catalystBonus: number;
+  canUseCatalyst: boolean;
+  successRate: number; // 0..100
   reason?: string;
 }
 
@@ -27,66 +52,32 @@ export interface ForgeActionResult {
   succeeded: boolean;
   message: string;
   item?: ItemInstance;
-  beforeStats?: Required<StatBonus>;
-  afterStats?: Required<StatBonus>;
+  beforeStats?: NormalizedEquipStats;
+  afterStats?: NormalizedEquipStats;
   rolledBonusText?: string;
   newPityBonus?: number;
 }
 
-const RARITY_SUBSTAT_MULT: Record<Rarity, number> = {
-  common: 1.0,
-  uncommon: 1.3,
-  rare: 1.7,
-  epic: 2.2,
-  legendary: 3.0,
+const BASE_RATES: Record<number, number> = {
+  1: 100,
+  2: 100,
+  3: 100,
+  4: 90,
+  5: 80,
+  6: 70,
+  7: 60,
+  8: 50,
+  9: 42,
+  10: 35,
 };
 
-function rollMatrixSubstat(
-  slot: EquipSlot | undefined,
-  rarity: Rarity,
-  target: StatBonus
-): string {
-  const mult = RARITY_SUBSTAT_MULT[rarity] ?? 1.0;
-  const pool: (keyof StatBonus)[] =
-    slot === "weapon"
-      ? ["atk", "crit", "spd", "atk"]
-      : slot === "armor"
-        ? ["def", "maxHp", "maxHp", "spd"]
-        : slot === "ring"
-          ? ["crit", "atk", "spd", "maxHp"]
-          : ["atk", "maxHp", "crit", "def", "spd"];
-
-  const pick = pool[Math.floor(Math.random() * pool.length)];
-  if (pick === "atk") {
-    const add = Math.max(1, Math.round((1 + Math.random() * 1.4) * mult));
-    target.atk = (target.atk ?? 0) + add;
-    return `+${add} ATK`;
-  }
-  if (pick === "def") {
-    const add = Math.max(1, Math.round((0.8 + Math.random() * 1.0) * mult));
-    target.def = (target.def ?? 0) + add;
-    return `+${add} DEF`;
-  }
-  if (pick === "maxHp") {
-    const add = Math.max(4, Math.round((5 + Math.random() * 6) * mult));
-    target.maxHp = (target.maxHp ?? 0) + add;
-    return `+${add} HP`;
-  }
-  if (pick === "spd") {
-    const add = Math.max(1, Math.round((1 + Math.random() * 1.2) * mult));
-    target.spd = (target.spd ?? 0) + add;
-    return `+${add} SPD`;
-  }
-  const add = Math.max(1, Math.round((1 + Math.random() * 0.8) * mult));
-  target.crit = (target.crit ?? 0) + add;
-  return `+${add}% CRIT`;
-}
-
 /**
- * Rune Matrix Transmutation Forge (+0 -> +10):
- * - Combines equipment + matrix materials + optional Matrix Rune catalyst (+15% success)
- * - Failure keeps gear safe and builds +8% Matrix Resonance pity (max +40%)
- * - Success upgrades +1 AND infuses bonus Matrix substats into the item!
+ * Blacksmith Prism Forge v2.5:
+ * - Safe +0 -> +10 enhancement (never breaks or downgrades items)
+ * - Prism Resonance Pity (+20% / +25% failstack accumulated per failure up to 100%)
+ * - Optional Prism Catalyst (+15% success rate using 2 Prism Shards)
+ * - +5 Chroma Pigment Elemental Infusion (fire / ice / nature / volt)
+ * - Rare / Epic / Legendary / Boss-Core equipment crafting
  */
 export class ForgeSystem {
   getEnhanceInfo(
@@ -95,9 +86,6 @@ export class ForgeSystem {
     useCatalyst = false
   ): EnhanceCostInfo {
     const def = ITEMS[item.defId];
-    const hasCatalyst = inv.countItem("mat_matrix_rune") > 0;
-    const pityBonus = Math.min(40, item.pityBonus ?? 0);
-
     if (!def || def.category !== "equipment") {
       return {
         canEnhance: false,
@@ -106,11 +94,10 @@ export class ForgeSystem {
         materials: [],
         baseRate: 0,
         pityBonus: 0,
-        catalystBoost: 0,
-        effectiveRate: 0,
+        catalystBonus: 0,
+        canUseCatalyst: false,
         successRate: 0,
-        hasCatalyst,
-        reason: "Vật phẩm này không thể đưa vào Ma Trận.",
+        reason: "Vật phẩm này không thể cường hóa.",
       };
     }
 
@@ -122,22 +109,21 @@ export class ForgeSystem {
         materials: [],
         baseRate: 0,
         pityBonus: 0,
-        catalystBoost: 0,
-        effectiveRate: 0,
+        catalystBonus: 0,
+        canUseCatalyst: false,
         successRate: 0,
-        hasCatalyst,
-        reason: "Ma Trận đã bão hòa (+10 tối đa)!",
+        reason: "Đã đạt cấp cường hóa tối đa (+10 Thức Tỉnh)!",
       };
     }
 
     const nextLevel = item.enhanceLevel + 1;
-    const goldCost = 35 + nextLevel * 30;
+    const goldCost = 30 + nextLevel * 28;
     const materials: { defId: string; qty: number }[] = [
       { defId: "mat_iron_ore", qty: 1 + Math.floor(nextLevel / 2) },
       { defId: "mat_glitch_core", qty: 1 + Math.floor(nextLevel / 3) },
     ];
-    if (nextLevel >= 4) {
-      materials.push({ defId: "mat_quartz_shard", qty: nextLevel - 3 });
+    if (nextLevel >= 5) {
+      materials.push({ defId: "mat_quartz_shard", qty: nextLevel - 4 });
     }
     if (nextLevel >= 7) {
       materials.push({ defId: "mat_amber_gem", qty: nextLevel - 6 });
@@ -146,9 +132,19 @@ export class ForgeSystem {
       materials.push({ defId: "mat_void_prism", qty: nextLevel - 8 });
     }
 
-    const baseRate = BASE_SUCCESS_RATES[nextLevel - 1] ?? 30;
-    const catalystBoost = useCatalyst && hasCatalyst ? 15 : 0;
-    const effectiveRate = Math.min(100, baseRate + pityBonus + catalystBoost);
+    const baseRate = BASE_RATES[nextLevel] ?? 50;
+    const pityBonus = item.pityBonus ?? 0;
+    const canUseCatalyst =
+      nextLevel >= 4 &&
+      baseRate + pityBonus < 100 &&
+      inv.countItem("mat_prism_shard") >= CATALYST_SHARD_COST;
+    const catalystBonus = useCatalyst && canUseCatalyst ? CATALYST_BONUS_PCT : 0;
+
+    if (catalystBonus > 0) {
+      materials.push({ defId: "mat_prism_shard", qty: CATALYST_SHARD_COST });
+    }
+
+    const successRate = Math.min(100, baseRate + pityBonus + catalystBonus);
 
     let canEnhance = inv.gold >= goldCost;
     let reason: string | undefined;
@@ -160,10 +156,6 @@ export class ForgeSystem {
         break;
       }
     }
-    if (useCatalyst && !hasCatalyst) {
-      canEnhance = false;
-      reason = "Thiếu Bùa Ma Trận để kích hoạt Xúc Tác.";
-    }
 
     return {
       canEnhance,
@@ -172,10 +164,9 @@ export class ForgeSystem {
       materials,
       baseRate,
       pityBonus,
-      catalystBoost,
-      effectiveRate,
-      successRate: effectiveRate,
-      hasCatalyst,
+      catalystBonus,
+      canUseCatalyst,
+      successRate,
       reason,
     };
   }
@@ -193,30 +184,43 @@ export class ForgeSystem {
       return { ok: false, succeeded: false, message: info.reason ?? "Không đủ điều kiện." };
     }
 
-    const beforeStats = getItemEffectiveStats(found.item);
-
     inv.gold -= info.goldCost;
     for (const m of info.materials) inv.consumeItem(m.defId, m.qty);
-    if (useCatalyst && info.catalystBoost > 0) {
-      inv.consumeItem("mat_matrix_rune", 1);
-    }
 
     const roll = Math.random() * 100;
     const def = ITEMS[found.item.defId];
-    if (roll <= info.effectiveRate) {
+    if (info.successRate >= 100 || roll <= info.successRate) {
+      const beforeStats = getItemEffectiveStats(found.item);
       found.item.enhanceLevel = info.nextLevel;
       found.item.pityBonus = 0;
-      if (!found.item.bonusStats) found.item.bonusStats = {};
-      const rolledBonusText = rollMatrixSubstat(def?.slot, def?.rarity ?? "common", found.item.bonusStats);
+
+      // Infuse random bonus substat via Matrix Transmutation!
+      const pool: { key: keyof StatBonus; min: number; max: number; label: string }[] = [
+        { key: "atk", min: 2, max: 4, label: "ATK" },
+        { key: "def", min: 1, max: 3, label: "DEF" },
+        { key: "maxHp", min: 12, max: 24, label: "HP" },
+        { key: "spd", min: 2, max: 4, label: "SPD" },
+        { key: "crit", min: 1, max: 3, label: "CRIT%" },
+      ];
+      const pick = pool[Math.floor(Math.random() * pool.length)];
+      const addVal = pick.min + Math.floor(Math.random() * (pick.max - pick.min + 1));
+      found.item.bonusStats = { ...(found.item.bonusStats ?? {}) };
+      found.item.bonusStats[pick.key] = (found.item.bonusStats[pick.key] ?? 0) + addVal;
+      const rolledBonusText = `+${addVal} ${pick.label}`;
       const afterStats = getItemEffectiveStats(found.item);
+
       quests.recordEvent("enhance_item", undefined, 1);
 
-      const glowNote =
-        found.item.enhanceLevel === 5 && def?.slot === "weapon"
-          ? " Vũ khí phát hào quang +5!"
-          : found.item.enhanceLevel === 8 && def?.slot === "weapon"
-            ? " Vũ khí khai mở hào quang Thất Sắc +8!"
-            : "";
+      let milestoneNote = "";
+      if (found.item.enhanceLevel === 3) {
+        milestoneNote = " ★ Đột phá [+3 Tôi Luyện] đã kích hoạt!";
+      } else if (found.item.enhanceLevel === 5) {
+        milestoneNote = " ★ Đột phá [+5]: Đã mở KHE NHUỘM BỘT SẮC TỐ NGUYÊN TỐ!";
+      } else if (found.item.enhanceLevel === 7) {
+        milestoneNote = " ★ Đột phá [+7 Hào Quang]: Mở khóa hào quang & giảm tiêu hao chiến đấu!";
+      } else if (found.item.enhanceLevel === 10) {
+        milestoneNote = " ★★★ THỨC TỈNH THẦN KHÍ [+10]: Cộng hưởng Lăng Kính tối thượng!";
+      }
 
       return {
         ok: true,
@@ -226,24 +230,70 @@ export class ForgeSystem {
         afterStats,
         rolledBonusText,
         newPityBonus: 0,
-        message: `MA TRẬN THÀNH CÔNG! ${def?.name ?? ""} đạt +${found.item.enhanceLevel} (Tụ thêm ${rolledBonusText})!${glowNote}`,
+        message: `Luyện Ma Trận thành công! ${def?.name ?? ""} đạt +${found.item.enhanceLevel} (${rolledBonusText})!${milestoneNote}`,
       };
     }
 
-    found.item.pityBonus = Math.min(40, (found.item.pityBonus ?? 0) + 8);
+    const gainPity = info.nextLevel === 10 ? 25 : 20;
+    found.item.pityBonus = Math.min(100, (found.item.pityBonus ?? 0) + gainPity);
+
     return {
       ok: true,
       succeeded: false,
       item: found.item,
-      beforeStats,
-      afterStats: beforeStats,
       newPityBonus: found.item.pityBonus,
-      message: `MA TRẬN QUÁ TẢI (${info.effectiveRate}%). Trang bị vẫn giữ +${found.item.enhanceLevel}, tích tụ +${found.item.pityBonus}% Cộng Hưởng cho lần sau!`,
+      message: `Trận pháp phản phệ (tỉ lệ ${info.successRate}%). Trang bị an toàn ở +${found.item.enhanceLevel} & tích lũy Bảo Hiểm Pity +${found.item.pityBonus}% cho lần luyện kế!`,
+    };
+  }
+
+  /** Infuses a +5..+10 equipment item with a Chroma Pigment element (fire/ice/nature/volt). */
+  infuseElement(
+    uid: string,
+    element: InfusableElement,
+    inv: InventorySystem,
+    quests: QuestSystem
+  ): ForgeActionResult {
+    const found = inv.findByUid(uid);
+    if (!found) return { ok: false, succeeded: false, message: "Không tìm thấy trang bị." };
+    const item = found.item;
+    const def = ITEMS[item.defId];
+    if (!def || def.category !== "equipment") {
+      return { ok: false, succeeded: false, message: "Vật phẩm không hỗ trợ khảm sắc tố." };
+    }
+    if (item.enhanceLevel < 5) {
+      return {
+        ok: false,
+        succeeded: false,
+        message: "Cần cường hóa trang bị đạt tối thiểu +5 để mở Khe Nhuộm Sắc Tố!",
+      };
+    }
+    const elInfo = ELEMENT_DISPLAY[element];
+    if (inv.gold < INFUSE_GOLD_COST) {
+      return { ok: false, succeeded: false, message: `Cần ${INFUSE_GOLD_COST} Vàng để nhuộm sắc tố.` };
+    }
+    if (inv.countItem(elInfo.pigmentId) < 1) {
+      return {
+        ok: false,
+        succeeded: false,
+        message: `Thiếu ${ITEMS[elInfo.pigmentId]?.name ?? elInfo.pigmentId}! Tìm tại Bia Ký, Boss hoặc Tiệm Mira.`,
+      };
+    }
+
+    inv.gold -= INFUSE_GOLD_COST;
+    inv.consumeItem(elInfo.pigmentId, 1);
+    item.infusedElement = element;
+    quests.recordEvent("infuse_item", element, 1);
+
+    return {
+      ok: true,
+      succeeded: true,
+      item,
+      message: `Đã khảm sắc tố [${elInfo.label}] vào ${def.name} +${item.enhanceLevel}! (+8% ELEM & đòn đánh cộng hưởng nguyên tố)`,
     };
   }
 
   canCraft(recipe: RecipeDef, inv: InventorySystem): { ok: boolean; reason?: string } {
-    if (inv.bag.length >= 32) return { ok: false, reason: "Túi đồ đã đầy (32/32)." };
+    if (inv.bag.length >= 40) return { ok: false, reason: "Túi đồ đã đầy (40/40)." };
     if (inv.gold < recipe.goldCost) return { ok: false, reason: "Không đủ Vàng." };
     for (const m of recipe.materials) {
       if (inv.countItem(m.defId) < m.qty) {
@@ -266,7 +316,7 @@ export class ForgeSystem {
     return {
       ok: true,
       succeeded: true,
-      message: `Hợp Thành Ma Trận thành công [${def?.name ?? recipe.resultDefId}]! Đã thêm vào Túi đồ.`,
+      message: `Chế tạo thành công [${def?.name ?? recipe.resultDefId}]! Đã thêm vào Túi đồ.`,
     };
   }
 }

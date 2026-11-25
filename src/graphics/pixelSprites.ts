@@ -2,13 +2,10 @@ import { hex } from "../vfx/pixelfx/core/color.js";
 import type { PixelfxActor } from "../vfx/pixelfxTypes";
 import { BIOME_CONFIGS } from "../data/worldConfig";
 import type { BiomeId, ClassId, HeroVisualLoadout } from "../data/types";
-import { buildAllHeroSprites, buildAllNpcSprites, buildDynamicHeroFrames } from "./heroSprites";
-import {
-  buildRichBuildings,
-  buildRichInteractables,
-  buildRichTileSet,
-  type RichTileSet,
-} from "./worldSprites";
+import { buildAllNpcSprites, buildDynamicHeroFrames } from "./heroSprites";
+import { buildRichBuildings, buildRichInteractables, buildRichTileSet, type RichTileSet } from "./worldSprites";
+
+export type TileSet = RichTileSet;
 
 export interface CompiledSprite {
   w: number;
@@ -17,10 +14,10 @@ export interface CompiledSprite {
   left: HTMLCanvasElement;
   whiteRight: HTMLCanvasElement;
   whiteLeft: HTMLCanvasElement;
+  bleachedRight: HTMLCanvasElement;
+  bleachedLeft: HTMLCanvasElement;
   actor: PixelfxActor;
 }
-
-export type TileSet = RichTileSet;
 
 function makeCanvas(w: number, h: number) {
   const c = document.createElement("canvas");
@@ -31,6 +28,19 @@ function makeCanvas(w: number, h: number) {
   return { c, ctx };
 }
 
+function toBleachedHex(hexCol: string): string {
+  const c = hexCol.replace("#", "");
+  if (c.length !== 6) return hexCol;
+  const r = parseInt(c.slice(0, 2), 16);
+  const g = parseInt(c.slice(2, 4), 16);
+  const b = parseInt(c.slice(4, 6), 16);
+  const lum = Math.round(r * 0.3 + g * 0.59 + b * 0.11);
+  const br = Math.min(255, Math.round(lum * 0.94 + 8));
+  const bg = Math.min(255, Math.round(lum * 0.96 + 10));
+  const bb = Math.min(255, Math.round(lum * 1.04 + 14));
+  return `#${br.toString(16).padStart(2, "0")}${bg.toString(16).padStart(2, "0")}${bb.toString(16).padStart(2, "0")}`;
+}
+
 function compileMatrix(rows: string[], pal: Record<string, string>): CompiledSprite {
   const h = rows.length;
   const w = rows[0].length;
@@ -38,6 +48,8 @@ function compileMatrix(rows: string[], pal: Record<string, string>): CompiledSpr
   const { c: left, ctx: lCtx } = makeCanvas(w, h);
   const { c: whiteRight, ctx: wrCtx } = makeCanvas(w, h);
   const { c: whiteLeft, ctx: wlCtx } = makeCanvas(w, h);
+  const { c: bleachedRight, ctx: brCtx } = makeCanvas(w, h);
+  const { c: bleachedLeft, ctx: blCtx } = makeCanvas(w, h);
   const maskData = new Uint8Array(w * h);
   const pixels = new Uint32Array(w * h);
 
@@ -48,6 +60,7 @@ function compileMatrix(rows: string[], pal: Record<string, string>): CompiledSpr
       if (ch === "." || ch === " ") continue;
       const col = pal[ch];
       if (!col) continue;
+      const bCol = toBleachedHex(col);
       const u32 = hex(col);
       rCtx.fillStyle = col;
       rCtx.fillRect(x, y, 1, 1);
@@ -57,6 +70,10 @@ function compileMatrix(rows: string[], pal: Record<string, string>): CompiledSpr
       wrCtx.fillRect(x, y, 1, 1);
       wlCtx.fillStyle = "#ffffff";
       wlCtx.fillRect(w - 1 - x, y, 1, 1);
+      brCtx.fillStyle = bCol;
+      brCtx.fillRect(x, y, 1, 1);
+      blCtx.fillStyle = bCol;
+      blCtx.fillRect(w - 1 - x, y, 1, 1);
       maskData[y * w + x] = 1;
       pixels[y * w + x] = u32;
     }
@@ -69,6 +86,8 @@ function compileMatrix(rows: string[], pal: Record<string, string>): CompiledSpr
     left,
     whiteRight,
     whiteLeft,
+    bleachedRight,
+    bleachedLeft,
     actor: {
       mask: { w, h, data: maskData },
       pixels,
@@ -81,6 +100,175 @@ function compileMatrix(rows: string[], pal: Record<string, string>): CompiledSpr
     },
   };
 }
+
+// =========================================================================
+// HERO MATRICES (4 Classes x 4 Walk Frames, 16x16)
+// =========================================================================
+
+const HERO_DEFS: Record<ClassId, { pal: Record<string, string>; frames: string[][] }> = {
+  prism_knight: {
+    pal: {
+      k: "#10121c", s: "#9fb6d6", S: "#e2f1ff", d: "#495d82",
+      c: "#2ae8ff", C: "#a8fbff", b: "#1d4e89", g: "#ffe066", w: "#ffffff",
+    },
+    frames: [
+      [
+        "......kkkk......", "....kkSSSSkk....", "...kSSssssSSk...", "...kSdCCCCdSk...",
+        "...kSdcwwcdSk...", "....kkddddkk....", "..kkbbSSSSbbkk..", ".kccbkSggSkbSSk.",
+        ".kCcbkSSSSkbSwk.", ".kccbkbbbbkbSdk.", "..kk.kbbbbk.kk..", ".....kddddk.....",
+        "....kkd..dkk....", "....kdd..ddk....", "....kkk..kkk....", "................",
+      ],
+      [
+        "................", "......kkkk......", "....kkSSSSkk....", "...kSSssssSSk...",
+        "...kSdCCCCdSk...", "...kSdcwwcdSk...", "....kkddddkk....", "..kkbbSSSSbbkk..",
+        ".kccbkSggSkbSSk.", ".kCcbkSSSSkbSwk.", ".kccbkbbbbkbSdk.", "..kk.kbbbbk.kk..",
+        "....kkd..dkk....", "...kddk...kddk..", "...kkk.....kkk..", "................",
+      ],
+      [
+        "......kkkk......", "....kkSSSSkk....", "...kSSssssSSk...", "...kSdCCCCdSk...",
+        "...kSdcwwcdSk...", "....kkddddkk....", "..kkbbSSSSbbkk..", ".kccbkSggSkbSSk.",
+        ".kCcbkSSSSkbSwk.", ".kccbkbbbbkbSdk.", "..kk.kbbbbk.kk..", ".....kddddk.....",
+        "....kkd..dkk....", "....kdd..ddk....", "....kkk..kkk....", "................",
+      ],
+      [
+        "................", "......kkkk......", "....kkSSSSkk....", "...kSSssssSSk...",
+        "...kSdCCCCdSk...", "...kSdcwwcdSk...", "....kkddddkk....", "..kkbbSSSSbbkk..",
+        ".kccbkSggSkbSSk.", ".kCcbkSSSSkbSwk.", ".kccbkbbbbkbSdk.", "..kk.kbbbbk.kk..",
+        "....kdd..ddk....", ".....kdkkdk.....", ".....kkkkkk.....", "................",
+      ],
+    ],
+  },
+  chroma_mage: {
+    pal: {
+      k: "#140b24", h: "#5d24a8", H: "#9d5cff", g: "#ffdd55", f: "#ffd1b3",
+      e: "#33eeff", r: "#ff52c8", R: "#3b176b", w: "#ffffff", t: "#7a4d2e",
+    },
+    frames: [
+      [
+        "......kkkk......", ".....kHHHHk.....", "....kHHggHHk....", "...khhhhhhhhk...",
+        "..kkkkkkkkkkkk..", "....kffeffek....", "....kffffffk....", "...kkrrrrrrkk...",
+        "..kRRrRRRRrRtk..", "..kRRrRggRrRtk..", "...kRRrrrrRRtk..", "...kRRRRRRRRwk..",
+        "....kRRRRRRk....", "....kRR..RRk....", "....kkk..kkk....", "................",
+      ],
+      [
+        "................", "......kkkk......", ".....kHHHHk.....", "....kHHggHHk....",
+        "...khhhhhhhhk...", "..kkkkkkkkkkkk..", "....kffeffek....", "....kffffffk....",
+        "...kkrrrrrrkk...", "..kRRrRRRRrRtk..", "..kRRrRggRrRtk..", "...kRRrrrrRRwk..",
+        "...kRRRRRRRRtk..", "....kRR..RRk....", "...kkk....kkk...", "................",
+      ],
+      [
+        "......kkkk......", ".....kHHHHk.....", "....kHHggHHk....", "...khhhhhhhhk...",
+        "..kkkkkkkkkkkk..", "....kffeffek....", "....kffffffk....", "...kkrrrrrrkk...",
+        "..kRRrRRRRrRtk..", "..kRRrRggRrRtk..", "...kRRrrrrRRtk..", "...kRRRRRRRRwk..",
+        "....kRRRRRRk....", "....kRR..RRk....", "....kkk..kkk....", "................",
+      ],
+      [
+        "................", "......kkkk......", ".....kHHHHk.....", "....kHHggHHk....",
+        "...khhhhhhhhk...", "..kkkkkkkkkkkk..", "....kffeffek....", "....kffffffk....",
+        "...kkrrrrrrkk...", "..kRRrRRRRrRtk..", "..kRRrRggRrRtk..", "...kRRrrrrRRtk..",
+        "...kRRRRRRRRwk..", ".....kRRRRk.....", ".....kk..kk.....", "................",
+      ],
+    ],
+  },
+  bit_rogue: {
+    pal: {
+      k: "#0e0a16", d: "#27243b", D: "#464266", r: "#ff2e63", R: "#ff88aa",
+      c: "#2ef2ff", w: "#ffffff",
+    },
+    frames: [
+      [
+        ".....kkkkkk.....", "....kDDDDDDk....", "...kDDddddDDk...", "...kdkckkckdk...",
+        "...kddddddddk...", "..kkrrrrrrrrkk..", ".kRRkddddddkcck.", ".krrkddccddkcwk.",
+        "..kk.kddddk.kk..", "....kkddddkk....", "....kdd..ddk....", "....kdk..kdk....",
+        "...kddk..kddk...", "...kkk....kkk...", "................", "................",
+      ],
+      [
+        "................", ".....kkkkkk.....", "....kDDDDDDk....", "...kDDddddDDk...",
+        "...kdkckkckdk...", "...kddddddddk...", ".kkkrrrrrrrrkk..", "kRRrkddddddkcck.",
+        "krr.kddccddkcwk.", "....kkddddkk.kk.", "....kdd..ddk....", "...kdk....kdk...",
+        "..kddk....kddk..", "..kkk......kkk..", "................", "................",
+      ],
+      [
+        ".....kkkkkk.....", "....kDDDDDDk....", "...kDDddddDDk...", "...kdkckkckdk...",
+        "...kddddddddk...", "..kkrrrrrrrrkk..", ".kRRkddddddkcck.", ".krrkddccddkcwk.",
+        "..kk.kddddk.kk..", "....kkddddkk....", "....kdd..ddk....", "....kdk..kdk....",
+        "...kddk..kddk...", "...kkk....kkk...", "................", "................",
+      ],
+      [
+        "................", ".....kkkkkk.....", "....kDDDDDDk....", "...kDDddddDDk...",
+        "...kdkckkckdk...", "...kddddddddk...", "..kkrrrrrrrrkk..", ".kRRkddddddkcck.",
+        ".krrkddccddkcwk.", "....kkddddkk.kk.", ".....kddddk.....", "....kdd..ddk....",
+        "....kkk..kkk....", "................", "................", "................",
+      ],
+    ],
+  },
+  pixel_tinker: {
+    pal: {
+      k: "#0b1414", h: "#8d582c", H: "#d69a4a", g: "#44ee88", G: "#b8ffcf",
+      a: "#285e4e", s: "#9eb3c2", S: "#e2f0f7", f: "#f2c29b", w: "#ffffff",
+    },
+    frames: [
+      [
+        ".....kkkkkk.....", "....kHHHHHHk....", "...kHhGGGGhHk...", "...kHhgggghHk...",
+        "....kffffffk....", "..kkkaaaaaakkk..", ".kHHkaagggakksk.", ".khhkaaaaaakSSw.",
+        ".kHHkaaaaaakssk.", "..kk.kaaaak.kk..", ".....khhhhk.....", "....khh..hhk....",
+        "....khh..hhk....", "....kkk..kkk....", "................", "................",
+      ],
+      [
+        "................", ".....kkkkkk.....", "....kHHHHHHk....", "...kHhGGGGhHk...",
+        "...kHhgggghHk...", "....kffffffk....", "..kkkaaaaaakkk..", ".kHHkaagggakksk.",
+        ".khhkaaaaaakSSw.", ".kHHkaaaaaakssk.", "..kk.kaaaak.kk..", "....khh..hhk....",
+        "...khhk..khhk...", "...kkk....kkk...", "................", "................",
+      ],
+      [
+        ".....kkkkkk.....", "....kHHHHHHk....", "...kHhGGGGhHk...", "...kHhgggghHk...",
+        "....kffffffk....", "..kkkaaaaaakkk..", ".kHHkaagggakksk.", ".khhkaaaaaakSSw.",
+        ".kHHkaaaaaakssk.", "..kk.kaaaak.kk..", ".....khhhhk.....", "....khh..hhk....",
+        "....khh..hhk....", "....kkk..kkk....", "................", "................",
+      ],
+      [
+        "................", ".....kkkkkk.....", "....kHHHHHHk....", "...kHhGGGGhHk...",
+        "...kHhgggghHk...", "....kffffffk....", "..kkkaaaaaakkk..", ".kHHkaagggakksk.",
+        ".khhkaaaaaakSSw.", ".kHHkaaaaaakssk.", "..kk.kaaaak.kk..", ".....khhhhk.....",
+        ".....khhhhk.....", ".....kk..kk.....", "................", "................",
+      ],
+    ],
+  },
+};
+
+// =========================================================================
+// NPC MATRICES (Elder, Blacksmith, Merchant)
+// =========================================================================
+
+const NPC_DEFS: Record<string, { pal: Record<string, string>; rows: string[] }> = {
+  elder: {
+    pal: { k: "#110f1c", w: "#edf2ff", g: "#ffe066", b: "#324994", B: "#5678d6", f: "#f2c29b", t: "#7a4e2b" },
+    rows: [
+      ".....kkkkkk.....", "....kggggggk....", "...kwwwwwwwwk...", "...kwfkwfkwwk...",
+      "...kwwwwwwwwk...", "...kkwwwwwwkk...", "..kBBbbbbbbBtk..", "..kBBbggggbBtk..",
+      "..kBBbbbbbbBtk..", "...kbbbbbbbbgk..", "...kbbbbbbbbtk..", "....kbbbbbbk....",
+      "....kbb..bbk....", "....kkk..kkk....", "................", "................",
+    ],
+  },
+  blacksmith: {
+    pal: { k: "#120d0c", h: "#694127", g: "#ff9933", f: "#e8b48e", a: "#593524", s: "#9aa6ba", S: "#e2edf7" },
+    rows: [
+      "....kkkkkkkk....", "...khhhhhhhhk...", "...khggkkggkh...", "...kffffffffk...",
+      "....khhffhhk....", "..kkkaaaaaakkk..", ".kffkaaaaaakssk.", ".kffkaaaaaakSSk.",
+      ".kffkaaaaaakssk.", "..kk.kaaaak.kh..", ".....kaaaak.kh..", "....khh..hhk....",
+      "....khh..hhk....", "....kkk..kkk....", "................", "................",
+    ],
+  },
+  merchant: {
+    pal: { k: "#0d1714", g: "#1e8050", G: "#5ee896", y: "#ffe066", f: "#f2c29b", b: "#473324" },
+    rows: [
+      "....kkkkkkkk....", "...kGGGGGGGGk...", "..kGGggggggGGk..", "...kgfkffkfkg...",
+      "....kffffffk....", "..kkggggggggkk..", ".kGGggggggggGGk.", ".kGGggyyyyggGGk.",
+      "..kkggggggggkk..", "...kggggggggk...", "....kbbbbbbk....", "....kbb..bbk....",
+      "....kkk..kkk....", "................", "................", "................",
+    ],
+  },
+};
 
 // =========================================================================
 // ENEMY MATRICES (9 Regular Enemies + Turret/Drone)
@@ -241,7 +429,7 @@ const DRONE_DEF = {
   ],
 };
 
-function buildBossSprite(kind: "root" | "amber" | "eraser"): CompiledSprite {
+function buildBossSprite(kind: "warden" | "root" | "amber" | "eraser"): CompiledSprite {
   const w = 32, h = 32;
   const grid = Array.from({ length: h }, () => Array(w).fill("."));
   const plot = (x: number, y: number, ch: string) => {
@@ -272,6 +460,41 @@ function buildBossSprite(kind: "root" | "amber" | "eraser"): CompiledSprite {
           grid[y][x] = ch;
       }
   };
+
+  if (kind === "warden") {
+    // Xing Tian Stone Warden: broad armored torso, glowing eyes/maw on chest, heavy shield left & war-axe right
+    const pal = { k: "#0f111a", d: "#364052", m: "#667894", l: "#b5c7e0", g: "#ffe066", r: "#ff3355", w: "#ffffff" };
+    fillEllipse(16, 16, 8, 9, "m");
+    fillEllipse(16, 12, 9, 4, "l");
+    // Pauldrons
+    fillEllipse(8, 11, 3.5, 3, "l");
+    fillEllipse(24, 11, 3.5, 3, "l");
+    // Fierce face on torso (Xing Tian motif)
+    symPlot(13, 14, "r");
+    symPlot(14, 14, "w");
+    for (let x = 13; x <= 18; x++) plot(x, 18, x % 2 === 0 ? "g" : "k");
+    // Left Lion Tower Shield
+    for (let y = 10; y <= 23; y++) {
+      for (let x = 3; x <= 8; x++) {
+        plot(x, y, x === 3 || x === 8 || y === 10 || y === 23 ? "g" : "d");
+      }
+    }
+    fillEllipse(5.5, 16, 1.6, 2, "g");
+    // Right Great War-Axe
+    for (let y = 6; y <= 25; y++) plot(25, y, "d");
+    for (let y = 7; y <= 15; y++) {
+      for (let x = 26; x <= 29; x++) {
+        plot(x, y, x >= 28 ? "w" : "l");
+      }
+    }
+    // Armored greaves
+    for (let y = 23; y < 30; y++) {
+      symPlot(12, y, "d");
+      symPlot(13, y, "m");
+    }
+    outline("k");
+    return compileMatrix(grid.map((r) => r.join("")), pal);
+  }
 
   if (kind === "root") {
     const pal = { k: "#110d14", d: "#29333d", m: "#4a6370", l: "#89bcc7", v: "#5eead4", w: "#ffffff", r: "#ff3366" };
@@ -348,6 +571,63 @@ function buildBossSprite(kind: "root" | "amber" | "eraser"): CompiledSprite {
   return compileMatrix(grid.map((r) => r.join("")), pal);
 }
 
+// =========================================================================
+// LORE TABLETS & ARENA TOTEM SPRITES (layered on top of worldSprites interactables)
+// =========================================================================
+
+function buildLoreAndTotemSprites() {
+  const mkLoreTablet = (read: boolean) => {
+    const { c, ctx } = makeCanvas(16, 22);
+    ctx.fillStyle = "#0e0c18";
+    ctx.fillRect(2, 16, 12, 5);
+    ctx.fillRect(3, 3, 10, 15);
+    ctx.fillRect(5, 1, 6, 4);
+    ctx.fillStyle = read ? "#435275" : "#2f384f";
+    ctx.fillRect(3, 17, 10, 3);
+    ctx.fillStyle = read ? "#657aa8" : "#515e7d";
+    ctx.fillRect(4, 4, 8, 13);
+    ctx.fillRect(6, 2, 4, 3);
+    // Glowing ancient runes
+    ctx.fillStyle = read ? "#44ee88" : "#ffe066";
+    ctx.fillRect(6, 5, 4, 1);
+    ctx.fillRect(5, 8, 6, 1);
+    ctx.fillRect(6, 11, 4, 1);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(7, 5, 2, 1);
+    return c;
+  };
+
+  const mkArenaTotem = (col: string | null) => {
+    const { c, ctx } = makeCanvas(16, 24);
+    ctx.fillStyle = "#0e0c18";
+    ctx.fillRect(3, 17, 10, 6);
+    ctx.fillRect(5, 4, 6, 15);
+    ctx.fillStyle = col ? "#4d5678" : "#3a3d47";
+    ctx.fillRect(4, 18, 8, 4);
+    ctx.fillStyle = col ?? "#666b7a";
+    ctx.fillRect(6, 5, 4, 13);
+    if (col) {
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(7, 6, 2, 9);
+    }
+    return c;
+  };
+
+  return {
+    loreUnread: mkLoreTablet(false),
+    loreRead: mkLoreTablet(true),
+    totemOff: mkArenaTotem(null),
+    totem_fire: mkArenaTotem("#ff4433"),
+    totem_ice: mkArenaTotem("#38e8ff"),
+    totem_nature: mkArenaTotem("#44ee88"),
+    totem_volt: mkArenaTotem("#ffee44"),
+    totem_void: mkArenaTotem("#b266ff"),
+    totem_chroma: mkArenaTotem("#ff66c4"),
+    totem_wind: mkArenaTotem("#5ef2d6"),
+    totem_quake: mkArenaTotem("#ff9933"),
+  };
+}
+
 class PixelSpriteAtlas {
   private ready = false;
   private dynamicHeroCache = new Map<string, CompiledSprite[]>();
@@ -359,13 +639,19 @@ class PixelSpriteAtlas {
   tilesBleached!: Record<BiomeId, TileSet>;
   tilesRestored!: Record<BiomeId, TileSet>;
   buildings!: ReturnType<typeof buildRichBuildings>;
-  interactables!: ReturnType<typeof buildRichInteractables>;
+  interactables!: ReturnType<typeof buildRichInteractables> & ReturnType<typeof buildLoreAndTotemSprites>;
 
   init() {
     if (this.ready) return;
     this.ready = true;
 
-    this.heroes = buildAllHeroSprites();
+    this.heroes = {
+      prism_knight: HERO_DEFS.prism_knight.frames.map((f) => compileMatrix(f, HERO_DEFS.prism_knight.pal)),
+      chroma_mage: HERO_DEFS.chroma_mage.frames.map((f) => compileMatrix(f, HERO_DEFS.chroma_mage.pal)),
+      bit_rogue: HERO_DEFS.bit_rogue.frames.map((f) => compileMatrix(f, HERO_DEFS.bit_rogue.pal)),
+      pixel_tinker: HERO_DEFS.pixel_tinker.frames.map((f) => compileMatrix(f, HERO_DEFS.pixel_tinker.pal)),
+    };
+
     this.npcs = buildAllNpcSprites();
 
     this.enemies = {};
@@ -374,6 +660,7 @@ class PixelSpriteAtlas {
     }
 
     this.bosses = {
+      boss_xing_warden: buildBossSprite("warden"),
       boss_blight_root: buildBossSprite("root"),
       boss_gilded_null: buildBossSprite("amber"),
       boss_the_eraser: buildBossSprite("eraser"),
@@ -392,7 +679,10 @@ class PixelSpriteAtlas {
     }
 
     this.buildings = buildRichBuildings();
-    this.interactables = buildRichInteractables();
+    this.interactables = {
+      ...buildLoreAndTotemSprites(),
+      ...buildRichInteractables(),
+    };
   }
 
   getHero(id: ClassId, frame = 0): CompiledSprite {

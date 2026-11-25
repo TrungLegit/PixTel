@@ -6,9 +6,13 @@ import { InventoryModalUI } from "./ui/InventoryModal";
 import { ForgeModalUI } from "./ui/ForgeModal";
 import { WorldMapModalUI } from "./ui/WorldMapModal";
 import { QuestJournalModalUI } from "./ui/QuestJournalModal";
+import { TutorialModalUI, type TutorialTabId } from "./ui/TutorialModal";
+import { ItemReviewTooltip } from "./ui/ItemReviewTooltip";
+import { installRopeFrameAssets } from "./graphics/ropeFrame";
 import { sfx } from "./audio/chiptuneSynth";
 
 function bootstrap() {
+  installRopeFrameAssets();
   const canvas = document.getElementById("game-canvas") as HTMLCanvasElement;
   const pauseModal = document.getElementById("modal-pause")!;
   const victoryModal = document.getElementById("modal-victory")!;
@@ -20,17 +24,21 @@ function bootstrap() {
   let forge: ForgeModalUI;
   let worldMap: WorldMapModalUI;
   let journal: QuestJournalModalUI;
+  let tutorial: TutorialModalUI;
+  let itemTooltip: ItemReviewTooltip;
 
   const game = new PixTelOpenWorldGame(canvas, {
     onHudUpdate: () => hud?.update(),
     onToast: (msg, tone) => hud?.toast(msg, tone),
     onModalChange: (modal: ModalId, payload?: unknown) => {
+      itemTooltip?.hide();
       classSelect?.hide();
       dialogue?.hide();
       inventory?.hide();
       forge?.hide();
       worldMap?.hide();
       journal?.hide();
+      tutorial?.hide();
       pauseModal.classList.add("hidden");
 
       hud?.setVisible(game.running && modal !== "class_select");
@@ -48,21 +56,25 @@ function bootstrap() {
       } else if (modal === "world_map") {
         worldMap.show();
       } else if (modal === "journal") {
-        journal.show();
+        journal.show(payload as { tab?: "quests" | "lore"; loreId?: string } | undefined);
+      } else if (modal === "tutorial") {
+        const initTab = (payload as { tab?: TutorialTabId } | undefined)?.tab;
+        tutorial.show(initTab);
       } else if (modal === "pause") {
         pauseModal.classList.remove("hidden");
       }
     },
     onBossVictory: (worldBoss: boolean, bossName: string) => {
       if (worldBoss) {
-        document.getElementById("victory-title")!.textContent = "ĐẠI CHIẾN THẮNG — THE ERASER ĐÃ BỊ THANH TẨY!";
+        document.getElementById("victory-title")!.textContent =
+          "BẢN GIAO HƯỞNG THẤT SẮC — THE ERASER ĐÃ ĐƯỢC THANH TẨY!";
         document.getElementById("victory-desc")!.textContent =
-          `Thế giới PIXTEL đã lấy lại toàn bộ 16-bit sắc màu rực rỡ! Bạn có thể tiếp tục khám phá thế giới mở, cường hóa trang bị +10 và mở toàn bộ Trụ Sắc Màu.`;
+          `Giao thức xóa sổ của Kiến Trúc Sư Vaelor đã khép lại trong bình yên, trả lại bầu trời 16-bit rực rỡ cho Aethel-16! Bạn có thể tiếp tục khám phá toàn bộ Bia Ký, mở đủ 9 Trụ Sắc Màu và thức tỉnh thần khí +10.`;
         document.getElementById("victory-stats")!.textContent =
-          `Cấp độ: LV.${game.player.level} · Hạ gục: ${game.stats.kills} · Khai thác: ${game.stats.mined} · Rương: ${game.stats.chestsOpened} · Màu khôi phục: ${game.colorSys.getProgressPct()}%`;
+          `LV.${game.player.level} · Hạ gục: ${game.stats.kills} · Phản ứng: ${game.stats.reactionsTriggered ?? 0} · Bia Ký: ${game.discoveredLore.size}/8 · Màu khôi phục: ${game.colorSys.getProgressPct()}%`;
         victoryModal.classList.remove("hidden");
       } else {
-        hud.toast(`ĐÃ HẠ BOSS VÙNG ${bossName}! Kiểm tra Rương kho báu & trả nhiệm vụ!`, "epic");
+        hud.toast(`ĐÃ GIẢI THOÁT THỦ LĨNH ${bossName}! Kiểm tra chiến lợi phẩm & về gặp Trưởng Làng Elian!`, "epic");
       }
     },
   });
@@ -74,11 +86,16 @@ function bootstrap() {
   forge = new ForgeModalUI(game);
   worldMap = new WorldMapModalUI(game);
   journal = new QuestJournalModalUI(game);
+  tutorial = new TutorialModalUI(game);
+  itemTooltip = new ItemReviewTooltip(game);
 
   // Pause Modal Controls
   document.getElementById("btn-pause-resume")!.addEventListener("click", () => {
     sfx.playUiClick();
     game.setModal(null);
+  });
+  document.getElementById("btn-pause-help")?.addEventListener("click", () => {
+    game.toggleModal("tutorial");
   });
   document.getElementById("btn-pause-save")!.addEventListener("click", () => {
     game.saveGame(true);

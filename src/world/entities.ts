@@ -4,6 +4,7 @@ import type {
   CampDef,
   ClassId,
   ElementType,
+  InfusableElement,
   ItemInstance,
   Rarity,
   ResourceNodeDef,
@@ -16,6 +17,7 @@ export interface PlayerEntity {
   vx: number;
   vy: number;
   facing: number; // 1 = right, -1 = left
+  facingDir: "down" | "up" | "left" | "right";
   aimAngle: number;
   radius: number;
 
@@ -32,6 +34,7 @@ export interface PlayerEntity {
   spd: number;
   crit: number; // percentage 0..100
   critMult: number;
+  elementBonus: number; // % bonus elemental & skill damage
 
   // Stamina (Zelda / Genshin wheel)
   stamina: number;
@@ -64,10 +67,43 @@ export interface PlayerEntity {
   droneTick: number;
   elementIdx: number; // Chroma Mage 0:fire, 1:ice, 2:poison
   walkTime: number;
+  attackAnimTime: number;
+
+  // Derived equipment bonuses & passives
+  staminaCostPct: number; // negative = cheaper charge/dash
+  poiseBreakPct: number; // % bonus vs Bleach Shield
+  skillCdPct: number; // negative = faster [E]
+  hasOrbitGrimoire: boolean;
+  hasReactionAmp: boolean;
+  hasVoidSiphon: boolean;
+  hasWindDancer: boolean;
+  hasChromaBlessing: boolean;
+  hasQuakeImpact: boolean;
+  grimoireTimer: number;
+
+  // Advanced 60FPS Combat Rhythm & 9-Element Reaction Buffs
+  perfectDashWindow: number;
+  chromaCounterTimer: number;
+  dashComboPreserveTimer: number;
+  quickChargeTimer: number;
+  bleachDebuffTime: number;
+  tectonicChargeBonus: boolean;
+  chromaGustTime: number;
+  chromaBloomBonusTime: number;
+  totemSurgeElement: InfusableElement | null;
+  totemSurgeTimer: number;
 
   // Consumable temporary buffs
   speedBuffTime: number;
+  speedBuffPct: number;
   atkBuffTime: number;
+  atkBuffPct: number;
+  atkBuffCrit: number;
+  defBuffTime: number;
+  defBuffPct: number;
+  aegisTime: number;
+  coatingTime: number;
+  coatingElement: InfusableElement | null;
   respawnWaypointId: string;
 }
 
@@ -107,14 +143,36 @@ export interface EnemyEntity {
   hitFlash: number;
   walkTime: number;
 
-  // Elemental reaction states (Chroma Mage)
+  // 9-Element reaction & Boss Bleach Shield / Stagger states
   element: ElementType | null;
   elementTime: number;
+  reactionIcd: number;
   burnTime: number;
   burnTick: number;
   slowTime: number;
   poisonTime: number;
   poisonTick: number;
+  rootTime: number;
+  stunTime: number;
+  vulnTime: number; // Def-down / Boss shield-break stagger vulnerability
+  critVulnTime: number; // +15% Crit taken (Superconduct)
+  normalAmpTime: number; // +18% Normal/Charge DMG taken (Null Frost)
+  disruptTime: number; // Disrupt: reduced enemy attack rate & accuracy (Void Arc / Maelstrom)
+  blightDecayTime: number; // Bonus Void decay chip on consecutive hits (Blight Decay)
+  chromaSlowBonusTime: number; // Bonus resource yield if killed while slowed (Chroma Cryo)
+  enrageBuffTime: number; // Enemy speed/def buff stripped by Void!
+  bleachShield: number;
+  maxBleachShield: number;
+  totemChannelTimer: number;
+}
+
+export interface ArenaTotemEntity {
+  uid: number;
+  element: InfusableElement;
+  x: number;
+  y: number;
+  lit: boolean;
+  hitFlash: number;
 }
 
 export interface ProjectileEntity {
@@ -134,8 +192,10 @@ export interface ProjectileEntity {
   preset: string; // pixelfx atlas preset
   element?: ElementType;
   hitSet: Set<number>;
+  homing?: boolean;
   canOverclockTurret?: boolean;
   hitPreset?: string;
+  poiseMult?: number;
 }
 
 export interface TurretEntity {
@@ -159,10 +219,18 @@ export interface HazardEntity {
     | "vortex"
     | "meteor"
     | "afterimage"
+    | "acid_pool"
+    | "null_frost"
+    | "chroma_bloom"
+    | "flame_trail"
+    | "bleach_zone"
+    | "skyfall_crystal"
+    | "boss_cone"
     | "boss_slam"
     | "boss_thorns"
     | "boss_erase"
-    | "boss_cross";
+    | "boss_cross"
+    | "boss_rot_cross";
   x: number;
   y: number;
   radius: number;
@@ -179,6 +247,10 @@ export interface GroundLootEntity {
   uid: number;
   x: number;
   y: number;
+  vx: number;
+  vy: number;
+  z: number;
+  vz: number;
   kind: "gold" | "item";
   gold?: number;
   item?: ItemInstance;

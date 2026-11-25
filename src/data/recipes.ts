@@ -1,188 +1,108 @@
 import type { RecipeDef } from "./types";
 
+/**
+ * Bản vẽ Chế Tạo tại Lò Rèn Lăng Kính:
+ * Cho phép dùng khoáng sản khai thác trên bản đồ + Mảnh Lăng Kính (phân rã)
+ * để đúc trực tiếp Mũ, Giáp, Vũ Khí, Giày và Phụ Kiện phẩm Lam / Tím / Huyền Thoại.
+ */
 export const FORGE_RECIPES: RecipeDef[] = [
-  // === RARE (LAM) CLASS WEAPONS ===
+  // === BỘ TINH THỂ THẠCH ANH (RARE / LAM) ===
   {
-    id: "rec_knight_quartz",
-    resultDefId: "wpn_knight_quartz",
-    goldCost: 115,
-    materials: [
-      { defId: "mat_iron_ore", qty: 5 },
-      { defId: "mat_quartz_shard", qty: 4 },
-      { defId: "mat_glitch_core", qty: 3 },
-    ],
-    desc: "Đúc Đại Kiếm Thạch Anh (mở Chấn Địa Khiên) cho Vệ Binh.",
-  },
-  {
-    id: "rec_mage_quartz",
-    resultDefId: "wpn_mage_quartz",
-    goldCost: 115,
-    materials: [
-      { defId: "mat_quartz_shard", qty: 5 },
-      { defId: "mat_glitch_core", qty: 4 },
-    ],
-    desc: "Chế tác Quyền Trượng Băng Tinh (mở Bão Tuyết Thạch Anh) cho Pháp Sư.",
-  },
-  {
-    id: "rec_rogue_quartz",
-    resultDefId: "wpn_rogue_quartz",
-    goldCost: 115,
+    id: "rec_quartz_visor",
+    resultDefId: "hlm_quartz_visor",
+    goldCost: 95,
     materials: [
       { defId: "mat_iron_ore", qty: 4 },
-      { defId: "mat_quartz_shard", qty: 4 },
-      { defId: "mat_glitch_core", qty: 4 },
+      { defId: "mat_quartz_shard", qty: 3 },
+      { defId: "mat_prism_shard", qty: 2 },
     ],
-    desc: "Rèn Song Đao Pha Lê Lam (mở Ảnh Sát Đột Kích) cho Sát Thủ.",
+    desc: "Đúc Mũ Kính Thạch Anh (Lam) từ Quặng Sắt và Mảnh Thạch Anh.",
   },
   {
-    id: "rec_tinker_quartz",
-    resultDefId: "wpn_tinker_quartz",
-    goldCost: 115,
-    materials: [
-      { defId: "mat_iron_ore", qty: 5 },
-      { defId: "mat_quartz_shard", qty: 4 },
-      { defId: "mat_glitch_core", qty: 3 },
-    ],
-    desc: "Lắp Pháo Điện Từ Thạch Anh (mở Trụ Sấm Thạch Anh) cho Kỹ Sư.",
-  },
-
-  // === RARE (LAM) CLASS ARMORS & UNIVERSAL PIX-CHIP ===
-  {
-    id: "rec_arm_knight_rare",
-    resultDefId: "arm_knight_rare",
+    id: "rec_quartz_plate",
+    resultDefId: "arm_quartz_plate",
     goldCost: 110,
     materials: [
       { defId: "mat_iron_ore", qty: 6 },
       { defId: "mat_quartz_shard", qty: 4 },
     ],
-    desc: "Đúc Chiến Giáp Thạch Anh (phản đòn) cho Vệ Binh.",
+    desc: "Đúc Áo Giáp Thạch Anh phẩm Lam tăng mạnh DEF & HP.",
   },
   {
-    id: "rec_arm_mage_rare",
-    resultDefId: "arm_mage_rare",
-    goldCost: 110,
-    materials: [
-      { defId: "mat_quartz_shard", qty: 5 },
-      { defId: "mat_glitch_core", qty: 4 },
-    ],
-    desc: "Dệt Pháp Bào Thạch Anh (+25% Phản Ứng Nguyên Tố) cho Pháp Sư.",
-  },
-  {
-    id: "rec_arm_rogue_rare",
-    resultDefId: "arm_rogue_rare",
-    goldCost: 110,
-    materials: [
-      { defId: "mat_iron_ore", qty: 4 },
-      { defId: "mat_quartz_shard", qty: 4 },
-      { defId: "mat_glitch_core", qty: 3 },
-    ],
-    desc: "May Y Phục Thạch Anh (giảm CD Dash) cho Sát Thủ.",
-  },
-  {
-    id: "rec_arm_tinker_rare",
-    resultDefId: "arm_tinker_rare",
+    id: "rec_quartz_reaver",
+    resultDefId: "wpn_quartz_reaver",
     goldCost: 110,
     materials: [
       { defId: "mat_iron_ore", qty: 5 },
       { defId: "mat_quartz_shard", qty: 4 },
+      { defId: "mat_glitch_core", qty: 3 },
     ],
-    desc: "Chế Giáp Cơ Khí Thạch Anh (+35% HP Trụ) cho Kỹ Sư.",
+    desc: "Đúc vũ khí phẩm Lam từ Quặng Sắt và Mảnh Thạch Anh.",
+  },
+  {
+    id: "rec_quartz_greaves",
+    resultDefId: "bts_quartz_greaves",
+    goldCost: 95,
+    materials: [
+      { defId: "mat_iron_ore", qty: 4 },
+      { defId: "mat_quartz_shard", qty: 3 },
+    ],
+    desc: "Chế tạo Ủng Pha Lê Khúc Xạ (Lam) tăng tốc chạy & chí mạng.",
   },
   {
     id: "rec_prism_chip",
     resultDefId: "chp_prism_core",
-    goldCost: 130,
+    goldCost: 120,
     materials: [
       { defId: "mat_quartz_shard", qty: 4 },
       { defId: "mat_glitch_core", qty: 5 },
     ],
-    desc: "Chế tạo Pix-Chip Lõi Quang (+25% uy lực [Q] & hồi 15% HP).",
+    desc: "Chế tạo Pix-Chip Lõi Quang phẩm Lam.",
   },
 
-  // === EPIC (TÍM) CLASS WEAPONS, ARMORS & RING ===
+  // === BỘ DUNG NHAM HỔ PHÁCH (EPIC / TÍM) ===
   {
-    id: "rec_knight_amber",
-    resultDefId: "wpn_knight_amber",
-    goldCost: 250,
-    materials: [
-      { defId: "mat_quartz_shard", qty: 5 },
-      { defId: "mat_amber_gem", qty: 5 },
-      { defId: "mat_glitch_core", qty: 6 },
-    ],
-    desc: "Đúc Trọng Kiếm Hổ Phách phẩm Sử Thi cho Vệ Binh.",
-  },
-  {
-    id: "rec_mage_amber",
-    resultDefId: "wpn_mage_amber",
-    goldCost: 250,
-    materials: [
-      { defId: "mat_quartz_shard", qty: 5 },
-      { defId: "mat_amber_gem", qty: 5 },
-      { defId: "mat_glitch_core", qty: 6 },
-    ],
-    desc: "Chế Pháp Trượng Thiên Hỏa phẩm Sử Thi cho Pháp Sư.",
-  },
-  {
-    id: "rec_rogue_amber",
-    resultDefId: "wpn_rogue_amber",
-    goldCost: 250,
+    id: "rec_amber_crown",
+    resultDefId: "hlm_amber_crown",
+    goldCost: 220,
     materials: [
       { defId: "mat_quartz_shard", qty: 4 },
       { defId: "mat_amber_gem", qty: 5 },
-      { defId: "mat_glitch_core", qty: 7 },
+      { defId: "mat_prism_shard", qty: 4 },
     ],
-    desc: "Rèn Song Nhận Hổ Phách phẩm Sử Thi cho Sát Thủ.",
+    desc: "Đúc Mũ Giáp Nham Thạch phẩm Sử Thi (Tím).",
   },
   {
-    id: "rec_tinker_amber",
-    resultDefId: "wpn_tinker_amber",
-    goldCost: 250,
+    id: "rec_amber_aegis",
+    resultDefId: "arm_amber_aegis",
+    goldCost: 240,
     materials: [
-      { defId: "mat_iron_ore", qty: 6 },
+      { defId: "mat_iron_ore", qty: 8 },
+      { defId: "mat_amber_gem", qty: 6 },
+    ],
+    desc: "Đúc Chiến Giáp Hổ Phách phẩm Tím chống chịu cực cao.",
+  },
+  {
+    id: "rec_amber_fury",
+    resultDefId: "wpn_amber_fury",
+    goldCost: 240,
+    materials: [
+      { defId: "mat_quartz_shard", qty: 5 },
       { defId: "mat_amber_gem", qty: 5 },
       { defId: "mat_glitch_core", qty: 6 },
     ],
-    desc: "Lắp Súng Quang Hổ Phách phẩm Sử Thi cho Kỹ Sư.",
+    desc: "Đúc vũ khí Sử Thi (Tím) Hỏa Phách Nộ Nha.",
   },
   {
-    id: "rec_arm_knight_epic",
-    resultDefId: "arm_knight_epic",
-    goldCost: 245,
+    id: "rec_amber_treads",
+    resultDefId: "bts_amber_treads",
+    goldCost: 210,
     materials: [
-      { defId: "mat_iron_ore", qty: 8 },
-      { defId: "mat_amber_gem", qty: 6 },
+      { defId: "mat_iron_ore", qty: 6 },
+      { defId: "mat_amber_gem", qty: 4 },
+      { defId: "mat_prism_shard", qty: 4 },
     ],
-    desc: "Đúc Thánh Giáp Hổ Phách chống chịu cực đại cho Vệ Binh.",
-  },
-  {
-    id: "rec_arm_mage_epic",
-    resultDefId: "arm_mage_epic",
-    goldCost: 245,
-    materials: [
-      { defId: "mat_quartz_shard", qty: 6 },
-      { defId: "mat_amber_gem", qty: 6 },
-    ],
-    desc: "Dệt Huyền Bào Hổ Phách phẩm Sử Thi cho Pháp Sư.",
-  },
-  {
-    id: "rec_arm_rogue_epic",
-    resultDefId: "arm_rogue_epic",
-    goldCost: 245,
-    materials: [
-      { defId: "mat_amber_gem", qty: 5 },
-      { defId: "mat_glitch_core", qty: 7 },
-    ],
-    desc: "May Hắc Giáp Hổ Phách phẩm Sử Thi cho Sát Thủ.",
-  },
-  {
-    id: "rec_arm_tinker_epic",
-    resultDefId: "arm_tinker_epic",
-    goldCost: 245,
-    materials: [
-      { defId: "mat_iron_ore", qty: 8 },
-      { defId: "mat_amber_gem", qty: 6 },
-    ],
-    desc: "Chế Giáp Lò Phản Ứng phẩm Sử Thi cho Kỹ Sư.",
+    desc: "Chế tạo Giày Chiến Hổ Phách phẩm Sử Thi (Tím).",
   },
   {
     id: "rec_amber_ring",
@@ -192,107 +112,266 @@ export const FORGE_RECIPES: RecipeDef[] = [
       { defId: "mat_amber_gem", qty: 5 },
       { defId: "mat_glitch_core", qty: 6 },
     ],
-    desc: "Chế tác Nhẫn Tâm Hổ Phách (Hút máu khi Crit & Nổ khi hạ địch).",
+    desc: "Chế tác Nhẫn Tâm Hổ Phách phẩm Tím.",
   },
 
-  // === LEGENDARY (CAM) CLASS WEAPONS, ARMORS & CHIP ===
+  // === BỘ QUANG PHỔ VÔ SẮC (LEGENDARY / CAM) ===
   {
-    id: "rec_knight_legend",
-    resultDefId: "wpn_knight_legend",
-    goldCost: 540,
+    id: "rec_prism_halo",
+    resultDefId: "hlm_prism_halo",
+    goldCost: 480,
     materials: [
-      { defId: "mat_amber_gem", qty: 6 },
-      { defId: "mat_void_prism", qty: 5 },
-      { defId: "mat_glitch_core", qty: 10 },
+      { defId: "mat_amber_gem", qty: 5 },
+      { defId: "mat_void_prism", qty: 4 },
+      { defId: "mat_prism_shard", qty: 8 },
     ],
-    desc: "Rèn Thánh Kiếm Thất Sắc (mở Thái Dương Lăng Kính) cho Vệ Binh!",
+    desc: "Rèn Vương Miện Quang Phổ phẩm Huyền Thoại (Cam)!",
   },
   {
-    id: "rec_mage_legend",
-    resultDefId: "wpn_mage_legend",
-    goldCost: 540,
-    materials: [
-      { defId: "mat_amber_gem", qty: 6 },
-      { defId: "mat_void_prism", qty: 5 },
-      { defId: "mat_glitch_core", qty: 10 },
-    ],
-    desc: "Đúc Thánh Trượng Tinh Tú (mở Hố Đen Quang Phổ) cho Pháp Sư!",
-  },
-  {
-    id: "rec_rogue_legend",
-    resultDefId: "wpn_rogue_legend",
-    goldCost: 540,
-    materials: [
-      { defId: "mat_amber_gem", qty: 6 },
-      { defId: "mat_void_prism", qty: 5 },
-      { defId: "mat_glitch_core", qty: 10 },
-    ],
-    desc: "Rèn Song Kiếm Hư Không (mở Liên Ảnh Diệt Sắc) cho Sát Thủ!",
-  },
-  {
-    id: "rec_tinker_legend",
-    resultDefId: "wpn_tinker_legend",
-    goldCost: 540,
-    materials: [
-      { defId: "mat_amber_gem", qty: 6 },
-      { defId: "mat_void_prism", qty: 5 },
-      { defId: "mat_glitch_core", qty: 10 },
-    ],
-    desc: "Chế Pháo Đài Hạt Alpha (mở Pháo Đài Quang Phổ) cho Kỹ Sư!",
-  },
-  {
-    id: "rec_arm_knight_legend",
-    resultDefId: "arm_knight_legend",
+    id: "rec_prism_mantle",
+    resultDefId: "arm_prism_mantle",
     goldCost: 500,
     materials: [
       { defId: "mat_quartz_shard", qty: 8 },
       { defId: "mat_void_prism", qty: 5 },
       { defId: "mat_amber_gem", qty: 5 },
     ],
-    desc: "Rèn Thần Giáp Lăng Kính Huyền Thoại cho Vệ Binh.",
+    desc: "Rèn Thánh Giáp Lăng Kính phẩm Huyền Thoại (Cam).",
   },
   {
-    id: "rec_arm_mage_legend",
-    resultDefId: "arm_mage_legend",
-    goldCost: 500,
-    materials: [
-      { defId: "mat_quartz_shard", qty: 8 },
-      { defId: "mat_void_prism", qty: 5 },
-      { defId: "mat_amber_gem", qty: 5 },
-    ],
-    desc: "Dệt Thánh Bào Tinh Vân Huyền Thoại cho Pháp Sư.",
-  },
-  {
-    id: "rec_arm_rogue_legend",
-    resultDefId: "arm_rogue_legend",
-    goldCost: 500,
+    id: "rec_chroma_sovereign",
+    resultDefId: "wpn_chroma_sovereign",
+    goldCost: 520,
     materials: [
       { defId: "mat_amber_gem", qty: 6 },
       { defId: "mat_void_prism", qty: 5 },
-      { defId: "mat_glitch_core", qty: 8 },
+      { defId: "mat_glitch_core", qty: 10 },
     ],
-    desc: "May Ảo Giáp Đoạt Mệnh Huyền Thoại cho Sát Thủ.",
+    desc: "Rèn Thần Khí Thất Sắc phẩm Huyền Thoại (Cam) tối thượng!",
   },
   {
-    id: "rec_arm_tinker_legend",
-    resultDefId: "arm_tinker_legend",
-    goldCost: 500,
+    id: "rec_void_walkers",
+    resultDefId: "bts_void_walkers",
+    goldCost: 460,
     materials: [
-      { defId: "mat_iron_ore", qty: 10 },
-      { defId: "mat_void_prism", qty: 5 },
-      { defId: "mat_amber_gem", qty: 5 },
+      { defId: "mat_void_prism", qty: 4 },
+      { defId: "mat_amber_gem", qty: 4 },
+      { defId: "mat_prism_shard", qty: 8 },
     ],
-    desc: "Chế Thần Giáp Kiến Tạo Huyền Thoại cho Kỹ Sư.",
+    desc: "Rèn Hài Đạp Hư Vô phẩm Huyền Thoại (Cam) tăng tối đa tốc độ!",
   },
   {
     id: "rec_eraser_chip",
     resultDefId: "chp_eraser_zero",
     goldCost: 480,
     materials: [
-      { defId: "mat_void_prism", qty: 5 },
-      { defId: "mat_matrix_rune", qty: 2 },
+      { defId: "mat_void_prism", qty: 4 },
       { defId: "mat_glitch_core", qty: 12 },
     ],
-    desc: "Lắp ráp Pix-Chip Alpha-Chroma Huyền Thoại (+65% uy lực [Q]).",
+    desc: "Lắp ráp Pix-Chip Alpha-Chroma phẩm Huyền Thoại (Cam).",
+  },
+  // === VŨ KHÍ CHUYÊN BIỆT CLASS TIER 4 & TIER 5 ===
+  {
+    id: "rec_amber_staff",
+    resultDefId: "wpn_amber_staff",
+    goldCost: 240,
+    materials: [
+      { defId: "mat_amber_gem", qty: 5 },
+      { defId: "mat_quartz_shard", qty: 4 },
+      { defId: "mat_prism_shard", qty: 4 },
+    ],
+    desc: "Chế tác Trượng Hỏa Tinh Hổ Phách (T4) cho Pháp Sư Sắc Độ.",
+  },
+  {
+    id: "rec_magma_fangs",
+    resultDefId: "wpn_magma_fangs",
+    goldCost: 240,
+    materials: [
+      { defId: "mat_amber_gem", qty: 5 },
+      { defId: "mat_iron_ore", qty: 6 },
+      { defId: "mat_glitch_core", qty: 6 },
+    ],
+    desc: "Rèn Song Nha Nham Thạch (T4) cho Sát Thủ Điểm Ảnh.",
+  },
+  {
+    id: "rec_thermal_repeater",
+    resultDefId: "wpn_thermal_repeater",
+    goldCost: 240,
+    materials: [
+      { defId: "mat_amber_gem", qty: 5 },
+      { defId: "mat_iron_ore", qty: 6 },
+      { defId: "mat_prism_shard", qty: 4 },
+    ],
+    desc: "Lắp ráp Pháo Hổ Phách Nóng Chảy (T4) cho Kỹ Sư Mạch Sáng.",
+  },
+  {
+    id: "rec_astral_scepter",
+    resultDefId: "wpn_astral_scepter",
+    goldCost: 520,
+    materials: [
+      { defId: "mat_void_prism", qty: 5 },
+      { defId: "mat_amber_gem", qty: 5 },
+      { defId: "mat_prism_shard", qty: 8 },
+    ],
+    desc: "Đúc Tinh Cầu Vương Trượng (T5) tối thượng cho Pháp Sư Sắc Độ!",
+  },
+  {
+    id: "rec_quantum_blades",
+    resultDefId: "wpn_quantum_blades",
+    goldCost: 520,
+    materials: [
+      { defId: "mat_void_prism", qty: 5 },
+      { defId: "mat_glitch_core", qty: 12 },
+      { defId: "mat_prism_shard", qty: 8 },
+    ],
+    desc: "Đúc Song Đao Lượng Tử (T5) tối thượng cho Sát Thủ Điểm Ảnh!",
+  },
+  {
+    id: "rec_singularity_cannon",
+    resultDefId: "wpn_singularity_cannon",
+    goldCost: 520,
+    materials: [
+      { defId: "mat_void_prism", qty: 5 },
+      { defId: "mat_quartz_shard", qty: 8 },
+      { defId: "mat_prism_shard", qty: 8 },
+    ],
+    desc: "Lắp ráp Pháo Hạt Kỳ Dị (T5) tối thượng cho Kỹ Sư Mạch Sáng!",
+  },
+  // === GIẢ KIM DƯỢC PHẨM CAO CẤP (TIER 3-5) ===
+  {
+    id: "rec_aegis_flask",
+    resultDefId: "pot_aegis_flask",
+    goldCost: 35,
+    materials: [
+      { defId: "mat_quartz_shard", qty: 2 },
+      { defId: "mat_prism_shard", qty: 1 },
+    ],
+    desc: "Điều chế Bình Hộ Thuẫn Pha Lê (T3) — Khiên giảm 35% sát thương.",
+  },
+  {
+    id: "rec_elixir_chroma",
+    resultDefId: "pot_elixir_chroma",
+    goldCost: 75,
+    materials: [
+      { defId: "mat_amber_gem", qty: 2 },
+      { defId: "mat_void_prism", qty: 1 },
+      { defId: "mat_prism_shard", qty: 2 },
+    ],
+    desc: "Luyện Thánh Dược Quang Phổ (T5) — Hồi 100% HP/Thể lực & 1.5s Bất tử.",
+  },
+  {
+    id: "rec_overdrive_vial",
+    resultDefId: "pot_overdrive_vial",
+    goldCost: 75,
+    materials: [
+      { defId: "mat_amber_gem", qty: 2 },
+      { defId: "mat_glitch_core", qty: 5 },
+      { defId: "mat_prism_shard", qty: 2 },
+    ],
+    desc: "Luyện Tinh Chất Quá Tải [Q] (T5) — Nạp +60% Nộ & +45% ATK!",
+  },
+  // === BẢN VẼ CỔ VẬT & LÕI THỦ LĨNH (ARCHETYPE & TACTICAL) ===
+  {
+    id: "rec_warden_cleaver",
+    resultDefId: "wpn_warden_cleaver",
+    goldCost: 115,
+    materials: [
+      { defId: "mat_warden_crest", qty: 1 },
+      { defId: "mat_iron_ore", qty: 5 },
+      { defId: "mat_prism_shard", qty: 2 },
+    ],
+    desc: "Rèn Đại Phủ Hình Thiên (+35% Phá Giáp Nhiễu Trắng Boss) từ Ấn Chiến Thần Vệ Thạch.",
+  },
+  {
+    id: "rec_amulet_wind",
+    resultDefId: "acc_amulet_wind",
+    goldCost: 105,
+    materials: [
+      { defId: "mat_iron_ore", qty: 3 },
+      { defId: "mat_quartz_shard", qty: 3 },
+      { defId: "mat_prism_shard", qty: 2 },
+    ],
+    desc: "Chế tác Dây Chuyền Hơi Thở Gió (+22 Thể Lực & -15% tiêu hao Dash/Tụ Lực).",
+  },
+  {
+    id: "rec_grimoire_arcane",
+    resultDefId: "acc_grimoire_arcane",
+    goldCost: 240,
+    materials: [
+      { defId: "mat_crystal_heart", qty: 1 },
+      { defId: "mat_quartz_shard", qty: 4 },
+      { defId: "mat_prism_shard", qty: 4 },
+    ],
+    desc: "Đóng quyển Cổ Thư Tinh Tú Khúc Xạ (Tự động phóng cầu phép nguyên tố mỗi 4.2s).",
+  },
+  {
+    id: "rec_disc_spectrum",
+    resultDefId: "acc_disc_spectrum",
+    goldCost: 260,
+    materials: [
+      { defId: "mat_amber_fang", qty: 1 },
+      { defId: "mat_amber_gem", qty: 4 },
+      { defId: "mat_prism_shard", qty: 4 },
+    ],
+    desc: "Đúc Đĩa Quang Phổ Cổ Đại (+25% Sát thương nổ Phản Ứng Nguyên Tố & hồi Overdrive).",
+  },
+  {
+    id: "rec_charm_undying",
+    resultDefId: "charm_undying",
+    goldCost: 130,
+    materials: [
+      { defId: "mat_prism_shard", qty: 3 },
+      { defId: "mat_glitch_core", qty: 4 },
+    ],
+    desc: "Chế tác Bùa Hộ Mệnh Bất Diệt (Tự động chặn 1 đòn chí tử & hồi 40% HP).",
+  },
+  // === CỔ VẬT MỞ RỘNG 9 NGUYÊN TỐ (GIÓ / CHẤN ĐỘNG / HƯ KHÔNG / SẮC ĐỘ) ===
+  {
+    id: "rec_wind_feather",
+    resultDefId: "acc_wind_feather",
+    goldCost: 120,
+    materials: [
+      { defId: "mat_warden_crest", qty: 1 },
+      { defId: "mat_pigment_wind", qty: 1 },
+      { defId: "mat_prism_shard", qty: 3 },
+    ],
+    desc: "Chế tác Lông Vũ Phong Lưu (+14 SPD, +20 Thể lực & lướt Dash tỏa xung Gió khuếch tán).",
+  },
+  {
+    id: "rec_quake_maul",
+    resultDefId: "wpn_quake_maul",
+    goldCost: 275,
+    materials: [
+      { defId: "mat_amber_fang", qty: 1 },
+      { defId: "mat_pigment_quake", qty: 1 },
+      { defId: "mat_amber_gem", qty: 4 },
+      { defId: "mat_prism_shard", qty: 4 },
+    ],
+    desc: "Rèn Cự Chùy Địa Chấn (+40% Phá Giáp Trắng & đòn N3/Tụ Lực gắn Ấn Chấn Động).",
+  },
+  {
+    id: "rec_void_scythe",
+    resultDefId: "wpn_void_scythe",
+    goldCost: 290,
+    materials: [
+      { defId: "mat_void_prism", qty: 2 },
+      { defId: "mat_pigment_void", qty: 1 },
+      { defId: "mat_glitch_core", qty: 8 },
+      { defId: "mat_prism_shard", qty: 5 },
+    ],
+    desc: "Rèn Lưỡi Hái Hư Không (Đòn N3/Tụ Lực tự gắn Ấn Hư Không kéo quái & xóa buff địch).",
+  },
+  {
+    id: "rec_chroma_heart",
+    resultDefId: "acc_chroma_heart",
+    goldCost: 540,
+    materials: [
+      { defId: "mat_origin_star", qty: 1 },
+      { defId: "mat_pigment_chroma", qty: 2 },
+      { defId: "mat_void_prism", qty: 3 },
+      { defId: "mat_prism_shard", qty: 8 },
+    ],
+    desc: "Kết tinh Trái Tim Thất Sắc Iris (Mọi Phản Ứng hồi +4% HP, +10 Stamina & N3 gắn Ấn Sắc Độ)!",
   },
 ];
+
