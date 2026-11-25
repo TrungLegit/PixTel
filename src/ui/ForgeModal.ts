@@ -49,7 +49,7 @@ export class ForgeModalUI {
   private contentEl: HTMLElement;
   private legendEl: HTMLElement;
   private tab: "enhance" | "craft" = "enhance";
-  private craftFilter: "class" | "all" = "class";
+  private craftFilter: "class" | "all" | "hidden" = "class";
   private selectedUid: string | null = null;
   private useCatalyst = false;
   private resultMsg = "";
@@ -772,10 +772,17 @@ export class ForgeModalUI {
 
   private _renderCraft(banner: string) {
     const classId = this.game.player.classId;
+    const hiddenRecipes = FORGE_RECIPES.filter((r) => r.isHiddenRecipe);
+    const unlockedHiddenCount = hiddenRecipes.filter((r) =>
+      this.game.isHiddenItemUnlocked(r.resultDefId)
+    ).length;
+
     const filtered =
-      this.craftFilter === "class"
-        ? FORGE_RECIPES.filter((r) => canClassEquip(ITEMS[r.resultDefId], classId))
-        : FORGE_RECIPES;
+      this.craftFilter === "hidden"
+        ? hiddenRecipes
+        : this.craftFilter === "class"
+          ? FORGE_RECIPES.filter((r) => canClassEquip(ITEMS[r.resultDefId], classId))
+          : FORGE_RECIPES;
 
     const filterBar = `
       <div class="craft-filter-bar">
@@ -785,20 +792,52 @@ export class ForgeModalUI {
         <button id="btn-craft-all" class="px-btn sm ${this.craftFilter === "all" ? "primary" : ""}">
           Tất cả (${FORGE_RECIPES.length})
         </button>
+        <button id="btn-craft-hidden" class="px-btn sm ${this.craftFilter === "hidden" ? "primary" : ""}" style="border-color:#ff9922;color:#ffe066">
+          ✦ Bản Vẽ Ẩn (${unlockedHiddenCount}/${hiddenRecipes.length})
+        </button>
       </div>
     `;
 
     const cards = filtered
       .map((rec) => {
         const def = ITEMS[rec.resultDefId];
+        if (!def) return "";
+
+        // Mask unrevealed secret blueprints so names, stats & materials stay hidden!
+        if (rec.isHiddenRecipe && !this.game.canRevealHiddenRecipe(rec)) {
+          const reqLv = rec.requiredLevel ?? 1;
+          const lvOk = this.game.player.level >= reqLv;
+          return `
+            <div class="craft-card" style="border-color:#5a4d78;background:#120f1e">
+              <div class="craft-head">
+                <div style="width:32px;height:32px;border:2px dashed #7a65a8;display:flex;align-items:center;justify-content:center;color:#ffe066;font-weight:700;font-size:15px">?</div>
+                <span class="tier-pill" style="color:#ff9922;background:#301b3d">BÍ MẬT</span>
+                <b style="color:#c2a8ff">??? — Bản Thiết Kế Bí Ẩn</b>
+              </div>
+              <div class="craft-desc" style="color:#b8b0cc">${rec.unlockHint ?? "Thu thập nguyên liệu cổ từ Boss để giải mã bản vẽ."}</div>
+              <div class="craft-mats">
+                <span class="craft-mat ${lvOk ? "ok" : "miss"}">Yêu cầu LV.${reqLv}</span>
+                <span class="craft-mat miss">Nguyên liệu: ???</span>
+              </div>
+              <button class="px-btn disabled" disabled>🔒 CHƯA GIẢI MÃ</button>
+            </div>
+          `;
+        }
+
         const rInfo = RARITY_INFO[def.rarity];
         const tInfo = getTierBadge(def);
-        const check = this.game.forge.canCraft(rec, this.game.inv);
+        const check = this.game.forge.canCraft(rec, this.game.inv, this.game.player.level);
         const usable = canClassEquip(def, classId);
         const clsTag =
           def.requiredClass && def.requiredClass !== "all"
             ? `<span class="${usable ? "class-req-ok" : "class-req-bad"}">${CLASS_DISPLAY_NAMES[def.requiredClass]}</span>`
             : `<span class="class-req-ok">Mọi Hệ</span>`;
+        const hiddenTag = rec.isHiddenRecipe
+          ? `<span class="tier-pill" style="color:#ffe066;background:#402454">✦ ẨN</span>`
+          : "";
+        const lvTag = rec.requiredLevel
+          ? `<span class="craft-mat ${this.game.player.level >= rec.requiredLevel ? "ok" : "miss"}">LV.${rec.requiredLevel}</span>`
+          : "";
 
         const mats = rec.materials
           .map((m) => {
@@ -812,6 +851,7 @@ export class ForgeModalUI {
             <div class="craft-head">
               <canvas class="px-item-icon" width="32" height="32" data-icon-def="${def.id}" data-icon-enh="0"></canvas>
               <span class="tier-pill" style="color:${tInfo.color};background:${tInfo.bg}">${tInfo.badge}</span>
+              ${hiddenTag}
               <b style="color:${rInfo.color}">${def.name}</b>
               <span class="craft-rarity" style="color:${rInfo.color}">[${rInfo.label}]</span>
               ${clsTag}
@@ -819,6 +859,7 @@ export class ForgeModalUI {
             <div class="craft-desc">${rec.desc}</div>
             ${def.passiveDesc ? `<div style="font-size:11px;color:#ff9922;margin-bottom:4px">${def.passiveDesc}</div>` : ""}
             <div class="craft-mats">
+              ${lvTag}
               <span class="craft-mat ${this.game.inv.gold >= rec.goldCost ? "ok" : "miss"}">${rec.goldCost}G</span>
               ${mats}
             </div>
@@ -845,13 +886,23 @@ export class ForgeModalUI {
       this.render();
     });
 
+    this.contentEl.querySelector("#btn-craft-hidden")?.addEventListener("click", () => {
+      sfx.playUiClick();
+      this.craftFilter = "hidden";
+      this.render();
+    });
+
     this.contentEl.querySelectorAll("[data-craft]").forEach((el) => {
       el.addEventListener("click", () => {
         const recId = (el as HTMLElement).dataset.craft!;
-        const res = this.game.forge.craftRecipe(recId, this.game.inv);
+        const res = this.game.forge.craftRecipe(recId, this.game.inv, this.game.player.level);
         this.resultMsg = res.message;
         this.resultOk = res.succeeded;
         if (res.succeeded) {
+          const rec = FORGE_RECIPES.find((r) => r.id === recId);
+          if (rec && ITEMS[rec.resultDefId]?.isHidden) {
+            this.game.unlockHiddenItem(rec.resultDefId);
+          }
           this.matrixPhase = "success";
           this.matrixTimer = 1.4;
           this._burstSparks(true);

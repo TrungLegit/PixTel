@@ -9,11 +9,13 @@ import {
   makeReactionKey,
 } from "../src/data/elements";
 import { ENEMIES } from "../src/data/enemies";
+import { HIDDEN_CRAFT_RECIPES, HIDDEN_ITEMS, rollBossHiddenDrops } from "../src/data/hiddenItems";
 import { ENEMY_DROP_TABLES } from "../src/data/lootTables";
 import codixelEnemiesMeta from "../src/assets/codixel-enemies.json";
 import { STARTER_WEAPON_BY_CLASS } from "../src/data/equipments";
 import {
   ITEMS,
+  MERCHANT_STOCK,
   canClassEquip,
   createItemInstance,
   getItemEffectiveStats,
@@ -213,6 +215,9 @@ function makeTestPlayer(classId: ClassId = "prism_knight"): PlayerEntity {
     hasWindDancer: false,
     hasChromaBlessing: false,
     hasQuakeImpact: false,
+    hasRestoredPrismSurge: false,
+    hasEnergySiphon: false,
+    hasSetResonance: false,
     grimoireTimer: 0.1,
     perfectDashWindow: 0,
     chromaCounterTimer: 0,
@@ -1560,8 +1565,108 @@ runTest("10 Reference Monster Models, 4-Direction Atlas & Synchronized Enemy Ski
   }
 });
 
+// =========================================================================
+// 11. HIDDEN ITEMS (CRAFT-ONLY & BOSS-DROP ONLY)
+// =========================================================================
+runTest("Hidden Items: exclusivity, Craft-Only, Boss-Only, unlocks & stats", () => {
+  const allHidden = Object.values(HIDDEN_ITEMS);
+  assert.ok(allHidden.length >= 6, `At least 6 hidden items exist (${allHidden.length})`);
+  assert.ok(
+    allHidden.every((it) => it.isHidden && (it.rarity === "epic" || it.rarity === "legendary")),
+    "All hidden items are Epic or Legendary with isHidden: true"
+  );
+
+  const craftOnly = allHidden.filter((it) => it.hiddenSource === "craft_only");
+  const bossOnly = allHidden.filter((it) => it.hiddenSource === "boss_only");
+  assert.ok(craftOnly.length >= 3 && bossOnly.length >= 3, "Both craft_only and boss_only sources exist");
+
+  // 1. Zero leakage into shop, random chest/equip rolls, or normal mob loot tables
+  for (const id of MERCHANT_STOCK) {
+    assert.ok(!ITEMS[id]?.isHidden, `Merchant stock item ${id} must not be hidden`);
+  }
+  for (const r of ["common", "uncommon", "rare", "epic", "legendary"] as const) {
+    for (let i = 0; i < 40; i++) {
+      const rolledId = pickRandomEquipByRarity(r);
+      assert.ok(!ITEMS[rolledId]?.isHidden, `pickRandomEquipByRarity(${r}) never returns hidden item (${rolledId})`);
+    }
+  }
+  for (const [mobId, table] of Object.entries(ENEMY_DROP_TABLES)) {
+    const entries = [...(table.guaranteed ?? []), ...table.rolls];
+    for (const entry of entries) {
+      assert.ok(!ITEMS[entry.itemId]?.isHidden, `Mob ${mobId} loot table never leaks hidden item ${entry.itemId}`);
+    }
+  }
+
+  // 2. Craft-Only level & material enforcement via ForgeSystem
+  const forge = new ForgeSystem();
+  const inv = new InventorySystem();
+  inv.resetStarterKit();
+  inv.gold = 5000;
+  for (const rec of HIDDEN_CRAFT_RECIPES) {
+    for (const m of rec.materials) inv.addItem(m.defId, m.qty);
+  }
+  const crownRec = HIDDEN_CRAFT_RECIPES.find((r) => r.resultDefId === "hid_craft_aethel_crown")!;
+  assert.ok(crownRec && (crownRec.requiredLevel ?? 0) > 1, "Hidden craft recipe has requiredLevel");
+  const lowLvCheck = forge.canCraft(crownRec, inv, 1);
+  assert.equal(lowLvCheck.ok, false, "Forge rejects hidden craft when player level is below requiredLevel");
+  const craftRes = forge.craftRecipe(crownRec.id, inv, 15);
+  assert.equal(craftRes.ok, true, "Forge crafts hidden item when level & materials are satisfied");
+  assert.ok(inv.bag.some((b) => b.defId === "hid_craft_aethel_crown"), "Crafted hidden item is added to bag");
+
+  // 3. Boss-Only guaranteed first-kill drop & special rainbow-burst + waypoint-pillar VFX
+  const firstEraserDrops = rollBossHiddenDrops("boss_the_eraser", false);
+  assert.ok(
+    firstEraserDrops.some((d) => d.itemId === "hid_boss_eraser_edge"),
+    "First kill of The Eraser guarantees hid_boss_eraser_edge"
+  );
+
+  const h = makeTestHarness("prism_knight");
+  const rec = { live: [] as MockVfxCall[], pooled: [] as MockVfxCall[] };
+  h.ctx.vfx = createMockVfx(rec);
+  const defeatedBossIds = new Set<string>();
+  h.ctx.defeatedBossIds = defeatedBossIds;
+  const warden = spawnDummyEnemy(h.spawner, h.player.x + 40, h.player.y, "boss_xing_warden");
+  h.combat.damageEnemy(h.ctx, warden, 999999, false, "hit-cyan");
+  assert.ok(
+    h.spawner.groundLoot.some((l) => l.item?.defId === "hid_boss_warden_mantle"),
+    "Defeating boss_xing_warden spawns its exclusive boss_only hidden armor"
+  );
+  assert.ok(
+    rec.live.some((c) => c.modId === "pixtel/rainbow-burst") &&
+      rec.pooled.some((c) => c.modId === "waypoint-pillar"),
+    "Boss hidden drop triggers rainbow-burst & waypoint-pillar VFX"
+  );
+  assert.ok(defeatedBossIds.has("boss_xing_warden"), "Boss defeat is tracked for first-kill guarantee");
+
+  // 4. Permanent localStorage unlock persistence via SaveSystem
+  const saveSys = new SaveSystem();
+  saveSys.clearHiddenUnlocks();
+  saveSys.saveHiddenUnlocks(["hid_craft_aethel_crown", "hid_boss_warden_mantle"]);
+  const loadedUnlocks = saveSys.loadHiddenUnlocks();
+  assert.ok(
+    loadedUnlocks.includes("hid_craft_aethel_crown") && loadedUnlocks.includes("hid_boss_warden_mantle"),
+    "Hidden item unlocks persist cleanly in localStorage"
+  );
+
+  // 5. Equipping hidden items updates recalculatePlayerStats() & passive flags
+  const h2 = makeTestHarness("prism_knight");
+  const baseAtk = h2.player.atk;
+  h2.inv.addItem("hid_boss_eraser_edge", 1, 0);
+  h2.inv.addItem("hid_craft_aethel_crown", 1, 0);
+  h2.inv.addItem("hid_craft_siphon_sigil", 1, 0);
+  for (const id of ["hid_boss_eraser_edge", "hid_craft_aethel_crown", "hid_craft_siphon_sigil"]) {
+    const inst = h2.inv.bag.find((b) => b.defId === id)!;
+    h2.inv.equipFromBag(inst.uid, h2.player.classId);
+  }
+  recalculatePlayerStats(h2.player, h2.inv, false);
+  assert.ok(h2.player.atk > baseAtk + 50, "Equipping hidden items significantly raises total ATK");
+  assert.equal(h2.player.hasRestoredPrismSurge, true, "hid_boss_eraser_edge enables hasRestoredPrismSurge");
+  assert.equal(h2.player.hasSetResonance, true, "hid_craft_aethel_crown enables hasSetResonance");
+  assert.equal(h2.player.hasEnergySiphon, true, "hid_craft_siphon_sigil enables hasEnergySiphon");
+});
+
 // ============================================================================
-// 11. PHASE 1: MOBILE TWIN-STICK TOUCH, OUTER-RING SPRINT & SMART AUTO-AIM
+// 12. PHASE 1: MOBILE TWIN-STICK TOUCH, OUTER-RING SPRINT & SMART AUTO-AIM
 // ============================================================================
 runTest("Phase 1 Mobile Twin-Stick Touch, Outer-Ring Sprint, Smart Auto-Aim & Hold Just-Charge", () => {
   const uiStub = {
@@ -1646,7 +1751,7 @@ runTest("Phase 1 Mobile Twin-Stick Touch, Outer-Ring Sprint, Smart Auto-Aim & Ho
 });
 
 // ============================================================================
-// 12. PHASE 2: DEDICATED CO-OP SERVER, 6-CHAR ROOMS, CROSS-PLAYER REACTIONS & LOOT
+// 13. PHASE 2: DEDICATED CO-OP SERVER, 6-CHAR ROOMS, CROSS-PLAYER REACTIONS & LOOT
 // ============================================================================
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function waitUntil(cond: () => boolean, timeoutMs = 1500) {

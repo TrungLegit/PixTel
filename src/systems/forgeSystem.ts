@@ -292,7 +292,10 @@ export class ForgeSystem {
     };
   }
 
-  canCraft(recipe: RecipeDef, inv: InventorySystem): { ok: boolean; reason?: string } {
+  canCraft(recipe: RecipeDef, inv: InventorySystem, playerLevel = 1): { ok: boolean; reason?: string } {
+    if (recipe.requiredLevel && playerLevel < recipe.requiredLevel) {
+      return { ok: false, reason: `Cần đạt cấp LV.${recipe.requiredLevel} để rèn cổ vật này.` };
+    }
     if (inv.bag.length >= 40) return { ok: false, reason: "Túi đồ đã đầy (40/40)." };
     if (inv.gold < recipe.goldCost) return { ok: false, reason: "Không đủ Vàng." };
     for (const m of recipe.materials) {
@@ -303,10 +306,10 @@ export class ForgeSystem {
     return { ok: true };
   }
 
-  craftRecipe(recipeId: string, inv: InventorySystem): ForgeActionResult {
+  craftRecipe(recipeId: string, inv: InventorySystem, playerLevel = 1): ForgeActionResult {
     const recipe = FORGE_RECIPES.find((r) => r.id === recipeId);
     if (!recipe) return { ok: false, succeeded: false, message: "Công thức không tồn tại." };
-    const check = this.canCraft(recipe, inv);
+    const check = this.canCraft(recipe, inv, playerLevel);
     if (!check.ok) return { ok: false, succeeded: false, message: check.reason ?? "Không đủ nguyên liệu." };
 
     inv.gold -= recipe.goldCost;

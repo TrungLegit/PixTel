@@ -10,6 +10,7 @@ import type {
   StatBonus,
 } from "./types";
 import { EQUIPMENT_ITEMS, RARITY_ENHANCE_MULT, STARTER_WEAPON_BY_CLASS, TIER_INFO } from "./equipments";
+import { HIDDEN_ITEMS } from "./hiddenItems";
 
 export const CLASS_DISPLAY_NAMES: Record<ClassId, string> = {
   prism_knight: "Vệ Binh Lăng Kính",
@@ -649,6 +650,9 @@ export const ITEMS: Record<string, ItemDef> = {
 
   // === ALL 5-SLOT RPG EQUIPMENT (from equipments.ts) ===
   ...EQUIPMENT_ITEMS,
+
+  // === EXCLUSIVE HIDDEN ITEMS (craft_only & boss_only) ===
+  ...HIDDEN_ITEMS,
 };
 
 /** Kho hàng của Thương Nhân Mira (gồm tiêu thụ T1-T4, vũ khí T1-T2 các class & 8 loại Bột Sắc Tố) */
@@ -851,7 +855,7 @@ export function getDismantleShardYield(inst: ItemInstance): number {
 
 export function pickRandomEquipByRarity(rarity: Rarity, preferredClassId?: ClassId): string {
   const pool = Object.values(ITEMS).filter(
-    (it) => it.category === "equipment" && it.rarity === rarity
+    (it) => it.category === "equipment" && it.rarity === rarity && !it.isHidden
   );
   if (pool.length === 0) return "wpn_meadow_edge";
   if (preferredClassId && Math.random() < 0.6) {

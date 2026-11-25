@@ -1,5 +1,6 @@
 import { getClassDef } from "../data/classes";
 import { ENEMIES } from "../data/enemies";
+import { rollBossHiddenDrops } from "../data/hiddenItems";
 import { ITEMS, RARITY_INFO } from "../data/items";
 import { rollEnemyDropTable } from "../data/lootTables";
 import { CHROMA_RAINBOW } from "../data/worldConfig";
@@ -46,6 +47,8 @@ export interface CombatContext {
   addHitstop: (sec: number) => void;
   notify: (msg: string, tone?: "info" | "good" | "warn" | "epic") => void;
   onGainXp: (amount: number) => void;
+  defeatedBossIds?: Set<string>;
+  onHiddenLootDropped?: (defId: string, x: number, y: number) => void;
   getBossLock?: () => ActiveBossLock | null;
   onBossLockTrigger?: (enemy: EnemyEntity) => void;
   onBossDefeated: (enemy: EnemyEntity) => void;
@@ -133,9 +136,13 @@ export class CombatSystem {
     const counterMult = counterUsed ? 1.55 : 1.0;
     const coatingBonus = player.coatingTime > 0 ? 20 : 0;
     const bloomBonus = player.chromaBloomBonusTime > 0 ? 15 : 0;
+    const restoredPrismActive =
+      player.hasRestoredPrismSurge && colorSys.isWorldPosRestored(player.x, player.y);
+    const prismSurgeElem = restoredPrismActive ? 22 : 0;
+    const prismSurgeAtkMult = restoredPrismActive ? 1.1 : 1.0;
     const bleachPenalty = player.bleachDebuffTime > 0 && isElemental ? -25 : 0;
     const elemMult = isElemental
-      ? Math.max(0.65, 1 + ((player.elementBonus || 0) + coatingBonus + bloomBonus + bleachPenalty) / 100)
+      ? Math.max(0.65, 1 + ((player.elementBonus || 0) + coatingBonus + bloomBonus + prismSurgeElem + bleachPenalty) / 100)
       : 1.0;
 
     // Null Frost (+18% Normal/Charge DMG taken)
@@ -168,6 +175,7 @@ export class CombatSystem {
       nullFrostMult *
       resonanceMult *
       bossSlayerMult *
+      prismSurgeAtkMult *
       (0.94 + Math.random() * 0.12);
 
     return {
@@ -2125,6 +2133,11 @@ export class CombatSystem {
       ctx.player.overdrive = Math.min(100, ctx.player.overdrive + 8);
     }
 
+    if (ctx.player.hasEnergySiphon) {
+      ctx.player.stamina = Math.min(ctx.player.maxStamina, ctx.player.stamina + Math.round(ctx.player.maxStamina * 0.08));
+      ctx.player.overdrive = Math.min(100, ctx.player.overdrive + 6);
+    }
+
     const edef = ENEMIES[e.defId];
     ctx.stats.kills += 1;
 
@@ -2193,6 +2206,26 @@ export class CombatSystem {
     }
 
     if (e.isBoss) {
+      const alreadyDefeated = ctx.defeatedBossIds?.has(e.defId) ?? false;
+      const hiddenDrops = rollBossHiddenDrops(e.defId, alreadyDefeated);
+      for (const hd of hiddenDrops) {
+        ctx.spawner.spawnItemLoot(e.x, e.y, hd.itemId, hd.qty, hd.enhanceLevel);
+        const hDef = ITEMS[hd.itemId];
+        sfx.playHiddenDrop();
+        ctx.vfx.spawnLive("pixtel/rainbow-burst", {
+          x: e.x,
+          y: e.y - 6,
+          priority: 6,
+          maxLife: 1.4,
+        });
+        ctx.vfx.spawnPooled("waypoint-pillar", { x: e.x, y: e.y });
+        if (hDef) {
+          ctx.notify(`✦ RƠI CỔ VẬT ẨN [${RARITY_INFO[hDef.rarity].label}]: ${hDef.name}!`, "epic");
+        }
+        ctx.onHiddenLootDropped?.(hd.itemId, e.x, e.y);
+      }
+      ctx.defeatedBossIds?.add(e.defId);
+
       ctx.stats.bossesDefeated += 1;
       ctx.onBossDefeated(e);
     }

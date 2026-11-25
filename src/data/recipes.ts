@@ -1,4 +1,5 @@
 import type { RecipeDef } from "./types";
+import { HIDDEN_CRAFT_RECIPES } from "./hiddenItems";
 
 /**
  * Bản vẽ Chế Tạo tại Lò Rèn Lăng Kính:
@@ -373,5 +374,7 @@ export const FORGE_RECIPES: RecipeDef[] = [
     ],
     desc: "Kết tinh Trái Tim Thất Sắc Iris (Mọi Phản Ứng hồi +4% HP, +10 Stamina & N3 gắn Ấn Sắc Độ)!",
   },
+  // === BẢN VẼ CỔ VẬT ẨN (CRAFT-ONLY) ===
+  ...HIDDEN_CRAFT_RECIPES,
 ];
 

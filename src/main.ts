@@ -1,3 +1,4 @@
+import "@fontsource-variable/pixelify-sans";
 import { PixTelOpenWorldGame, type ModalId } from "./game";
 import { ClassSelectUI } from "./ui/ClassSelect";
 import { HudUI } from "./ui/HUD";

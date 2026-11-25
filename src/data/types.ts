@@ -138,7 +138,20 @@ export type EquipPassiveId =
   | "void_siphon"
   | "wind_dancer"
   | "chroma_blessing"
-  | "quake_impact";
+  | "quake_impact"
+  | "restored_prism_surge"
+  | "energy_siphon_magnet"
+  | "set_resonance_echo";
+
+export type HiddenSource = "craft_only" | "boss_only";
+
+export interface HiddenCraftRecipeSpec {
+  goldCost: number;
+  materials: { defId: string; qty: number }[];
+  requiredLevel?: number;
+  revealMaterialId?: string;
+  unlockHint: string;
+}
 
 export interface StatBonus {
   atk?: number;
@@ -174,6 +187,12 @@ export interface ItemDef {
   biomeTheme?: BiomeId;
   setId?: string;
   dismantleShards?: number;
+  isHidden?: boolean;
+  hiddenSource?: HiddenSource;
+  sourceBossId?: string;
+  hiddenDropChance?: number;
+  hiddenHint?: string;
+  craftRecipe?: HiddenCraftRecipeSpec;
   desc: string;
   lore?: string;
   passiveId?: EquipPassiveId;
@@ -207,6 +226,10 @@ export interface RecipeDef {
   goldCost: number;
   materials: { defId: string; qty: number }[];
   desc: string;
+  requiredLevel?: number;
+  isHiddenRecipe?: boolean;
+  revealMaterialId?: string;
+  unlockHint?: string;
 }
 
 export type QuestObjectiveKind =
@@ -379,6 +402,8 @@ export interface SaveDataV2 {
   unlockedWaypoints: string[];
   openedChests: string[];
   discoveredLore?: string[];
+  unlockedHiddenItems?: string[];
+  defeatedBossIds?: string[];
   tutorialCompleted?: boolean;
   quests: Record<string, QuestProgress>;
   stats: {
