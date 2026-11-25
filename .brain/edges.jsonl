@@ -1,5 +1,6 @@
 {"created": "2026-11-25T04:21:45.750293+00:00", "dst": "file:src/graphics/pixelSprites.ts", "note": "", "schema_version": 1, "src": "bug:20261125042129-classselect-firstframe-negative-dt", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T04:21:45.464715+00:00", "dst": "file:src/ui/ClassSelect.ts", "note": "", "schema_version": 1, "src": "bug:20261125042129-classselect-firstframe-negative-dt", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-25T14:29:41.846066+00:00", "dst": "file:style.css", "note": "", "schema_version": 1, "src": "bug:20261125142941-narrow-titlescreen-class-cards", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T03:24:49.304532+00:00", "dst": "file:src/engine/game.js", "note": "", "schema_version": 1, "src": "decision:20261125032449-hybrid-pixelfx-rendering", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T03:24:49.304532+00:00", "dst": "file:src/vfx/vfxManager.js", "note": "", "schema_version": 1, "src": "decision:20261125032449-hybrid-pixelfx-rendering", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T04:21:28.826831+00:00", "dst": "decision:20261125032449-hybrid-pixelfx-rendering", "note": "", "schema_version": 1, "src": "decision:20261125042128-pixtel-v2-openworld-vite", "type": "supersedes", "weight": 1.0}
@@ -35,12 +36,14 @@
 {"created": "2026-11-25T12:37:42.420995+00:00", "dst": "decision:20261125121555-4direction-monster-atlas", "note": "", "schema_version": 1, "src": "decision:20261125123742-multiframe-monster-animations", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T12:41:26.851322+00:00", "dst": "file:src/systems/combat.ts", "note": "", "schema_version": 1, "src": "decision:20261125124126-bit-rogue-pure-melee", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:07:11.483575+00:00", "dst": "file:DEV_LOG.md", "note": "", "schema_version": 1, "src": "decision:20261125140711-mandatory-team-vibecode-devlog", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-25T14:28:12.513611+00:00", "dst": "file:src/ui/ClassSelect.ts", "note": "", "schema_version": 1, "src": "decision:20261125142812-epic-pixelgrid-title-screen", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T13:30:11.378545+00:00", "dst": "file:.agents/skills/codixel/SKILL.md", "note": "", "schema_version": 1, "src": "file:.agents/skills/codixel/package.json", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T13:30:11.809596+00:00", "dst": "file:src/vfx/vfxManager.ts", "note": "", "schema_version": 1, "src": "file:.agents/skills/pixelfx/SKILL.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:.agents/skills/spritecook-polish-sprites/scripts/compare_alpha.py", "note": "", "schema_version": 1, "src": "file:.agents/skills/spritecook-polish-sprites/scripts/test_compare_alpha.py", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T14:07:11.188224+00:00", "dst": "file:DEV_LOG.md", "note": "", "schema_version": 1, "src": "file:.github/copilot-instructions.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:07:10.887944+00:00", "dst": "file:DEV_LOG.md", "note": "", "schema_version": 1, "src": "file:AGENTS.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:07:11.334098+00:00", "dst": "file:DEV_LOG.md", "note": "", "schema_version": 1, "src": "file:CLAUDE.md", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-25T14:30:13.212983+00:00", "dst": "decision:20261125142812-epic-pixelgrid-title-screen", "note": "", "schema_version": 1, "src": "file:DEV_LOG.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:07:10.739244+00:00", "dst": "file:AGENTS.md", "note": "", "schema_version": 1, "src": "file:DEV_LOG.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:07:11.036763+00:00", "dst": "file:DEV_LOG.md", "note": "", "schema_version": 1, "src": "file:GEMINI.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T05:02:37.739271+00:00", "dst": "file:src/game.ts", "note": "", "schema_version": 1, "src": "file:README.md", "type": "relates_to", "weight": 1.0}
@@ -48,6 +51,7 @@
 {"created": "2026-11-25T07:18:58.887261+00:00", "dst": "file:src/main.ts", "note": "", "schema_version": 1, "src": "file:index.html", "type": "depends_on", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/main.ts", "note": "", "schema_version": 1, "src": "file:index.html", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T10:17:25.456760+00:00", "dst": "file:src/main.ts", "note": "", "schema_version": 1, "src": "file:index.html", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-25T14:28:12.596770+00:00", "dst": "file:src/ui/ClassSelect.ts", "note": "", "schema_version": 1, "src": "file:index.html", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T08:04:58.822440+00:00", "dst": "file:src/ui/ItemReviewTooltip.ts", "note": "", "schema_version": 1, "src": "file:index.html", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:style.css", "note": "", "schema_version": 1, "src": "file:index.html", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T03:25:02.669635+00:00", "dst": "file:server.mjs", "note": "", "schema_version": 1, "src": "file:package.json", "type": "relates_to", "weight": 1.0}
@@ -272,6 +276,7 @@
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/types.ts", "note": "", "schema_version": 1, "src": "file:src/systems/questSystem.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T04:21:24.570192+00:00", "dst": "file:src/data/types.ts", "note": "", "schema_version": 1, "src": "file:src/systems/saveSystem.ts", "type": "depends_on", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/types.ts", "note": "", "schema_version": 1, "src": "file:src/systems/saveSystem.ts", "type": "imports", "weight": 1.0}
+{"created": "2026-11-25T14:28:12.682051+00:00", "dst": "file:index.html", "note": "", "schema_version": 1, "src": "file:src/ui/ClassSelect.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/audio/chiptuneSynth.ts", "note": "", "schema_version": 1, "src": "file:src/ui/ClassSelect.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/classes.ts", "note": "", "schema_version": 1, "src": "file:src/ui/ClassSelect.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/types.ts", "note": "", "schema_version": 1, "src": "file:src/ui/ClassSelect.ts", "type": "imports", "weight": 1.0}
@@ -709,7 +714,8 @@
 {"created": "2026-11-25T04:21:20.600429+00:00", "dst": "file:src/data/worldConfig.ts", "note": "", "schema_version": 1, "src": "file:src/world/worldMap.ts", "type": "depends_on", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/worldConfig.ts", "note": "", "schema_version": 1, "src": "file:src/world/worldMap.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T09:24:44.984836+00:00", "dst": "file:src/data/worldConfig.ts", "note": "", "schema_version": 1, "src": "file:src/world/worldMap.ts", "type": "relates_to", "weight": 1.0}
-{"created": "2026-11-25T10:17:25.910950+00:00", "dst": "file:index.html", "note": "", "schema_version": 1, "src": "file:style.css", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-25T14:29:41.950237+00:00", "dst": "decision:20261125142812-epic-pixelgrid-title-screen", "note": "", "schema_version": 1, "src": "file:style.css", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-25T14:28:12.768968+00:00", "dst": "file:index.html", "note": "", "schema_version": 1, "src": "file:style.css", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T08:04:59.313321+00:00", "dst": "file:src/graphics/ropeFrame.ts", "note": "", "schema_version": 1, "src": "file:style.css", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T08:04:59.313321+00:00", "dst": "file:src/ui/ItemReviewTooltip.ts", "note": "", "schema_version": 1, "src": "file:style.css", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/classes.ts", "note": "", "schema_version": 1, "src": "file:tests/featureTests.ts", "type": "imports", "weight": 1.0}
