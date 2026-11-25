@@ -4,6 +4,7 @@ import type {
   CampDef,
   ClassId,
   ElementType,
+  ExoticSkillModId,
   InfusableElement,
   ItemInstance,
   Rarity,
@@ -87,6 +88,9 @@ export interface PlayerEntity {
   hasEnergySiphon: boolean;
   hasSetResonance: boolean;
   grimoireTimer: number;
+  exoticMods?: Set<ExoticSkillModId>;
+  exoticIcds?: Partial<Record<ExoticSkillModId, number>>;
+  potCd?: number;
 
   // Advanced 60FPS Combat Rhythm & 9-Element Reaction Buffs
   perfectDashWindow: number;
@@ -199,6 +203,9 @@ export interface EnemyEntity {
   dashTime: number;
   guardTime: number;
   skillCycle: number;
+  spawnAnimTime?: number;
+  alertTimer?: number;
+  hurtTilt?: number;
 
   // 9-Element reaction & Boss Bleach Shield / Stagger states
   element: ElementType | null;

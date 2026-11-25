@@ -67,6 +67,7 @@
       <!-- Top-Right Minimap + Toolbar + Quest Tracker -->
       <div class="hud-top-right">
         <div class="hud-toolbar">
+          <button id="hud-btn-gacha" class="hud-mini-btn" style="color:#ffe066;border-color:#ff99cc" title="Rương Gacha Theo Mùa [G]">G·GACHA</button>
           <button id="hud-btn-coop" class="hud-mini-btn" style="color:#44ee88;border-color:#44ee88" title="Tổ Đội Co-op Online 2–4 Người [P]">P·COOP</button>
           <button id="hud-btn-help" class="hud-mini-btn" style="color:#ffe066;border-color:#ffe066" title="Cẩm Nang Tân Thủ, Combo & 9 Nguyên Tố [H / F1]">H·HDẪN</button>
           <button id="hud-btn-map" class="hud-mini-btn" title="Bản đồ thế giới [M]">M·MAP</button>
@@ -94,27 +95,45 @@
       <!-- [F] World Interact Prompt -->
       <button id="interact-prompt" class="interact-prompt hidden">[F] Tương tác</button>
 
-      <!-- Bottom Skill & Consumable Hotbar -->
+      <!-- Bottom Backpack, Pixel Skill Icons & Smart Consumable Hotbar -->
+      <div id="hud-skill-tooltip" class="hud-skill-tooltip hidden"></div>
       <div class="hud-bottom-bar">
-        <div id="slot-skill-lmb" class="skill-slot" title="Đánh thường 3 nhịp / Giữ Chuột trái để Tụ Lực (Just-Charge)">
+        <button id="slot-bag" class="skill-slot icon-skill-slot bag-slot" type="button" data-hud-tip="bag" aria-label="Túi Đồ & Trang Bị [I]">
+          <span class="key-cap">I</span>
+          <span id="bag-slot-pts" class="bag-pts-pill hidden">+0</span>
+          <canvas id="bag-slot-icon" class="skill-icon-canvas" width="36" height="36"></canvas>
+          <span id="bag-slot-count" class="cons-qty">0/40</span>
+        </button>
+        <button id="slot-gacha" class="skill-slot icon-skill-slot gacha-slot" type="button" data-hud-tip="gacha" aria-label="Rương Gacha Mùa [G]">
+          <span class="key-cap">G</span>
+          <canvas id="gacha-slot-icon" class="skill-icon-canvas" width="36" height="36"></canvas>
+          <span id="gacha-slot-count" class="cons-qty">🗝0</span>
+        </button>
+        <div class="hotbar-sep bag-sep"></div>
+        <div id="slot-skill-lmb" class="skill-slot icon-skill-slot" data-hud-tip="lmb" aria-label="Đòn Đánh Thường & Tụ Lực [LMB]">
           <span class="key-cap">LMB</span>
-          <span id="skill-lmb-name" class="slot-title">Đấm Tay Không</span>
-          <span id="skill-lmb-sub" class="slot-sub">TAY KHÔNG</span>
+          <canvas id="skill-lmb-icon" class="skill-icon-canvas" width="36" height="36"></canvas>
+          <span id="skill-lmb-sub" class="skill-badge hidden"></span>
         </div>
-        <div id="slot-skill-e" class="skill-slot">
+        <div id="slot-skill-e" class="skill-slot icon-skill-slot" data-hud-tip="skill" aria-label="Kỹ Năng Đặc Trưng [E]">
           <span class="key-cap">E</span>
-          <span id="skill-e-name" class="slot-title">Kỹ Năng</span>
-          <span id="skill-e-cd" class="slot-sub">READY</span>
+          <div id="skill-e-veil" class="skill-cd-veil"></div>
+          <canvas id="skill-e-icon" class="skill-icon-canvas" width="36" height="36"></canvas>
+          <canvas id="skill-e-lock" class="skill-lock-icon hidden" width="16" height="16"></canvas>
+          <span id="skill-e-cd" class="skill-badge hidden"></span>
         </div>
-        <div id="slot-skill-q" class="skill-slot">
+        <div id="slot-skill-q" class="skill-slot icon-skill-slot" data-hud-tip="ult" aria-label="Tuyệt Kỹ [Q]">
           <span class="key-cap">Q</span>
-          <span id="skill-q-name" class="slot-title">Tuyệt Kỹ</span>
-          <span id="skill-q-cd" class="slot-sub">35%</span>
+          <div id="skill-q-gauge" class="skill-ult-gauge"></div>
+          <canvas id="skill-q-icon" class="skill-icon-canvas" width="36" height="36"></canvas>
+          <canvas id="skill-q-lock" class="skill-lock-icon hidden" width="16" height="16"></canvas>
+          <span id="skill-q-cd" class="skill-badge">0%</span>
         </div>
-        <div id="slot-dash" class="skill-slot" title="Lướt đúng khoảnh khắc đòn đánh chạm tới = CHROMA DODGE!">
+        <div id="slot-dash" class="skill-slot icon-skill-slot" data-hud-tip="dash" aria-label="Chroma Dash [Space]">
           <span class="key-cap">SPC</span>
-          <span class="slot-title">Dash</span>
-          <span id="skill-dash-cd" class="slot-sub">READY</span>
+          <div id="skill-dash-veil" class="skill-cd-veil"></div>
+          <canvas id="skill-dash-icon" class="skill-icon-canvas" width="36" height="36"></canvas>
+          <span id="skill-dash-cd" class="skill-badge hidden"></span>
         </div>
         <div class="hotbar-sep"></div>
         <button id="slot-c1" class="skill-slot cons-slot">
@@ -202,7 +221,7 @@
         <div id="title-room-invite-banner" class="coop-invite-banner hidden"></div>
         <div id="class-grid" class="class-grid"></div>
         <div class="title-controls-hint">
-          <b>PC:</b> WASD · Shift · Space · LMB/Giữ · E/Q · F · 1-4 · <b>P</b> Co-op · <b>H</b> Cẩm nang &nbsp;|&nbsp; <b>Mobile:</b> Cần xoay Analog + Cụm phím Twin-Stick Tự Ngắm
+          <b>PC:</b> WASD · Shift · Space · LMB/Giữ · <b>E</b> Skill Vũ Khí · <b>Q</b> Skill Class · <b>G</b> Rương Gacha Mùa · F · 1-4 · <b>P</b> Co-op · <b>H</b> Cẩm nang
         </div>
         <div id="newbie-guide-wrap" class="tutorial-opt-row">
           <label class="tutorial-opt-toggle">
@@ -261,18 +280,45 @@
           </div>
           <div class="inv-right">
             <div class="inv-bag-hdr-row">
-              <div class="section-hdr" style="margin:0;border:0;padding:0">TÚI ĐỒ (40 Ô)</div>
+              <div id="inv-bag-title" class="section-hdr" style="margin:0;border:0;padding:0">TÚI ĐỒ (0/40 Ô)</div>
               <div class="inv-bag-actions">
+                <button id="btn-buy-backpack" class="px-btn sm good" title="Mua thêm Balo mở rộng vĩnh viễn +10 ô kho đồ (Tối đa 80 ô)">🎒 +10 Ô (250G)</button>
                 <button id="btn-equip-best" class="px-btn sm primary" title="Tự động mặc trang bị mạnh nhất đúng Class của bạn">⚡ TRANG BỊ TỐT NHẤT</button>
                 <button id="btn-toggle-quicksell" class="px-btn sm warn" title="Tự chọn trước đồ khác Class và bấm chọn thêm đồ muốn bán rồi mới Xác Nhận">💰 BÁN NHANH</button>
               </div>
             </div>
+            <div id="inv-autosell-bar" class="inv-autosell-bar"></div>
             <div id="inv-quicksell-bar" class="inv-quicksell-bar hidden"></div>
             <div id="inv-bag-grid" class="bag-grid"></div>
             <div class="section-hdr">SO SÁNH CHỈ SỐ & THAO TÁC</div>
             <div id="inv-item-detail" class="item-detail-box"></div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- MODAL: PERSONAL STORAGE CHEST AT SPAWN [F] -->
+    <div id="modal-stash" class="modal-backdrop hidden">
+      <div class="modal-box modal-xl stash-modal-box">
+        <div class="modal-header">
+          <div>📦 RƯƠNG CÁ NHÂN — KHO LƯU TRỮ TẠI QUẢNG TRƯỜNG SPAWN (80 Ô)</div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button id="btn-stash-deposit-mats" class="px-btn sm primary" title="Cất toàn bộ nguyên liệu thường vào Rương Cá Nhân">📦 CẤT NHANH NGUYÊN LIỆU</button>
+            <button id="btn-close-stash" class="px-btn sm">✕ ĐÓNG</button>
+          </div>
+        </div>
+        <div id="stash-status-msg" class="stash-status-msg"></div>
+        <div class="stash-layout">
+          <div class="stash-col">
+            <div id="stash-bag-title" class="section-hdr" style="margin-top:0">TÚI ĐỒ HÀNH TRANG</div>
+            <div id="stash-bag-grid" class="stash-grid"></div>
+          </div>
+          <div class="stash-col">
+            <div id="stash-chest-title" class="section-hdr" style="margin-top:0;color:#5ef2ff">📦 RƯƠNG CÁ NHÂN (0/80 Ô)</div>
+            <div id="stash-chest-grid" class="stash-grid"></div>
+          </div>
+        </div>
+        <div class="stash-foot-note">★ Vật phẩm trong Rương Cá Nhân được lưu vĩnh viễn theo Save và không bị ảnh hưởng khi bạn Đổi Class tại Đài Đổi Class!</div>
       </div>
     </div>
 
@@ -303,6 +349,53 @@
       </div>
     </div>
 
+    <!-- MODAL: SEASONAL GACHA CHEST [G] -->
+    <div id="modal-gacha" class="modal-backdrop hidden">
+      <div class="modal-box modal-xl gacha-modal-box">
+        <div class="modal-header gacha-header">
+          <div>★ ĐÀI RƯƠNG GACHA THEO MÙA [G]</div>
+          <div class="gacha-hdr-right">
+            <div id="gacha-key-pill" class="gacha-key-pill"></div>
+            <button id="btn-close-gacha" class="px-btn sm">✕ ĐÓNG</button>
+          </div>
+        </div>
+        <div id="gacha-tabs" class="gacha-tabs"></div>
+        <div class="gacha-body">
+          <div class="gacha-banner-meta">
+            <div id="gacha-banner-title" class="gacha-banner-title"></div>
+            <div id="gacha-banner-desc" class="gacha-banner-desc"></div>
+          </div>
+          <div class="gacha-stage-wrap">
+            <canvas id="gacha-stage-canvas" class="gacha-stage-canvas" width="380" height="128"></canvas>
+            <button id="btn-gacha-skip" class="px-btn sm gacha-skip-btn hidden">⏩ BỎ QUA</button>
+          </div>
+          <div id="gacha-results-tray" class="gacha-results-tray hidden"></div>
+          <div class="gacha-controls-row">
+            <div class="gacha-roll-btns">
+              <button id="btn-gacha-roll1" class="px-btn gacha-roll-btn roll-1">🗝 MỞ ×1</button>
+              <button id="btn-gacha-roll5" class="px-btn gacha-roll-btn roll-5">★ MỞ ×5</button>
+            </div>
+            <div class="gacha-util-btns">
+              <button id="btn-gacha-craft-key" class="px-btn sm primary" title="Mở Lò Rèn Lăng Kính để đúc Chìa Mùa">⚒ RÈN CHÌA</button>
+              <button id="btn-gacha-rates" class="px-btn sm">📊 TỈ LỆ</button>
+              <button id="btn-gacha-history" class="px-btn sm">📜 LỊCH SỬ</button>
+            </div>
+          </div>
+          <div class="gacha-lower-grid">
+            <div class="gacha-pity-col">
+              <div class="gacha-sec-lbl">BẢO HIỂM PITY RƯƠNG NÀY</div>
+              <div id="gacha-pity-bars" class="gacha-pity-bars"></div>
+            </div>
+            <div class="gacha-feat-col">
+              <div class="gacha-sec-lbl">★ VẬT PHẨM ĐỘC QUYỀN MÙA NỔI BẬT (RÊ CHUỘT ĐỂ XEM)</div>
+              <div id="gacha-featured-row" class="gacha-featured-row"></div>
+            </div>
+          </div>
+          <div id="gacha-sub-panel" class="gacha-sub-panel hidden"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- MODAL: WORLD MAP & FAST TRAVEL [M] -->
     <div id="modal-world-map" class="modal-backdrop hidden">
       <div class="modal-box modal-xl">
@@ -318,6 +411,7 @@
               <span><i style="background:#ffe066"></i> Bạn</span>
               <span><i style="background:#38f2ff"></i> Trụ Đã Mở (Click để Dịch chuyển)</span>
               <span><i style="background:#7c8291"></i> Trụ Tắt</span>
+              <span><i style="background:#ff9933"></i> Khu Farm Quái</span>
               <span><i style="background:#ff2e55"></i> Đấu Trường Boss</span>
             </div>
           </div>

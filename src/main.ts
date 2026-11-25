@@ -4,7 +4,9 @@ import { ClassSelectUI } from "./ui/ClassSelect";
 import { HudUI } from "./ui/HUD";
 import { DialogueModalUI } from "./ui/DialogueModal";
 import { InventoryModalUI } from "./ui/InventoryModal";
+import { StorageChestModalUI } from "./ui/StorageChestModal";
 import { ForgeModalUI } from "./ui/ForgeModal";
+import { GachaModalUI } from "./ui/GachaModal";
 import { WorldMapModalUI } from "./ui/WorldMapModal";
 import { QuestJournalModalUI } from "./ui/QuestJournalModal";
 import { TutorialModalUI, type TutorialTabId } from "./ui/TutorialModal";
@@ -25,7 +27,9 @@ function bootstrap() {
   let hud: HudUI;
   let dialogue: DialogueModalUI;
   let inventory: InventoryModalUI;
+  let stashModal: StorageChestModalUI;
   let forge: ForgeModalUI;
+  let gachaModal: GachaModalUI;
   let worldMap: WorldMapModalUI;
   let journal: QuestJournalModalUI;
   let tutorial: TutorialModalUI;
@@ -47,7 +51,9 @@ function bootstrap() {
       classSelect?.hide();
       dialogue?.hide();
       inventory?.hide();
+      stashModal?.hide();
       forge?.hide();
+      gachaModal?.hide();
       worldMap?.hide();
       journal?.hide();
       tutorial?.hide();
@@ -65,8 +71,12 @@ function bootstrap() {
         dialogue.show(npcId);
       } else if (modal === "inventory") {
         inventory.show(payload as { quickSell?: boolean } | undefined);
+      } else if (modal === "stash") {
+        stashModal.show();
       } else if (modal === "forge") {
         forge.show();
+      } else if (modal === "gacha") {
+        gachaModal.show();
       } else if (modal === "world_map") {
         worldMap.show();
       } else if (modal === "journal") {
@@ -100,7 +110,9 @@ function bootstrap() {
   hud = new HudUI(game);
   dialogue = new DialogueModalUI(game);
   inventory = new InventoryModalUI(game);
+  stashModal = new StorageChestModalUI(game);
   forge = new ForgeModalUI(game);
+  gachaModal = new GachaModalUI(game);
   worldMap = new WorldMapModalUI(game);
   journal = new QuestJournalModalUI(game);
   tutorial = new TutorialModalUI(game);

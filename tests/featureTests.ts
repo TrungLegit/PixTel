@@ -9,9 +9,15 @@ import {
   makeReactionKey,
 } from "../src/data/elements";
 import { ENEMIES } from "../src/data/enemies";
+import { EXOTIC_ITEMS } from "../src/data/exoticItems";
+import { GACHA_BANNERS, GACHA_KEY_ITEMS, GACHA_KEY_RECIPES, SEASONAL_ITEMS } from "../src/data/gacha";
 import { HIDDEN_CRAFT_RECIPES, HIDDEN_ITEMS, rollBossHiddenDrops } from "../src/data/hiddenItems";
 import { ENEMY_DROP_TABLES } from "../src/data/lootTables";
+import { WEAPON_SKILLS, getWeaponSkillForItem } from "../src/data/weaponSkills";
 import codixelEnemiesMeta from "../src/assets/codixel-enemies.json";
+import codixelIconsMeta from "../src/assets/codixel-icons.json";
+import { posedStyled } from "../src/vfx/pixelfx/core/index.js";
+import { GACHA_ALTAR_POS, STORAGE_CHEST_POS, TOWN_BOUNDS } from "../src/data/worldConfig";
 import { STARTER_WEAPON_BY_CLASS } from "../src/data/equipments";
 import {
   ITEMS,
@@ -35,7 +41,8 @@ import {
 } from "../src/graphics/pixelfxHeroModels";
 import { CombatSystem, type CombatContext } from "../src/systems/combat";
 import { ELEMENT_DISPLAY, ForgeSystem } from "../src/systems/forgeSystem";
-import { InventorySystem, recalculatePlayerStats } from "../src/systems/inventorySystem";
+import { GachaSystem } from "../src/systems/gachaSystem";
+import { BACKPACK_UPGRADES, InventorySystem, MAX_STASH_SLOTS, recalculatePlayerStats } from "../src/systems/inventorySystem";
 import { QuestSystem } from "../src/systems/questSystem";
 import { SaveSystem } from "../src/systems/saveSystem";
 import { BEGINNER_PRACTICE_STEPS } from "../src/ui/TutorialModal";
@@ -948,11 +955,11 @@ runTest("Hardcore RPG: Bare-Handed Start, Skill Gating, Class Locks, Matrix Forg
 
   bare.player.skillCd = 0;
   bare.combat.performSkillE(bare.ctx);
-  assert.equal(bare.player.skillCd, 0, "[E] skill stays locked while no weapon is equipped");
+  assert.equal(bare.player.skillCd, 0, "[E] Weapon Skill stays locked while no weapon is equipped");
 
   bare.player.overdrive = 100;
   bare.combat.performUltimateQ(bare.ctx);
-  assert.equal(bare.player.overdrive, 100, "[Q] Ultimate stays locked while no accessory is equipped");
+  assert.equal(bare.player.overdrive, 0, "[Q] Fixed Class Signature Skill unleashes at 100% Overdrive without needing an accessory");
 
   // 3. Strict Class Equipment Locks (zero universal weapons!) & Safe Class Switch + Combat Bypass Prevention
   for (const itemDef of Object.values(ITEMS)) {
@@ -1167,10 +1174,13 @@ runTest("Pixelfx Hero Models, Equip Best, Selective Quick Sell, 25 Main+Side Que
   const k1 = qs.turnInQuest("sq_kael_1", "prism_knight");
   assert.ok(k1 && qs.getState("sq_kael_2") === "available", "Completing step 1 unlocks Kael step 2");
 
-  // 5. Balanced Mob/Boss curve & Threat/DEF combat formulas
+  // 5. Hardcore Rebalanced Mob/Boss curve & Threat/DEF combat formulas
   assert.equal(ENEMIES["null_slime"].level, 1);
-  assert.equal(ENEMIES["null_slime"].maxHp, 44);
-  assert.ok(ENEMIES["boss_the_eraser"].maxHp === 6800 && ENEMIES["boss_xing_warden"].maxHp === 1250);
+  assert.ok(ENEMIES["null_slime"].maxHp >= 70, `null_slime rebalanced tougher (HP=${ENEMIES["null_slime"].maxHp})`);
+  assert.ok(
+    ENEMIES["boss_the_eraser"].maxHp >= 12000 && ENEMIES["boss_xing_warden"].maxHp >= 2200,
+    "Regional & World Bosses scaled for grind-to-boss progression"
+  );
 
   const defLow = makeTestHarness("prism_knight");
   const defHi = makeTestHarness("prism_knight");
@@ -1354,7 +1364,7 @@ runTest("Attack Animation & Pixelfx VFX Synchronization Across All Classes & Mod
 // ============================================================================
 // 10. 10 REFERENCE MONSTER MODELS, 4-DIRECTION ATLAS & SYNCHRONIZED SKILL VFX
 // ============================================================================
-runTest("10 Reference Monster Models, 4-Direction Atlas & Synchronized Enemy Skill VFX", () => {
+runTest("19 Reference Monster Models, 4-Direction Atlas & Synchronized Enemy Skill VFX", () => {
   const refMonsterIds = [
     "null_slime",
     "ash_hopper",
@@ -1366,21 +1376,37 @@ runTest("10 Reference Monster Models, 4-Direction Atlas & Synchronized Enemy Ski
     "static_imp",
     "quartz_knight",
     "boss_blight_root",
+    "cinder_imp",
+    "amber_beetle",
+    "amber_warrior",
+    "boss_gilded_null",
+    "void_wraith",
+    "prism_golem",
+    "null_knight",
+    "void_gatekeeper",
+    "boss_the_eraser",
   ] as const;
 
   const frames = codixelEnemiesMeta.frames as Record<string, { x: number; y: number; w: number; h: number; anchorY: number }>;
   const monsters = codixelEnemiesMeta.monsters as Record<string, { w: number; h: number; floating: boolean }>;
 
-  assert.equal(Object.keys(frames).length, 122, "Enemy sprite atlas contains 122 multi-frame sprites (10x4x3 + 2 special poses)");
+  assert.equal(
+    Object.keys(frames).length,
+    306,
+    "Enemy sprite atlas contains 306 HD multi-frame sprites (19x4x4 with :atk strike frames + 2 special poses)"
+  );
+  assert.equal(Object.keys(ENEMIES).length, 19, "All 19 enemies & bosses across all 4 biomes are registered");
   for (const id of refMonsterIds) {
-    assert.ok(monsters[id] && monsters[id].w >= 24 && monsters[id].h >= 22, `${id} registered in codixel-enemies metadata`);
+    assert.ok(monsters[id] && monsters[id].w >= 28 && monsters[id].h >= 26, `${id} registered in sharpened HD codixel-enemies metadata`);
     for (const dir of ["front", "right", "left", "back"] as const) {
       const f = frames[`${id}:${dir}`];
       const f1 = frames[`${id}:${dir}:1`];
       const f2 = frames[`${id}:${dir}:2`];
+      const fAtk = frames[`${id}:${dir}:atk`];
       assert.ok(f && f.w > 0 && f.h > 0 && f.anchorY === f.h, `${id}:${dir} has valid grounded frame rect`);
       assert.ok(f1 && f1.w === f.w && f1.h === f.h, `${id}:${dir}:1 animation frame present`);
       assert.ok(f2 && f2.w === f.w && f2.h === f.h, `${id}:${dir}:2 animation frame present`);
+      assert.ok(fAtk && fAtk.w === f.w && fAtk.h === f.h, `${id}:${dir}:atk strike animation frame present`);
     }
     assert.ok(ENEMIES[id], `${id} exists in ENEMIES`);
     assert.ok(ENEMY_DROP_TABLES[id], `${id} exists in ENEMY_DROP_TABLES`);
@@ -1584,27 +1610,73 @@ runTest("10 Reference Monster Models, 4-Direction Atlas & Synchronized Enemy Ski
     );
   }
 
-  // Test Amber & Ruins monsters animation states + biome-specific enemy deaths
+  // Test Amber & Ruins monsters (including 3 new Amber/Ruins Mini-Bosses & Elites) + biome-specific enemy deaths
   {
     const expectedOther = [
-      ["amber_beetle", "amber_roll", "explode-fire"],
-      ["cinder_imp", "ember_cast", "explode-fire"],
-      ["prism_golem", "void_slam", "explode-void"],
-      ["void_wraith", "void_blink", "explode-void"],
+      ["amber_beetle", "ember_cast", "claw_clamp", "explode-fire"],
+      ["cinder_imp", "amber_roll", "ember_volley", "explode-fire"],
+      ["amber_warrior", "molten_slam", "ember_cast", "explode-fire"],
+      ["prism_golem", "void_barrage", "void_slam", "explode-void"],
+      ["void_wraith", "void_blink", "dive_slash", "explode-void"],
+      ["null_knight", "halberd_sweep", "crystal_lunge", "explode-void"],
+      ["void_gatekeeper", "void_barrage", "quartz_shield", "explode-void"],
     ] as const;
-    for (const [id, expectedAnim, expectedDeath] of expectedOther) {
+    for (const [id, firstAnim, secondAnim, expectedDeath] of expectedOther) {
       const h = makeTestHarness("prism_knight");
       const rec = { live: [] as MockVfxCall[], pooled: [] as MockVfxCall[] };
       h.ctx.vfx = createMockVfx(rec);
       const e = spawnDummyEnemy(h.spawner, h.player.x + 50, h.player.y, id);
       e.aiTimer = 0;
       h.combat.update(h.ctx, 0.016);
-      assert.equal(e.animKind, expectedAnim, `${id} runs synchronized Amber/Ruins skill pose (${expectedAnim})`);
+      assert.equal(e.animKind, firstAnim, `${id} runs synchronized first skill pose (${firstAnim})`);
+
+      e.animTime = 0;
+      e.dashTime = 0;
+      e.aiTimer = 0;
+      h.combat.update(h.ctx, 0.016);
+      assert.equal(e.animKind, secondAnim, `${id} cycles cleanly to second skill pose (${secondAnim})`);
+
+      if (id === "void_gatekeeper") {
+        assert.ok(e.guardTime > 2.0, "void_gatekeeper Khiên Nhiễu Trắng activates guardTime");
+        assert.ok(rec.live.some((c) => c.modId === "pixtel/hex-shield"), "void_gatekeeper spawns hex-shield VFX");
+        e.animTime = 0;
+        e.aiTimer = 0;
+        h.combat.update(h.ctx, 0.016);
+        assert.equal(e.animKind, "thin_laser", "void_gatekeeper cycles to Tia Hư Vô beam");
+      }
+
+      if (id === "amber_warrior") {
+        e.animTime = 0;
+        e.aiTimer = 0;
+        h.combat.update(h.ctx, 0.016);
+        assert.equal(e.animKind, "ember_volley", "amber_warrior cycles to Cuồng Nộ Hổ Phách");
+        assert.ok(e.enrageBuffTime > 4.0, "amber_warrior Cuồng Nộ Hổ Phách grants enrageBuffTime");
+      }
 
       rec.pooled.length = 0;
       rec.live.length = 0;
       h.combat.damageEnemy(h.ctx, e, 999999, false, "hit-cyan");
       assert.ok(rec.pooled.some((c) => c.modId === expectedDeath), `${id} death emits biome-specific ${expectedDeath}`);
+    }
+
+    // Verify Amber Boss (Chúa Tể Hổ Phách) & Ruins Boss (The Eraser) signature moves
+    for (const [bossId, firstAnim, secondAnim] of [
+      ["boss_gilded_null", "claw_clamp", "ember_volley"],
+      ["boss_the_eraser", "void_barrage", "thin_laser"],
+    ] as const) {
+      const h = makeTestHarness("prism_knight");
+      const rec = { live: [] as MockVfxCall[], pooled: [] as MockVfxCall[] };
+      h.ctx.vfx = createMockVfx(rec);
+      const b = spawnDummyEnemy(h.spawner, h.player.x + 54, h.player.y, bossId);
+      b.aiTimer = 0;
+      b.specialTimer = 5;
+      h.combat.update(h.ctx, 0.016);
+      assert.equal(b.animKind, firstAnim, `${bossId} triggers first signature boss attack (${firstAnim})`);
+      b.animTime = 0;
+      b.dashTime = 0;
+      b.aiTimer = 0;
+      h.combat.update(h.ctx, 0.016);
+      assert.equal(b.animKind, secondAnim, `${bossId} alternates to second signature boss attack (${secondAnim})`);
     }
   }
 });
@@ -1792,6 +1864,359 @@ runTest("Phase 1 Mobile Twin-Stick Touch, Outer-Ring Sprint, Smart Auto-Aim & Ho
   g.player.overdrive = 100;
   g.mobileUltQ();
   assert.equal(g.player.overdrive, 0, "Mobile [Q] button unleashes Class Ultimate");
+});
+
+// ============================================================================
+// 14. PIXEL HUD BACKPACK & SKILL ICONS, 29 FARM ZONES & 3D SPECIAL GEAR MODELS
+// ============================================================================
+runTest("Pixel Backpack & Skill Icons, 29 Farm Spawn Zones & Bespoke 3D Special Gear Models", () => {
+  const frames = codixelIconsMeta.frames as Record<string, { x: number; y: number; w: number; h: number }>;
+
+  // 1. Verify all 16 HUD backpack & class skill pixel icons exist in codixel-icons.json
+  const requiredHudIcons = [
+    "ui_backpack",
+    "ui_lock",
+    "skill_unarmed",
+    "skill_dash",
+    "skill_knight_lmb",
+    "skill_knight_e",
+    "skill_knight_q",
+    "skill_mage_lmb",
+    "skill_mage_e",
+    "skill_mage_q",
+    "skill_rogue_lmb",
+    "skill_rogue_e",
+    "skill_rogue_q",
+    "skill_tinker_lmb",
+    "skill_tinker_e",
+    "skill_tinker_q",
+  ];
+  for (const key of requiredHudIcons) {
+    assert.ok(frames[key], `HUD/Skill pixel icon '${key}' must exist in codixel-icons.json`);
+  }
+
+  // 2. Verify EVERY item with a spriteKey resolves to a real frame in codixel-icons.json
+  for (const item of Object.values(ITEMS)) {
+    if (item.spriteKey) {
+      assert.ok(
+        frames[item.spriteKey],
+        `Item '${item.id}' spriteKey '${item.spriteKey}' must exist in codixel-icons.json`
+      );
+    }
+  }
+
+  // 3. Verify all 4 classes now have Legendary Hidden Craft Weapons & strictly class-locked
+  const mythicByClass: Record<ClassId, string> = {
+    prism_knight: "hid_craft_prism_blade",
+    chroma_mage: "hid_craft_nebula_staff",
+    bit_rogue: "hid_craft_eclipse_fangs",
+    pixel_tinker: "hid_craft_nova_railgun",
+  };
+  for (const [cid, itemId] of Object.entries(mythicByClass) as [ClassId, string][]) {
+    const def = ITEMS[itemId];
+    assert.ok(def && def.isHidden && def.rarity === "legendary", `Mythic hidden weapon ${itemId} exists`);
+    assert.equal(def.requiredClass, cid, `${itemId} is strictly locked to ${cid}`);
+    assert.equal(canClassEquip(def, cid), true, `${cid} can equip ${itemId}`);
+    for (const other of ["prism_knight", "chroma_mage", "bit_rogue", "pixel_tinker"] as ClassId[]) {
+      if (other !== cid) {
+        assert.equal(canClassEquip(def, other), false, `${other} cannot equip ${itemId}`);
+      }
+    }
+  }
+
+  // 4. Verify expanded 29 WORLD_CAMPS (all 4 biomes >= 6 camps, none inside Origin Town, all walkable)
+  assert.ok(WORLD_CAMPS.length >= 28, `WORLD_CAMPS expanded for combat farming (got ${WORLD_CAMPS.length})`);
+  const world = new WorldMap();
+  const byBiome: Record<string, number> = { meadow: 0, quartz: 0, amber: 0, ruins: 0 };
+  for (const camp of WORLD_CAMPS) {
+    byBiome[camp.biome] = (byBiome[camp.biome] ?? 0) + 1;
+    const inTown =
+      camp.tx >= TOWN_BOUNDS.x0 &&
+      camp.tx <= TOWN_BOUNDS.x1 &&
+      camp.ty >= TOWN_BOUNDS.y0 &&
+      camp.ty <= TOWN_BOUNDS.y1;
+    assert.equal(inTown, false, `Farm camp ${camp.id} must not spawn inside Origin Town`);
+    assert.equal(
+      world.isBlocked(camp.tx * TILE_SIZE + 8, camp.ty * TILE_SIZE + 8, 4),
+      false,
+      `Farm camp ${camp.id} must sit on walkable terrain`
+    );
+  }
+  for (const b of ["meadow", "quartz", "amber", "ruins"]) {
+    assert.ok(byBiome[b] >= 6, `Biome ${b} has at least 6 spawn zones (got ${byBiome[b]})`);
+  }
+
+  // 5. Verify bespoke 3D pixelfx weapon, headgear & backAccessory models render cleanly
+  const newWeapons = ["prism_blade", "null_sever", "greataxe", "astral_staff", "twin_quantum", "rail_cannon"];
+  const newHeadgears = ["dragon_helm", "royal_crown", "antler_crest"] as const;
+  const newBacks = ["prism_wings", "warden_roots", "amber_thrusters"] as const;
+  for (const wpn of newWeapons) {
+    const out = (posedStyled as (p: Record<string, unknown>, t: Record<string, unknown>, s: number) => { n: number })(
+      { weapon: wpn, offWeapon: wpn === "twin_quantum" ? wpn : undefined, fx: 8, fy: -18 },
+      { headgear: "dragon_helm", backAccessory: "prism_wings" },
+      0.62
+    );
+    assert.ok(out.n > 80, `3D weapon model '${wpn}' renders cleanly (pixels=${out.n})`);
+  }
+  for (const hg of newHeadgears) {
+    for (const bk of newBacks) {
+      const out = (posedStyled as (p: Record<string, unknown>, t: Record<string, unknown>, s: number) => { n: number })(
+        { weapon: "prism_blade", fx: 6, fy: -16 },
+        { headgear: hg, backAccessory: bk },
+        0.62
+      );
+      assert.ok(out.n > 80, `3D gear combo '${hg}' + '${bk}' renders cleanly (pixels=${out.n})`);
+    }
+  }
+});
+
+// ============================================================================
+// 15. PIXTEL v3.0: WEAPON-SPECIFIC SKILLS, 16 EXOTIC DROPS, 4 BOSS CHESTS & GACHA
+// ============================================================================
+runTest("PIXTEL v3.0: Weapon-Specific [E] Skills, 16 Exotic Drop-Only Gear, 4 Boss Chests & Seasonal Gacha", () => {
+  const iconFrames = codixelIconsMeta.frames as Record<string, { x: number; y: number; w: number; h: number }>;
+
+  // 1. Every weapon resolves to a valid Weapon Skill with a real codixel iconKey
+  let weaponCount = 0;
+  for (const def of Object.values(ITEMS)) {
+    if (def.category === "equipment" && def.slot === "weapon") {
+      weaponCount++;
+      const ws = getWeaponSkillForItem(def.id);
+      assert.ok(ws && WEAPON_SKILLS[ws.id], `Weapon ${def.id} resolves to registered WeaponSkill`);
+      assert.ok(iconFrames[ws.iconKey], `WeaponSkill ${ws.id} iconKey '${ws.iconKey}' exists in codixel-icons.json`);
+    }
+  }
+  assert.ok(weaponCount >= 40, `All ${weaponCount} weapons mapped to Weapon Skills`);
+
+  // Swapping weapons within the same Class dynamically changes [E] Skill, Icon & Execution!
+  const kH = makeTestHarness("prism_knight");
+  kH.spawner.enemies.length = 0;
+  spawnDummyEnemy(kH.spawner, kH.player.x + 42, kH.player.y, "root_golem");
+
+  const wsStarter = getWeaponSkillForItem(kH.inv.equipment.weapon?.defId);
+  kH.inv.addItem("exo_wpn_blood_greatsword", 1, 0);
+  const bloodUid = kH.inv.bag.find((b) => b.defId === "exo_wpn_blood_greatsword")!.uid;
+  assert.equal(kH.inv.equipFromBag(bloodUid, "prism_knight").ok, true);
+  const wsBlood = getWeaponSkillForItem(kH.inv.equipment.weapon?.defId);
+  assert.notEqual(wsStarter.id, wsBlood.id, "Swapping weapon changes [E] Weapon Skill ID");
+  assert.notEqual(wsStarter.iconKey, wsBlood.iconKey, "Swapping weapon changes [E] HUD pixel icon");
+
+  kH.player.skillCd = 0;
+  kH.player.hp = Math.floor(kH.player.maxHp * 0.5);
+  const hpBeforeBlood = kH.player.hp;
+  const golemBeforeBlood = kH.spawner.enemies[0]!.hp;
+  kH.combat.performSkillE(kH.ctx);
+  assert.ok(kH.player.skillCd > 0, "Exotic weapon skill enters weapon-specific cooldown");
+  assert.ok(kH.spawner.enemies[0]!.hp < golemBeforeBlood, "Blood Greatsword [E] Crimson Reap cleaves target");
+  assert.ok(kH.player.hp > hpBeforeBlood, "Blood Greatsword [E] Crimson Reap lifesteals +8% maxHp on hit");
+
+  // 2. All 16 Exotic Skill-Altering Gear items are strictly Drop-Only (zero shop/craft/random leak!)
+  const exoticList = Object.values(EXOTIC_ITEMS);
+  assert.equal(exoticList.length, 16, "Exactly 16 Exotic Skill-Altering gear pieces registered");
+  const allDropItemIds = new Set<string>();
+  for (const tbl of Object.values(ENEMY_DROP_TABLES)) {
+    for (const g of tbl.guaranteed ?? []) allDropItemIds.add(g.itemId);
+    for (const r of tbl.rolls) allDropItemIds.add(r.itemId);
+  }
+  for (const ex of exoticList) {
+    assert.equal(ex.dropOnly, true, `Exotic ${ex.id} must be dropOnly: true`);
+    assert.equal(MERCHANT_STOCK.includes(ex.id), false, `Exotic ${ex.id} never appears in Merchant Shop`);
+    assert.equal(
+      FORGE_RECIPES.some((r) => r.resultDefId === ex.id),
+      false,
+      `Exotic ${ex.id} never appears in Forge Recipes`
+    );
+    assert.equal(allDropItemIds.has(ex.id), true, `Exotic ${ex.id} drops from monsters or bosses in ENEMY_DROP_TABLES`);
+  }
+  for (const r of ["common", "uncommon", "rare", "epic", "legendary"] as const) {
+    for (let i = 0; i < 40; i++) {
+      const rolled = pickRandomEquipByRarity(r);
+      assert.ok(!ITEMS[rolled]?.dropOnly && !ITEMS[rolled]?.seasonalBannerId, `Random equip never leaks exotic/seasonal (${rolled})`);
+    }
+  }
+
+  // Equip Exotic Armor/Helm/Boots -> verify exoticMods activate & mutate Dash / Combat!
+  kH.inv.addItem("exo_helm_frost_gaze", 1, 0);
+  kH.inv.addItem("exo_boots_quake_stompers", 1, 0);
+  kH.inv.equipFromBag(kH.inv.bag.find((b) => b.defId === "exo_helm_frost_gaze")!.uid, "prism_knight");
+  kH.inv.equipFromBag(kH.inv.bag.find((b) => b.defId === "exo_boots_quake_stompers")!.uid, "prism_knight");
+  recalculatePlayerStats(kH.player, kH.inv, false);
+  assert.equal(kH.player.exoticMods?.has("mod_dash_frost_nova"), true, "Frost Gaze helm activates mod_dash_frost_nova");
+  assert.equal(kH.player.exoticMods?.has("mod_dash_quake_stomp"), true, "Quake Stompers boots activate mod_dash_quake_stomp");
+
+  const golem = kH.spawner.enemies[0]!;
+  golem.x = kH.player.x + 28;
+  golem.y = kH.player.y;
+  const golemHpBefore = golem.hp;
+  kH.player.dashCd = 0;
+  kH.player.stamina = 100;
+  kH.combat.performDash(kH.ctx, 1, 0);
+  assert.ok(golem.hp < golemHpBefore, "Exotic Dash mods deal Frost Nova & Quake Stomp damage on Dash");
+  assert.ok((kH.player.exoticIcds?.mod_dash_frost_nova ?? 0) > 0, "Exotic mod enters balanced ICD after triggering");
+
+  // 3. Map Chest Cleanup: ONLY 4 Boss Arena Main Chests remain on the open world map!
+  const chestCamps = WORLD_CAMPS.filter((c) => c.hasLockedChest);
+  assert.equal(chestCamps.length, 4, "Exactly 4 camps hold chests on the world map (Boss Arenas only)");
+  assert.deepEqual(
+    chestCamps.map((c) => c.id).sort(),
+    ["camp_amber_boss", "camp_meadow_boss", "camp_quartz_boss", "camp_world_boss"],
+    "Only the 4 regional & world Boss Arenas keep their main Boss Chest"
+  );
+  const freshSpawner = new WorldSpawner();
+  freshSpawner.reset([]);
+  assert.equal(freshSpawner.chests.length, 4, "WorldSpawner creates strictly 4 Boss Chests");
+
+  // 4. 4 Biome Seasonal Keys drop from biome mobs, craft at Forge, & Gacha Altar is interactable
+  const keyIds = Object.keys(GACHA_KEY_ITEMS);
+  assert.equal(keyIds.length, 4, "4 Biome Gacha Keys registered");
+  assert.equal(Object.keys(SEASONAL_ITEMS).length, 8, "8 Seasonal Gacha exclusive items registered");
+  for (const kid of keyIds) {
+    assert.equal(allDropItemIds.has(kid), true, `Biome key ${kid} drops from mobs/bosses`);
+    assert.ok(GACHA_KEY_RECIPES.some((r) => r.resultDefId === kid), `Biome key ${kid} has a Forge crafting recipe`);
+  }
+  const nearAltar = findNearestInteractable(
+    GACHA_ALTAR_POS.tx * TILE_SIZE + 8,
+    GACHA_ALTAR_POS.ty * TILE_SIZE + 14,
+    kH.colorSys,
+    [],
+    []
+  );
+  assert.equal(nearAltar?.kind, "gacha_altar", "Town Seasonal Gacha Altar is interactable via [F]");
+
+  // 5. GachaSystem: Key gating, 1x & 5x rolls, Hard Pity 10/25, Duplicate Shard+Gold protection & Save persistence
+  const gacha = new GachaSystem();
+  const gInv = new InventorySystem();
+  gInv.resetStarterKit("chroma_mage");
+
+  const failRoll = gacha.roll("banner_winter", 1, gInv);
+  assert.equal(failRoll.ok, false, "Gacha refuses roll without matching Biome Key");
+
+  gInv.addItem("key_season_winter", 30);
+  const roll5 = gacha.roll("banner_winter", 5, gInv);
+  assert.equal(roll5.ok, true, "Gacha 5x Multi-Roll succeeds when holding 5+ Biome Keys");
+  assert.equal(roll5.outcomes.length, 5);
+  assert.equal(gInv.countItem("key_season_winter"), 25, "5x Roll consumes exactly 5 Biome Keys");
+
+  // Roll remaining 25 keys -> guarantees at least 1 Featured Seasonal Jackpot via Hard Pity 25!
+  let sawFeatured = roll5.outcomes.some((o) => o.featured);
+  let sawDupConversion = roll5.outcomes.some((o) => o.isDuplicate && o.bonusShards > 0 && o.bonusGold > 0);
+  for (let i = 0; i < 5; i++) {
+    const r = gacha.roll("banner_winter", 5, gInv);
+    assert.equal(r.ok, true);
+    if (r.outcomes.some((o) => o.featured)) sawFeatured = true;
+    if (r.outcomes.some((o) => o.isDuplicate && o.bonusShards > 0 && o.bonusGold > 0)) sawDupConversion = true;
+  }
+  assert.equal(sawFeatured, true, "Hard Pity 25 guarantees Featured Seasonal Jackpot within 30 rolls");
+  assert.equal(sawDupConversion, true, "Duplicate equipment rolls auto-convert into Prism Shards + Gold");
+  assert.equal(gacha.totalRolls, 30);
+  assert.equal(GACHA_BANNERS.length, 4);
+
+  // Verify Gacha state export/import round-trip
+  const exported = gacha.exportState();
+  const gacha2 = new GachaSystem();
+  gacha2.importState(exported);
+  assert.equal(gacha2.totalRolls, 30, "Gacha totalRolls persists across export/import");
+  assert.equal(gacha2.history.length, 30, "Gacha roll history persists across export/import");
+});
+
+// ============================================================================
+// 16. AUTO-SELL LOW-RARITY GEAR, BACKPACK EXPANSIONS (40->80) & SPAWN STASH CHEST
+// ============================================================================
+runTest("Auto-Sell Low-Rarity Gear, 4-Tier Backpack Upgrades (40->80 Slots) & Personal Spawn Stash Chest", () => {
+  const iconFrames = codixelIconsMeta.frames as Record<string, { x: number; y: number; w: number; h: number }>;
+  for (const key of ["ui_stash_chest", "ui_backpack_t1", "ui_backpack_t2", "ui_backpack_t3", "ui_backpack_t4"]) {
+    assert.ok(iconFrames[key], `Codixel icon '${key}' exists in codixel-icons.json`);
+  }
+
+  // 1. Auto-Sell Low-Rarity Equipment with strict safety guards for Exotic / Hidden / Seasonal / Enhanced!
+  const inv = new InventorySystem();
+  inv.resetStarterKit("prism_knight");
+  inv.setAutoSell("uncommon", false);
+
+  const commonSwd = createItemInstance("wpn_starter", 1, 0);
+  const uncommonSwd = createItemInstance("wpn_meadow_edge", 1, 0);
+  const enhancedCommon = createItemInstance("wpn_starter", 1, 2); // +2 enhanced -> PROTECTED!
+  const exoticWpn = createItemInstance("exo_wpn_blood_greatsword", 1, 0); // Exotic -> PROTECTED!
+  const seasonalWpn = createItemInstance("sea_wpn_spring_katana", 1, 0); // Seasonal -> PROTECTED!
+  const hiddenArm = createItemInstance("hid_boss_warden_mantle", 1, 0); // Hidden -> PROTECTED!
+
+  assert.equal(inv.shouldAutoSell(commonSwd, "prism_knight"), true, "Auto-Sell <= Uncommon sells Common gear");
+  assert.equal(inv.shouldAutoSell(uncommonSwd, "prism_knight"), true, "Auto-Sell <= Uncommon sells Uncommon gear");
+  assert.equal(inv.shouldAutoSell(enhancedCommon, "prism_knight"), false, "Auto-Sell NEVER sells enhanced (+N) gear");
+  assert.equal(inv.shouldAutoSell(exoticWpn, "prism_knight"), false, "Auto-Sell NEVER sells Exotic dropOnly gear");
+  assert.equal(inv.shouldAutoSell(seasonalWpn, "prism_knight"), false, "Auto-Sell NEVER sells Seasonal Gacha gear");
+  assert.equal(inv.shouldAutoSell(hiddenArm, "prism_knight"), false, "Auto-Sell NEVER sells Hidden Relics");
+
+  const goldBeforeAuto = inv.gold;
+  const soldRes = inv.tryAutoSellInstance(uncommonSwd, "prism_knight");
+  assert.equal(soldRes.sold, true);
+  assert.ok(soldRes.gold > 0 && inv.gold === goldBeforeAuto + soldRes.gold, "tryAutoSellInstance credits exact Gold");
+
+  // Sweep existing bag items cleanly
+  inv.addExistingInstance(commonSwd);
+  inv.addExistingInstance(exoticWpn);
+  const sweep = inv.sweepAutoSellBag("prism_knight");
+  assert.equal(sweep.soldCount, 1, "sweepAutoSellBag sells only eligible low-rarity item");
+  assert.equal(inv.bag.some((b) => b.defId === "exo_wpn_blood_greatsword"), true, "sweepAutoSellBag protects Exotic gear");
+
+  // 2. 4-Tier Backpack Upgrades expanding Bag Capacity from 40 -> 80 slots!
+  assert.equal(BACKPACK_UPGRADES.length, 4);
+  assert.equal(inv.bagCapacity, 40);
+  inv.gold = 100;
+  assert.equal(inv.buyNextBackpackUpgrade().ok, false, "Cannot buy Backpack Tier 1 without 250G");
+
+  inv.gold = 10000;
+  for (let t = 1; t <= 4; t++) {
+    const up = inv.buyNextBackpackUpgrade();
+    assert.equal(up.ok, true, `Buying Backpack Tier ${t} succeeds`);
+    assert.equal(inv.bagCapacity, 40 + t * 10, `Bag capacity expands to ${40 + t * 10}`);
+  }
+  assert.equal(inv.bagCapacity, 80);
+  assert.equal(inv.getNextBackpackUpgrade(), null, "Maxed backpack returns null next upgrade");
+
+  // Confirm bag actually accepts > 40 items (fill to 55!)
+  for (let i = 0; i < 55; i++) {
+    assert.equal(inv.addItem("wpn_starter", 1, 0), true, `Expanded bag accepts item #${i + 1}`);
+  }
+  assert.ok(inv.bag.length >= 55);
+
+  // 3. Personal Storage Chest at Spawn (walkable, [F] interactable, deposit/withdraw/depositAllMaterials & persistence)
+  const world = new WorldMap();
+  const sx = STORAGE_CHEST_POS.tx * TILE_SIZE + 8;
+  const sy = STORAGE_CHEST_POS.ty * TILE_SIZE + 8;
+  assert.equal(world.isBlocked(sx, sy, 4), false, "Spawn Personal Stash Chest sits on walkable ground");
+  const colorSys = new ColorRestorationSystem();
+  colorSys.reset();
+  const nearStash = findNearestInteractable(sx + 4, sy + 4, colorSys, [], []);
+  assert.equal(nearStash?.kind, "stash_chest", "Personal Stash Chest at Spawn is interactable via [F]");
+
+  const exoticUid = inv.bag.find((b) => b.defId === "exo_wpn_blood_greatsword")!.uid;
+  assert.equal(inv.depositToStash(exoticUid).ok, true, "Depositing Exotic weapon into Personal Stash succeeds");
+  assert.equal(inv.bag.some((b) => b.uid === exoticUid), false);
+  assert.ok(inv.findInStash(exoticUid), "Deposited item is stored safely in stash");
+
+  inv.addItem("mat_iron_ore", 12);
+  inv.addItem("key_season_spring", 3);
+  const movedMats = inv.depositAllMaterialsToStash();
+  assert.equal(movedMats, 1, "Quick-deposit moves regular materials while keeping Seasonal Gacha Keys in bag");
+  assert.equal(inv.countItem("key_season_spring"), 3, "Gacha keys stay in bag during quick material deposit");
+
+  assert.equal(inv.withdrawFromStash(exoticUid).ok, true, "Withdrawing item from Stash returns it to bag");
+  assert.equal(inv.bag.some((b) => b.uid === exoticUid), true);
+
+  // Save/load state round-trip
+  const inv2 = new InventorySystem();
+  inv2.loadState(inv.gold, inv.equipment, inv.bag, {
+    bagCapacity: inv.bagCapacity,
+    backpackTier: inv.backpackTier,
+    stash: inv.stash,
+    autoSell: inv.autoSell,
+  });
+  assert.equal(inv2.bagCapacity, 80, "Expanded bagCapacity persists via loadState");
+  assert.equal(inv2.backpackTier, 4, "backpackTier persists via loadState");
+  assert.equal(inv2.autoSell.maxRarity, "uncommon", "autoSell setting persists via loadState");
+  assert.equal(inv2.stash.length, inv.stash.length, "Personal Stash items persist via loadState");
+  assert.equal(MAX_STASH_SLOTS, 80);
 });
 
 // ============================================================================

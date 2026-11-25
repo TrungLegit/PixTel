@@ -8,7 +8,8 @@ import {
   resolveClassReward,
 } from "../data/items";
 import { TOWN_NPCS } from "../data/worldConfig";
-import { onCodixelReady } from "../graphics/codixelAtlas";
+import { drawCodixelIcon, onCodixelReady } from "../graphics/codixelAtlas";
+import { BACKPACK_UPGRADES } from "../systems/inventorySystem";
 import { uiRarityFx } from "../vfx/uiRarityFx";
 import type { PixTelOpenWorldGame } from "../game";
 import { sfx } from "../audio/chiptuneSynth";
@@ -71,7 +72,31 @@ export class DialogueModalUI {
 
     // Merchant Shop
     if (npc.kind === "merchant") {
-      html += `<div class="section-hdr">CỬA HÀNG VẬT PHẨM (Vàng hiện có: <b style="color:#ffe066">${this.game.inv.gold} G</b>)</div>`;
+      html += `<div class="section-hdr">CỬA HÀNG VẬT PHẨM (Vàng hiện có: <b style="color:#ffe066">${this.game.inv.gold} G</b> · Kho đồ: <b style="color:#5ef2ff">${this.game.inv.bag.length}/${this.game.inv.bagCapacity} Ô</b>)</div>`;
+
+      // Backpack Expansion Upgrades (40 -> 50 -> 60 -> 70 -> 80 slots)
+      html += `<div class="shop-cat-hdr">🎒 Mở Rộng Balo Hành Trang (Tối đa 80 Ô)</div><div class="backpack-shop-grid">`;
+      for (const bp of BACKPACK_UPGRADES) {
+        const owned = this.game.inv.backpackTier >= bp.tier;
+        const isNext = this.game.inv.backpackTier + 1 === bp.tier;
+        const canBuy = isNext && this.game.inv.gold >= bp.price;
+        const btn = owned
+          ? `<span class="bp-owned-tag">✓ ĐÃ SỞ HỮU</span>`
+          : isNext
+            ? `<button class="px-btn sm ${canBuy ? "good" : "disabled"}" data-buy-backpack="${bp.tier}">Mua · ${bp.price}G</button>`
+            : `<span class="bp-lock-tag">🔒 Cần Balo cấp ${bp.tier - 1}</span>`;
+        html += `
+          <div class="backpack-card ${owned ? "owned" : isNext ? "next" : "locked"}" style="border-color:${owned ? "#44ee88" : bp.color}">
+            <canvas class="bp-icon-cv" data-bp-icon="${bp.iconKey}" width="32" height="32"></canvas>
+            <div class="bp-info">
+              <div class="bp-name" style="color:${bp.color}">${bp.name}</div>
+              <div class="bp-desc">${bp.desc}</div>
+            </div>
+            <div class="bp-act">${btn}</div>
+          </div>
+        `;
+      }
+      html += `</div>`;
       const groups: { title: string; ids: string[] }[] = [
         {
           title: "Dược Phẩm Tiêu Thụ (Đa Tier)",
@@ -195,8 +220,34 @@ export class DialogueModalUI {
 
     // Paint codixel icons & attach live pixelfx high-rarity slot auras
     uiRarityFx.syncContainer(this.bodyEl);
+    this.bodyEl.querySelectorAll<HTMLCanvasElement>("[data-bp-icon]").forEach((cv) => {
+      const ctx = cv.getContext("2d");
+      if (ctx) {
+        ctx.clearRect(0, 0, cv.width, cv.height);
+        drawCodixelIcon(ctx, cv.dataset.bpIcon, 0, 0, cv.width);
+      }
+    });
 
     // Bind dynamic buttons
+    this.bodyEl.querySelectorAll("[data-buy-backpack]").forEach((el) => {
+      el.addEventListener("click", () => {
+        const res = this.game.inv.buyNextBackpackUpgrade();
+        if (!res.ok) {
+          sfx.playForgeFail();
+          this.game.uiToast(res.reason ?? "Không thể mua Balo!", "warn");
+          return;
+        }
+        sfx.playHiddenUnlock();
+        this.game.saveGame(false);
+        this.game.refreshHud();
+        this.game.uiToast(
+          `🎒 Đã mua ${res.upgrade!.name}! Kho đồ mở rộng lên ${res.upgrade!.totalSlots} ô!`,
+          "epic"
+        );
+        this.render();
+      });
+    });
+
     this.bodyEl.querySelectorAll("[data-action='open-forge']").forEach((el) => {
       el.addEventListener("click", () => {
         sfx.playUiClick();
@@ -215,7 +266,10 @@ export class DialogueModalUI {
           return;
         }
         if (!this.game.inv.addItem(defId, 1, 0)) {
-          this.game.uiToast("Túi đồ đã đầy (32/32)!", "warn");
+          this.game.uiToast(
+            `Túi đồ đã đầy (${this.game.inv.bag.length}/${this.game.inv.bagCapacity})! Hãy mua Balo lớn hơn hoặc cất vào Rương Cá Nhân!`,
+            "warn"
+          );
           return;
         }
         this.game.inv.gold -= def.buyPrice;

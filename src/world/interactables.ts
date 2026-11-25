@@ -1,4 +1,4 @@
-import { CLASS_ALTAR_POS, TILE_SIZE, TOWN_NPCS, WAYPOINTS } from "../data/worldConfig";
+import { CLASS_ALTAR_POS, GACHA_ALTAR_POS, STORAGE_CHEST_POS, TILE_SIZE, TOWN_NPCS, WAYPOINTS } from "../data/worldConfig";
 import { ITEMS } from "../data/items";
 import { LORE_TABLETS } from "../data/lore";
 import type { LoreTabletDef, NpcDef, WaypointDef } from "../data/types";
@@ -8,6 +8,8 @@ import type { ColorRestorationSystem } from "../graphics/colorRestoration";
 export type InteractableTarget =
   | { kind: "npc"; npc: NpcDef; x: number; y: number; prompt: string; dist: number }
   | { kind: "altar"; x: number; y: number; prompt: string; dist: number }
+  | { kind: "stash_chest"; x: number; y: number; prompt: string; dist: number }
+  | { kind: "gacha_altar"; x: number; y: number; prompt: string; dist: number }
   | { kind: "waypoint"; wp: WaypointDef; unlocked: boolean; x: number; y: number; prompt: string; dist: number }
   | { kind: "lore"; lore: LoreTabletDef; read: boolean; x: number; y: number; prompt: string; dist: number }
   | { kind: "chest"; chest: ChestEntity; x: number; y: number; prompt: string; dist: number }
@@ -56,6 +58,28 @@ export function findNearestInteractable(
     consider(
       { kind: "altar", x, y, prompt: `[F] Đài Đổi Class`, dist },
       2
+    );
+  }
+
+  // 2b. Personal Storage Chest right beside Spawn (Rương Cá Nhân)
+  {
+    const x = STORAGE_CHEST_POS.tx * TILE_SIZE + 8;
+    const y = STORAGE_CHEST_POS.ty * TILE_SIZE + 8;
+    const dist = Math.hypot(px - x, py - y);
+    consider(
+      { kind: "stash_chest", x, y, prompt: `[F] 📦 Mở Rương Cá Nhân (Cất / Lấy Đồ)`, dist },
+      0
+    );
+  }
+
+  // 2c. Seasonal Gacha Altar (Đài Rương Gacha Mùa)
+  {
+    const x = GACHA_ALTAR_POS.tx * TILE_SIZE + 8;
+    const y = GACHA_ALTAR_POS.ty * TILE_SIZE + 8;
+    const dist = Math.hypot(px - x, py - y);
+    consider(
+      { kind: "gacha_altar", x, y, prompt: `[F] ★ Đài Rương Gacha Mùa [G]`, dist },
+      1
     );
   }
 

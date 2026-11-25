@@ -285,6 +285,61 @@ class ChiptuneSynth {
     this.tone(523, 784, 0.16, "triangle", 0.22, 0.06);
     this.tone(784, 1568, 0.28, "triangle", 0.24, 0.12);
   }
+
+  /** Metallic biome key sliding & turning in the Seasonal Gacha lock. */
+  playGachaKeyTurn() {
+    this.noise(0.06, 0.16, 4600, 0);
+    this.tone(680, 960, 0.08, "square", 0.16, 0.02);
+    this.tone(1180, 1568, 0.12, "triangle", 0.18, 0.09);
+  }
+
+  /** Rising heartbeat / tension arpeggio ticks while Gacha chest shakes. */
+  playGachaTick(step: number) {
+    const base = 260 + Math.min(18, step) * 44;
+    this.tone(base, base * 1.12, 0.055, "square", 0.13 + Math.min(0.08, step * 0.005));
+    if (step % 2 === 1) {
+      this.tone(base * 1.5, base * 1.65, 0.045, "triangle", 0.1, 0.01);
+    }
+  }
+
+  /** Dramatic rarity fake-out shatter & electric upgrade surge ("Lật Kèo Đổi Màu!"). */
+  playGachaFakeoutCrack() {
+    this.noise(0.18, 0.28, 3800, 0);
+    this.tone(220, 92, 0.14, "sawtooth", 0.24, 0);
+    const surge = [523, 659, 784, 1046, 1318, 1568, 2093];
+    surge.forEach((f, i) => this.tone(f, f * 1.04, 0.16, "triangle", 0.22, 0.08 + i * 0.032));
+  }
+
+  /** Distinct celebratory reveal fanfares scaling with rarity. */
+  playGachaReveal(rarity: "common" | "uncommon" | "rare" | "epic" | "legendary") {
+    if (rarity === "legendary") {
+      // Grand rainbow-gold jackpot symphony!
+      this.noise(0.22, 0.2, 5200, 0);
+      const fanfare = [523, 659, 784, 1046, 988, 1046, 1318, 1568, 2093];
+      fanfare.forEach((n, i) => {
+        const dt = i * 0.06;
+        this.tone(n, n * 1.01, i >= 7 ? 0.42 : 0.15, "triangle", 0.24, dt);
+        if (i % 2 === 0) this.tone(n * 0.5, n * 0.5, 0.18, "square", 0.13, dt);
+      });
+      return;
+    }
+    if (rarity === "epic") {
+      // Radiant violet crystal fanfare
+      this.noise(0.14, 0.14, 4000, 0);
+      const notes = [440, 554, 659, 880, 1109, 1318];
+      notes.forEach((n, i) => this.tone(n, n * 1.02, 0.22, "triangle", 0.22, i * 0.055));
+      return;
+    }
+    if (rarity === "rare") {
+      // Crisp cyan triad chime
+      const notes = [392, 494, 587, 784];
+      notes.forEach((n, i) => this.tone(n, n * 1.02, 0.15, "triangle", 0.19, i * 0.05));
+      return;
+    }
+    // Uncommon / Common brisk pop
+    this.tone(330, 440, 0.08, "triangle", 0.16, 0);
+    this.tone(440, 587, 0.12, "triangle", 0.16, 0.05);
+  }
 }
 
 export const sfx = new ChiptuneSynth();

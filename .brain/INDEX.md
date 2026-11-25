@@ -1,39 +1,42 @@
 # Project Brain Index
-*Generated: 2026-11-25T16:10:59.945122+00:00*
+*Generated: 2026-11-25T19:06:03.587308+00:00*
 
 ## Description
 > **Thế giới mở 16-Bit Action RPG trên trình duyệt (PC · Mobile PWA · Co-op 2–4 Người)** — Khởi đầu tay không tại **Thị Trấn Khởi Nguyên**, săn trang bị **khóa chặt theo Class**, luyện **Ma Trận Luyện
 
 ## Main Modules
-- **src/** (165 files)
+- **src/** (171 files)
 - **.agents/** (38 files)
 - **(root)/** (14 files)
 - **public/** (4 files)
 - **.brain/** (3 files)
 
 ## Central Nodes
-- `file:src/game.ts` (file, 74 links): Merged v2.7 Mobile Auto-Aim + Co-op sync with loadSavedGame auto-unequip, getValidEquippedWeapon aura checks, and _buildLocalCoopSnapshot weapon validation.
-- `file:src/data/types.ts` (file, 53 links): Added ruins_weapon variant to ClassRewardKey union.
-- `file:src/systems/combat.ts` (file, 45 links): Gated weapon element resolution, LMB primary/charged attacks, and [E] skills with hasValidEquippedWeapon while preserving v2.7 Co-op hooks.
-- `file:src/data/items.ts` (file, 37 links): Hardened canClassEquip for weapon slot, added ruins_weapon ClassRewardKey, and locked fallback starter weapon to prism_knight.
-- `file:tests/featureTests.ts` (file, 30 links): Merged 13/13 v2.7 test suites (Hidden Relics, Mobile Twin-Stick, Co-op WS Server) with strict class-locked weapon and ruins_weapon tests.
-- `file:src/systems/inventorySystem.ts` (file, 24 links): Added getValidEquippedWeapon/hasValidEquippedWeapon guards across bonuses, passives, set effects, stats, and auto-unequip.
-- `file:src/ui/HUD.ts` (file, 21 links): Merged v2.7 Co-op party roster & toolbar with getValidEquippedWeapon bare-handed/skill-lock display.
-- `file:src/graphics/pixelfxHeroModels.ts` (file, 17 links): Prioritized wpn_void_scythe renderer branch ahead of halberd check for Bit Rogue scythe visuals.
-- `file:src/data/equipments.ts` (file, 17 links): Locked all 8 former universal weapons strictly to prism_knight (7 swords/axes/mauls) or bit_rogue (wpn_void_scythe).
-- `file:DEV_LOG.md` (file, 14 links): Logged new PIXTEL v2.7 gameplay-demo.gif/mp4 recording and README media refresh.
+- `file:src/game.ts` (file, 78 links): Rendered Town STASH CHEST beside Spawn, wired [F] stash modal, integrated live ground-loot Auto-Sell and dynamic bagCapacity magnet + SaveDataV2 persistence.
+- `file:src/data/types.ts` (file, 56 links): Added AutoSellMode, AutoSellSettings and optional bagCapacity/backpackTier/stash/autoSell fields to SaveDataV2.
+- `file:src/systems/combat.ts` (file, 48 links): Implemented 41 weapon-driven [E] skills, unlocked [Q] as fixed Class skill, wired 12 Exotic/Seasonal combat mods with ICDs, pack aggro alerts and hardcore threat scaling.
+- `file:src/data/items.ts` (file, 39 links): Merged EXOTIC_ITEMS, GACHA_KEY_ITEMS and SEASONAL_ITEMS into ITEMS while isolating dropOnly and seasonal items from pickRandomEquipByRarity.
+- `file:src/systems/inventorySystem.ts` (file, 34 links): Added Auto-Sell low-rarity equipment (with Exotic/Hidden/Seasonal/+N guards), 4-tier Backpack upgrades (40->80 slots), and 80-slot Personal Stash chest with save persistence.
+- `file:tests/featureTests.ts` (file, 33 links): Added Suite 16 covering Auto-Sell low-rarity guards, 4-tier Backpack upgrades (40->80) and Spawn Personal Stash Chest persistence.
+- `file:src/data/worldConfig.ts` (file, 29 links): Added STORAGE_CHEST_POS ({tx:77, ty:82}) right beside Origin Town Spawn Waypoint.
+- `file:src/ui/HUD.ts` (file, 28 links): Updated HUD bag slot to show dynamic bagCapacity, upgraded tiered Backpack codixel icon, and Auto-Sell + Stash info in hover tooltip.
+- `file:src/ui/ItemReviewTooltip.ts` (file, 27 links): Resolved stashed item UIDs via inv.findInStash so hovering items inside Personal Storage Chest shows full braided-rope inspection cards.
+- `file:src/main.ts` (file, 25 links): Instantiated and wired StorageChestModalUI into onModalChange for modal === 'stash'.
 
 ## Recent Decisions
+- **Inventory QoL: Auto-Sell Low-Rarity Guards, 4-Tier Backpack Upgrades & Spawn Stash Chest** (`decision:20261125185843-inventory-qol-autosell-lowrarity`): Auto-Sell converts eligible unenhanced normal equipment straight to Gold on pickup while strictly protecting Hidden, Exotic dropOnly, Seasonal Gacha and +N enhanced gear; 4 purchasable Backpacks expand bagCapacity from 40 to 80; Personal Stash Chest at Origin Town Spawn ({tx:77,t
+- **PIXTEL v3.0 Weapon-Driven Skills, Exotic Drop-Only Gear & Seasonal Gacha Architecture** (`decision:20261125183922-pixtel-v30-weapondriven-skills`): Separated character combat into 1 Basic/Charge Attack (LMB), 1 Fixed Class Skill ([Q], always unlocked at 100% Overdrive) and 41 dynamic Weapon-Specific [E] skills; gated 16 skill-altering Exotics strictly to mob/boss drops; removed all 25 farm/waypoint chests leaving only 4 Boss
+- **Complete 19-Monster 4-Biome Sprite Atlas (+9 Amber/Ruins Models)** (`decision:20261125172509-complete-19monster-4biome-sprite`): Completed codixel-enemies.png/json to 19 monsters/bosses (230 frames) by extracting 9 new Amber Mines & Blank Ruins reference sheets, preserving existing IDs for Save/Quest compatibility while adding amber_warrior, null_knight, and void_gatekeeper with biome-native WORLD_CAMPS an
+- **Pixel Backpack & Skill Icon Hotbar + 29 Farm Zones + Bespoke 3D Gear** (`decision:20261125170423-pixel-backpack-skill`): Moved Inventory access to a pixel Backpack button at front of bottom bar, converted LMB/E/Q/SPC to codixel pixel icons with hover-only tooltips, added 16 fast-respawn farm camps (29 total), and designed bespoke codixel + 3D pixelfx special equipment models.
 - **Phase 1 Mobile PWA + Twin-Stick & Phase 2 Dual-Transport 2-4P Co-op + GitHub Pages** (`decision:20261125154018-phase-1-mobile-pwa`): Shipped public GitHub Pages CI/CD + fullscreen landscape PWA, Phase 1 Mobile Twin-Stick controls with Smart Auto-Aim and Tap-to-Inspect tooltips, and Phase 2 2-4 Player Co-op (PeerJS WebRTC P2P + Dedicated Node.js WebSocket Room Server) with cross-player 9-element reactions, shar
-- **Self-hosted Vietnamese pixel UI font** (`decision:20261125144603-selfhosted-vietnamese-pixel-ui`): Use the OFL-licensed Pixelify Sans variable font from a local npm package as the primary game-wide UI font, removing Google Fonts runtime requests to keep Vietnamese glyph rendering available offline.
-- **Resolve current main conflicts without dropping branch history** (`decision:20261125144411-resolve-current-main-conflicts`): Use a merge commit to retain both histories; preserve both DEV_LOG entries and let project-brain tooling compact the graph and regenerate its digest rather than hand-editing graph files.
-- **Block-pixel logo lettering** (`decision:20261125143734-blockpixel-logo-lettering`): Broaden the PIXTEL canvas wordmark into a chunky 7x7 bitmap alphabet inspired by the user's Vietnamese Minecraft font reference, while keeping custom glyphs and the current chroma crest.
-- **Hidden Items System (Craft-Only & Boss-Drop Only)** (`decision:20261125143028-hidden-items-system-craftonly`): Added 8 isHidden items (4 craft_only, 4 boss_only) strictly isolated from shops/chests/normal mobs, masked as ??? until discovered, permanently unlocked in localStorage, and integrated with combat passives, VFX, and Paper-Doll shimmer.
 
 ## Stale Files (Need Re-reading)
 - `file:.brain/INDEX.md` (.brain/INDEX.md)
 - `file:.brain/edges.jsonl` (.brain/edges.jsonl)
 - `file:.brain/nodes.jsonl` (.brain/nodes.jsonl)
+- `file:src/assets/codixel-icons.json` (src/assets/codixel-icons.json)
+- `file:src/assets/codixel-enemies.json` (src/assets/codixel-enemies.json)
+- `file:src/assets/codixel-paperdoll.json` (src/assets/codixel-paperdoll.json)
 - `file:.agents/skills/codixel/LICENSE` (.agents/skills/codixel/LICENSE)
 - `file:.agents/skills/codixel/SKILL.md` (.agents/skills/codixel/SKILL.md)
 - `file:.agents/skills/codixel/core/pixel.js` (.agents/skills/codixel/core/pixel.js)
@@ -64,12 +67,3 @@
 - `file:.agents/skills/spritecook-polish-sprites/scripts/compare_alpha.py` (.agents/skills/spritecook-polish-sprites/scripts/compare_alpha.py)
 - `file:.agents/skills/spritecook-polish-sprites/scripts/test_compare_alpha.py` (.agents/skills/spritecook-polish-sprites/scripts/test_compare_alpha.py)
 - `file:.agents/skills/spritecook-upload-assets/SKILL.md` (.agents/skills/spritecook-upload-assets/SKILL.md)
-- `file:.agents/skills/spritecook-use-assets-in-godot/SKILL.md` (.agents/skills/spritecook-use-assets-in-godot/SKILL.md)
-- `file:.agents/skills/spritecook-use-assets-in-godot/agents/openai.yaml` (.agents/skills/spritecook-use-assets-in-godot/agents/openai.yaml)
-- `file:.agents/skills/spritecook-use-dual-grid-tilesets/SKILL.md` (.agents/skills/spritecook-use-dual-grid-tilesets/SKILL.md)
-- `file:.agents/skills/spritecook-use-presets/SKILL.md` (.agents/skills/spritecook-use-presets/SKILL.md)
-- `file:.agents/skills/spritecook-workflow-essentials/LICENSE` (.agents/skills/spritecook-workflow-essentials/LICENSE)
-- `file:.agents/skills/spritecook-workflow-essentials/SKILL.md` (.agents/skills/spritecook-workflow-essentials/SKILL.md)
-- `file:.github/copilot-instructions.md` (.github/copilot-instructions.md)
-- `file:.github/workflows/deploy-pages.yml` (.github/workflows/deploy-pages.yml)
-- `file:.gitignore` (.gitignore)

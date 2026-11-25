@@ -8,8 +8,9 @@ import {
   getItemEffectiveStats,
   getTierBadge,
 } from "../data/items";
-import { EQUIP_SLOTS, type EquipSlot, type StatAllocKey } from "../data/types";
-import { MAX_BAG_SLOTS } from "../systems/inventorySystem";
+import { EQUIP_SLOTS, type AutoSellMode, type EquipSlot, type StatAllocKey } from "../data/types";
+import { getWeaponSkillForItem } from "../data/weaponSkills";
+import { MAX_EXPANDED_BAG_SLOTS } from "../systems/inventorySystem";
 
 const STAT_ALLOC_ROWS: { key: StatAllocKey; label: string; effect: string }[] = [
   { key: "str", label: "STR", effect: "+3 ATK" },
@@ -41,6 +42,9 @@ export class InventoryModalUI {
   private bagEl: HTMLElement;
   private detailEl: HTMLElement;
   private quickSellBarEl: HTMLElement | null;
+  private autoSellBarEl: HTMLElement | null;
+  private bagTitleEl: HTMLElement | null;
+  private buyBackpackBtn: HTMLButtonElement | null;
 
   private selectedUid: string | null = null;
   private hoveredUid: string | null = null;
@@ -65,6 +69,26 @@ export class InventoryModalUI {
     this.bagEl = document.getElementById("inv-bag-grid")!;
     this.detailEl = document.getElementById("inv-item-detail")!;
     this.quickSellBarEl = document.getElementById("inv-quicksell-bar");
+    this.autoSellBarEl = document.getElementById("inv-autosell-bar");
+    this.bagTitleEl = document.getElementById("inv-bag-title");
+    this.buyBackpackBtn = document.getElementById("btn-buy-backpack") as HTMLButtonElement | null;
+
+    this.buyBackpackBtn?.addEventListener("click", () => {
+      const res = this.game.inv.buyNextBackpackUpgrade();
+      if (!res.ok) {
+        sfx.playForgeFail();
+        this.game.uiToast(res.reason ?? "Không thể nâng cấp Balo!", "warn");
+        return;
+      }
+      sfx.playHiddenUnlock();
+      this.game.saveGame(false);
+      this.game.refreshHud();
+      this.game.uiToast(
+        `🎒 Đã mua ${res.upgrade!.name}! Kho đồ mở rộng lên ${res.upgrade!.totalSlots} ô!`,
+        "epic"
+      );
+      this.render();
+    });
 
     onCodixelReady(() => {
       if (!this.root.classList.contains("hidden")) {
@@ -310,7 +334,23 @@ export class InventoryModalUI {
       `;
     }).join("");
 
-    // 3. 40-Slot Bag Grid + Selective Quick Sell Mode
+    // 3. Dynamic Bag Grid (40..80 slots) + Backpack Upgrade + Auto-Sell Low-Rarity Bar + Selective Quick Sell
+    if (this.bagTitleEl) {
+      this.bagTitleEl.textContent = `TÚI ĐỒ (${inv.bag.length}/${inv.bagCapacity} Ô)`;
+    }
+    if (this.buyBackpackBtn) {
+      const nextBp = inv.getNextBackpackUpgrade();
+      if (!nextBp) {
+        this.buyBackpackBtn.textContent = `🎒 TỐI ĐA (${MAX_EXPANDED_BAG_SLOTS} Ô)`;
+        this.buyBackpackBtn.disabled = true;
+        this.buyBackpackBtn.classList.remove("good");
+      } else {
+        this.buyBackpackBtn.textContent = `🎒 +${nextBp.bonusSlots} Ô (${nextBp.price}G)`;
+        this.buyBackpackBtn.disabled = false;
+        this.buyBackpackBtn.classList.toggle("good", inv.gold >= nextBp.price);
+        this.buyBackpackBtn.title = `${nextBp.name} — ${nextBp.desc}`;
+      }
+    }
     const toggleBtn = document.getElementById("btn-toggle-quicksell");
     if (toggleBtn) {
       toggleBtn.classList.toggle("active", this.quickSellMode);
@@ -324,7 +364,7 @@ export class InventoryModalUI {
     }
 
     let bagHtml = "";
-    for (let i = 0; i < MAX_BAG_SLOTS; i++) {
+    for (let i = 0; i < inv.bagCapacity; i++) {
       const it = inv.bag[i];
       if (!it) {
         bagHtml += `<div class="bag-cell empty"></div>`;
@@ -352,6 +392,7 @@ export class InventoryModalUI {
       `;
     }
     this.bagEl.innerHTML = bagHtml;
+    this._renderAutoSellBar();
     this._renderQuickSellBar();
 
     // Paint codixel icons & attach live pixelfx high-rarity slot auras
@@ -391,6 +432,76 @@ export class InventoryModalUI {
     });
 
     this._renderDetail();
+  }
+
+  private _renderAutoSellBar() {
+    if (!this.autoSellBarEl) return;
+    const inv = this.game.inv;
+    const mode = inv.autoSell.maxRarity;
+    const offCls = Boolean(inv.autoSell.includeOffClass);
+    const active = mode !== "off" || offCls;
+    const modes: { id: AutoSellMode; label: string; color: string }[] = [
+      { id: "off", label: "TẮT", color: "#9da4bf" },
+      { id: "common", label: "TRẮNG", color: "#e5e8f0" },
+      { id: "uncommon", label: "≤ LỤC", color: "#44ee88" },
+      { id: "rare", label: "≤ LAM", color: "#38e8ff" },
+    ];
+    const sweepable = inv.bag.filter((b) => inv.shouldAutoSell(b, this.game.player.classId)).length;
+
+    this.autoSellBarEl.classList.toggle("active", active);
+    this.autoSellBarEl.innerHTML = `
+      <div class="as-row">
+        <span class="as-lbl">⚙ AUTO-BÁN KHI NHẶT:</span>
+        <div class="as-pills">
+          ${modes
+            .map(
+              (m) =>
+                `<button class="as-pill ${mode === m.id ? "on" : ""}" data-as-mode="${m.id}" style="--pill-c:${m.color}">${m.label}</button>`
+            )
+            .join("")}
+        </div>
+        <label class="as-chk" title="Tự bán luôn trang bị khác Class (trừ Huyền Thoại / Độc Lạ / Ẩn)">
+          <input type="checkbox" id="chk-as-offclass" ${offCls ? "checked" : ""} />
+          <span>Khác Class</span>
+        </label>
+        <button id="btn-as-sweep" class="px-btn sm ${sweepable > 0 ? "good" : ""}" ${sweepable === 0 ? "disabled" : ""} title="Quét và bán ngay các trang bị phẩm chất thấp hiện đang nằm trong túi">
+          🧹 QUÉT (${sweepable})
+        </button>
+      </div>
+      <div class="as-guard">🛡 Tự động bán đồ phẩm chất thấp ngay khi nhặt · Luôn bảo vệ Đồ Ẩn, Đồ Độc Lạ, Đồ Rương Mùa &amp; Đồ đã +N</div>
+    `;
+
+    this.autoSellBarEl.querySelectorAll<HTMLButtonElement>("[data-as-mode]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        sfx.playUiClick();
+        const nextMode = btn.dataset.asMode as AutoSellMode;
+        inv.setAutoSell(nextMode, inv.autoSell.includeOffClass);
+        this.game.saveGame(false);
+        this.game.refreshHud();
+        this.render();
+      });
+    });
+
+    this.autoSellBarEl.querySelector<HTMLInputElement>("#chk-as-offclass")?.addEventListener("change", (ev) => {
+      sfx.playUiClick();
+      const checked = (ev.currentTarget as HTMLInputElement).checked;
+      inv.setAutoSell(inv.autoSell.maxRarity, checked);
+      this.game.saveGame(false);
+      this.game.refreshHud();
+      this.render();
+    });
+
+    this.autoSellBarEl.querySelector("#btn-as-sweep")?.addEventListener("click", () => {
+      const res = inv.sweepAutoSellBag(this.game.player.classId);
+      if (res.soldCount > 0) {
+        sfx.playBuy();
+        if (this.selectedUid && !inv.findByUid(this.selectedUid)) this.selectedUid = null;
+        this.game.saveGame(false);
+        this.game.refreshHud();
+        this.game.uiToast(`🧹 Đã quét Auto-Bán ${res.soldCount} trang bị phẩm thấp → +${res.totalGold} G!`, "good");
+        this.render();
+      }
+    });
   }
 
   private _renderQuickSellBar() {
@@ -571,6 +682,15 @@ export class InventoryModalUI {
       btns += `<button class="px-btn warn" id="inv-act-sell">BÁN 1 (+${def.sellPrice}G)</button>`;
     }
 
+    const wpnSkill = def.slot === "weapon" ? getWeaponSkillForItem(def.id) : null;
+    const wpnSkillLine = wpnSkill
+      ? `<div style="font-size:11px;color:${wpnSkill.accent};margin-top:3px;padding:3px 6px;background:rgba(16,12,32,0.75);border-left:2px solid ${wpnSkill.accent}">⚔ <b>Kỹ Năng Vũ Khí [E]: ${wpnSkill.name}</b> (${wpnSkill.cooldown}s) — ${wpnSkill.detailDesc}</div>`
+      : "";
+    const exoticTagLine = def.dropOnly
+      ? `<div style="font-size:11px;color:#ff6699;margin-top:2px">★ ĐỘC LẠ (Chỉ rơi từ Quái & Boss)</div>`
+      : def.seasonalBannerId
+        ? `<div style="font-size:11px;color:#d266ff;margin-top:2px">✦ ĐỘC QUYỀN RƯƠNG GACHA MÙA [G]</div>`
+        : "";
     const infuseLine =
       item.enhanceLevel >= 5 && item.infusedElement
         ? `<div style="font-size:11px;color:#5ef2ff;margin-top:2px">★ Khảm Sắc Tố: <b>${item.infusedElement.toUpperCase()}</b> (+8% ELEM & gắn Ấn)</div>`
@@ -605,6 +725,8 @@ export class InventoryModalUI {
         <span style="color:${classMismatch ? "#ff4466" : "#99a3c4"}">${classReqText}</span>
       </div>
       <div class="detail-desc">${def.desc}</div>
+      ${wpnSkillLine}
+      ${exoticTagLine}
       ${passiveLine}
       ${infuseLine}
       ${bonusSubLine}

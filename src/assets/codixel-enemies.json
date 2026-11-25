@@ -3,907 +3,2240 @@
     "null_slime:front": {
       "x": 2,
       "y": 2,
-      "w": 24,
-      "h": 22,
-      "anchorY": 22
+      "w": 28,
+      "h": 26,
+      "anchorY": 26
     },
     "null_slime:front:1": {
-      "x": 28,
+      "x": 32,
       "y": 2,
-      "w": 24,
-      "h": 22,
-      "anchorY": 22
+      "w": 28,
+      "h": 26,
+      "anchorY": 26
     },
     "null_slime:front:2": {
-      "x": 54,
+      "x": 62,
       "y": 2,
-      "w": 24,
-      "h": 22,
-      "anchorY": 22
+      "w": 28,
+      "h": 26,
+      "anchorY": 26
+    },
+    "null_slime:front:atk": {
+      "x": 92,
+      "y": 2,
+      "w": 28,
+      "h": 26,
+      "anchorY": 26
     },
     "null_slime:right": {
-      "x": 80,
+      "x": 122,
       "y": 2,
-      "w": 24,
-      "h": 22,
-      "anchorY": 22
+      "w": 28,
+      "h": 26,
+      "anchorY": 26
     },
     "null_slime:right:1": {
-      "x": 106,
+      "x": 152,
       "y": 2,
-      "w": 24,
-      "h": 22,
-      "anchorY": 22
+      "w": 28,
+      "h": 26,
+      "anchorY": 26
     },
     "null_slime:right:2": {
-      "x": 132,
+      "x": 182,
       "y": 2,
-      "w": 24,
-      "h": 22,
-      "anchorY": 22
+      "w": 28,
+      "h": 26,
+      "anchorY": 26
+    },
+    "null_slime:right:atk": {
+      "x": 212,
+      "y": 2,
+      "w": 28,
+      "h": 26,
+      "anchorY": 26
     },
     "null_slime:left": {
-      "x": 158,
+      "x": 242,
       "y": 2,
-      "w": 24,
-      "h": 22,
-      "anchorY": 22
+      "w": 28,
+      "h": 26,
+      "anchorY": 26
     },
     "null_slime:left:1": {
-      "x": 184,
+      "x": 272,
       "y": 2,
-      "w": 24,
-      "h": 22,
-      "anchorY": 22
+      "w": 28,
+      "h": 26,
+      "anchorY": 26
     },
     "null_slime:left:2": {
-      "x": 210,
+      "x": 302,
       "y": 2,
-      "w": 24,
-      "h": 22,
-      "anchorY": 22
+      "w": 28,
+      "h": 26,
+      "anchorY": 26
+    },
+    "null_slime:left:atk": {
+      "x": 332,
+      "y": 2,
+      "w": 28,
+      "h": 26,
+      "anchorY": 26
     },
     "null_slime:back": {
-      "x": 236,
+      "x": 362,
       "y": 2,
-      "w": 24,
-      "h": 22,
-      "anchorY": 22
+      "w": 28,
+      "h": 26,
+      "anchorY": 26
     },
     "null_slime:back:1": {
-      "x": 262,
+      "x": 392,
       "y": 2,
-      "w": 24,
-      "h": 22,
-      "anchorY": 22
+      "w": 28,
+      "h": 26,
+      "anchorY": 26
     },
     "null_slime:back:2": {
-      "x": 288,
+      "x": 422,
       "y": 2,
-      "w": 24,
-      "h": 22,
-      "anchorY": 22
+      "w": 28,
+      "h": 26,
+      "anchorY": 26
+    },
+    "null_slime:back:atk": {
+      "x": 452,
+      "y": 2,
+      "w": 28,
+      "h": 26,
+      "anchorY": 26
     },
     "null_slime:slam": {
-      "x": 314,
+      "x": 482,
       "y": 2,
-      "w": 24,
-      "h": 22,
-      "anchorY": 22
+      "w": 28,
+      "h": 26,
+      "anchorY": 26
     },
     "ash_hopper:front": {
       "x": 2,
-      "y": 26,
-      "w": 26,
-      "h": 24,
-      "anchorY": 24
+      "y": 30,
+      "w": 32,
+      "h": 28,
+      "anchorY": 28
     },
     "ash_hopper:front:1": {
-      "x": 30,
-      "y": 26,
-      "w": 26,
-      "h": 24,
-      "anchorY": 24
+      "x": 36,
+      "y": 30,
+      "w": 32,
+      "h": 28,
+      "anchorY": 28
     },
     "ash_hopper:front:2": {
-      "x": 58,
-      "y": 26,
-      "w": 26,
-      "h": 24,
-      "anchorY": 24
+      "x": 70,
+      "y": 30,
+      "w": 32,
+      "h": 28,
+      "anchorY": 28
+    },
+    "ash_hopper:front:atk": {
+      "x": 104,
+      "y": 30,
+      "w": 32,
+      "h": 28,
+      "anchorY": 28
     },
     "ash_hopper:right": {
-      "x": 86,
-      "y": 26,
-      "w": 26,
-      "h": 24,
-      "anchorY": 24
+      "x": 138,
+      "y": 30,
+      "w": 32,
+      "h": 28,
+      "anchorY": 28
     },
     "ash_hopper:right:1": {
-      "x": 114,
-      "y": 26,
-      "w": 26,
-      "h": 24,
-      "anchorY": 24
+      "x": 172,
+      "y": 30,
+      "w": 32,
+      "h": 28,
+      "anchorY": 28
     },
     "ash_hopper:right:2": {
-      "x": 142,
-      "y": 26,
-      "w": 26,
-      "h": 24,
-      "anchorY": 24
+      "x": 206,
+      "y": 30,
+      "w": 32,
+      "h": 28,
+      "anchorY": 28
+    },
+    "ash_hopper:right:atk": {
+      "x": 240,
+      "y": 30,
+      "w": 32,
+      "h": 28,
+      "anchorY": 28
     },
     "ash_hopper:left": {
-      "x": 170,
-      "y": 26,
-      "w": 26,
-      "h": 24,
-      "anchorY": 24
+      "x": 274,
+      "y": 30,
+      "w": 32,
+      "h": 28,
+      "anchorY": 28
     },
     "ash_hopper:left:1": {
-      "x": 198,
-      "y": 26,
-      "w": 26,
-      "h": 24,
-      "anchorY": 24
+      "x": 308,
+      "y": 30,
+      "w": 32,
+      "h": 28,
+      "anchorY": 28
     },
     "ash_hopper:left:2": {
-      "x": 226,
-      "y": 26,
-      "w": 26,
-      "h": 24,
-      "anchorY": 24
+      "x": 342,
+      "y": 30,
+      "w": 32,
+      "h": 28,
+      "anchorY": 28
+    },
+    "ash_hopper:left:atk": {
+      "x": 376,
+      "y": 30,
+      "w": 32,
+      "h": 28,
+      "anchorY": 28
     },
     "ash_hopper:back": {
-      "x": 254,
-      "y": 26,
-      "w": 26,
-      "h": 24,
-      "anchorY": 24
+      "x": 410,
+      "y": 30,
+      "w": 32,
+      "h": 28,
+      "anchorY": 28
     },
     "ash_hopper:back:1": {
-      "x": 282,
-      "y": 26,
-      "w": 26,
-      "h": 24,
-      "anchorY": 24
+      "x": 444,
+      "y": 30,
+      "w": 32,
+      "h": 28,
+      "anchorY": 28
     },
     "ash_hopper:back:2": {
-      "x": 310,
-      "y": 26,
-      "w": 26,
-      "h": 24,
-      "anchorY": 24
+      "x": 478,
+      "y": 30,
+      "w": 32,
+      "h": 28,
+      "anchorY": 28
+    },
+    "ash_hopper:back:atk": {
+      "x": 512,
+      "y": 30,
+      "w": 32,
+      "h": 28,
+      "anchorY": 28
     },
     "ash_hopper:roll": {
-      "x": 338,
-      "y": 26,
-      "w": 26,
-      "h": 24,
-      "anchorY": 24
+      "x": 546,
+      "y": 30,
+      "w": 32,
+      "h": 28,
+      "anchorY": 28
     },
     "thorn_archer:front": {
       "x": 2,
-      "y": 52,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "y": 60,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "thorn_archer:front:1": {
-      "x": 32,
-      "y": 52,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 38,
+      "y": 60,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "thorn_archer:front:2": {
-      "x": 62,
-      "y": 52,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 74,
+      "y": 60,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
+    },
+    "thorn_archer:front:atk": {
+      "x": 110,
+      "y": 60,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "thorn_archer:right": {
-      "x": 92,
-      "y": 52,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 146,
+      "y": 60,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "thorn_archer:right:1": {
-      "x": 122,
-      "y": 52,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 182,
+      "y": 60,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "thorn_archer:right:2": {
-      "x": 152,
-      "y": 52,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 218,
+      "y": 60,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
+    },
+    "thorn_archer:right:atk": {
+      "x": 254,
+      "y": 60,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "thorn_archer:left": {
-      "x": 182,
-      "y": 52,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 290,
+      "y": 60,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "thorn_archer:left:1": {
-      "x": 212,
-      "y": 52,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 326,
+      "y": 60,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "thorn_archer:left:2": {
-      "x": 242,
-      "y": 52,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 362,
+      "y": 60,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
+    },
+    "thorn_archer:left:atk": {
+      "x": 398,
+      "y": 60,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "thorn_archer:back": {
-      "x": 272,
-      "y": 52,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 434,
+      "y": 60,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "thorn_archer:back:1": {
-      "x": 302,
-      "y": 52,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 470,
+      "y": 60,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "thorn_archer:back:2": {
-      "x": 332,
-      "y": 52,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 506,
+      "y": 60,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
+    },
+    "thorn_archer:back:atk": {
+      "x": 542,
+      "y": 60,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "root_golem:front": {
       "x": 2,
-      "y": 78,
-      "w": 38,
-      "h": 36,
-      "anchorY": 36
+      "y": 92,
+      "w": 46,
+      "h": 44,
+      "anchorY": 44
     },
     "root_golem:front:1": {
-      "x": 42,
-      "y": 78,
-      "w": 38,
-      "h": 36,
-      "anchorY": 36
+      "x": 50,
+      "y": 92,
+      "w": 46,
+      "h": 44,
+      "anchorY": 44
     },
     "root_golem:front:2": {
-      "x": 82,
-      "y": 78,
-      "w": 38,
-      "h": 36,
-      "anchorY": 36
+      "x": 98,
+      "y": 92,
+      "w": 46,
+      "h": 44,
+      "anchorY": 44
+    },
+    "root_golem:front:atk": {
+      "x": 146,
+      "y": 92,
+      "w": 46,
+      "h": 44,
+      "anchorY": 44
     },
     "root_golem:right": {
-      "x": 122,
-      "y": 78,
-      "w": 38,
-      "h": 36,
-      "anchorY": 36
+      "x": 194,
+      "y": 92,
+      "w": 46,
+      "h": 44,
+      "anchorY": 44
     },
     "root_golem:right:1": {
-      "x": 162,
-      "y": 78,
-      "w": 38,
-      "h": 36,
-      "anchorY": 36
+      "x": 242,
+      "y": 92,
+      "w": 46,
+      "h": 44,
+      "anchorY": 44
     },
     "root_golem:right:2": {
-      "x": 202,
-      "y": 78,
-      "w": 38,
-      "h": 36,
-      "anchorY": 36
+      "x": 290,
+      "y": 92,
+      "w": 46,
+      "h": 44,
+      "anchorY": 44
+    },
+    "root_golem:right:atk": {
+      "x": 338,
+      "y": 92,
+      "w": 46,
+      "h": 44,
+      "anchorY": 44
     },
     "root_golem:left": {
-      "x": 242,
-      "y": 78,
-      "w": 38,
-      "h": 36,
-      "anchorY": 36
+      "x": 386,
+      "y": 92,
+      "w": 46,
+      "h": 44,
+      "anchorY": 44
     },
     "root_golem:left:1": {
-      "x": 282,
-      "y": 78,
-      "w": 38,
-      "h": 36,
-      "anchorY": 36
+      "x": 434,
+      "y": 92,
+      "w": 46,
+      "h": 44,
+      "anchorY": 44
     },
     "root_golem:left:2": {
-      "x": 322,
-      "y": 78,
-      "w": 38,
-      "h": 36,
-      "anchorY": 36
+      "x": 482,
+      "y": 92,
+      "w": 46,
+      "h": 44,
+      "anchorY": 44
+    },
+    "root_golem:left:atk": {
+      "x": 530,
+      "y": 92,
+      "w": 46,
+      "h": 44,
+      "anchorY": 44
     },
     "root_golem:back": {
-      "x": 362,
-      "y": 78,
-      "w": 38,
-      "h": 36,
-      "anchorY": 36
+      "x": 578,
+      "y": 92,
+      "w": 46,
+      "h": 44,
+      "anchorY": 44
     },
     "root_golem:back:1": {
-      "x": 402,
-      "y": 78,
-      "w": 38,
-      "h": 36,
-      "anchorY": 36
+      "x": 626,
+      "y": 92,
+      "w": 46,
+      "h": 44,
+      "anchorY": 44
     },
     "root_golem:back:2": {
-      "x": 442,
-      "y": 78,
-      "w": 38,
-      "h": 36,
-      "anchorY": 36
+      "x": 674,
+      "y": 92,
+      "w": 46,
+      "h": 44,
+      "anchorY": 44
+    },
+    "root_golem:back:atk": {
+      "x": 722,
+      "y": 92,
+      "w": 46,
+      "h": 44,
+      "anchorY": 44
     },
     "boss_xing_warden:front": {
       "x": 2,
-      "y": 116,
-      "w": 44,
-      "h": 44,
-      "anchorY": 44
+      "y": 138,
+      "w": 54,
+      "h": 52,
+      "anchorY": 52
     },
     "boss_xing_warden:front:1": {
-      "x": 48,
-      "y": 116,
-      "w": 44,
-      "h": 44,
-      "anchorY": 44
+      "x": 58,
+      "y": 138,
+      "w": 54,
+      "h": 52,
+      "anchorY": 52
     },
     "boss_xing_warden:front:2": {
-      "x": 94,
-      "y": 116,
-      "w": 44,
-      "h": 44,
-      "anchorY": 44
+      "x": 114,
+      "y": 138,
+      "w": 54,
+      "h": 52,
+      "anchorY": 52
+    },
+    "boss_xing_warden:front:atk": {
+      "x": 170,
+      "y": 138,
+      "w": 54,
+      "h": 52,
+      "anchorY": 52
     },
     "boss_xing_warden:right": {
-      "x": 140,
-      "y": 116,
-      "w": 44,
-      "h": 44,
-      "anchorY": 44
+      "x": 226,
+      "y": 138,
+      "w": 54,
+      "h": 52,
+      "anchorY": 52
     },
     "boss_xing_warden:right:1": {
-      "x": 186,
-      "y": 116,
-      "w": 44,
-      "h": 44,
-      "anchorY": 44
+      "x": 282,
+      "y": 138,
+      "w": 54,
+      "h": 52,
+      "anchorY": 52
     },
     "boss_xing_warden:right:2": {
-      "x": 232,
-      "y": 116,
-      "w": 44,
-      "h": 44,
-      "anchorY": 44
+      "x": 338,
+      "y": 138,
+      "w": 54,
+      "h": 52,
+      "anchorY": 52
+    },
+    "boss_xing_warden:right:atk": {
+      "x": 394,
+      "y": 138,
+      "w": 54,
+      "h": 52,
+      "anchorY": 52
     },
     "boss_xing_warden:left": {
-      "x": 278,
-      "y": 116,
-      "w": 44,
-      "h": 44,
-      "anchorY": 44
+      "x": 450,
+      "y": 138,
+      "w": 54,
+      "h": 52,
+      "anchorY": 52
     },
     "boss_xing_warden:left:1": {
-      "x": 324,
-      "y": 116,
-      "w": 44,
-      "h": 44,
-      "anchorY": 44
+      "x": 506,
+      "y": 138,
+      "w": 54,
+      "h": 52,
+      "anchorY": 52
     },
     "boss_xing_warden:left:2": {
-      "x": 370,
-      "y": 116,
-      "w": 44,
-      "h": 44,
-      "anchorY": 44
+      "x": 562,
+      "y": 138,
+      "w": 54,
+      "h": 52,
+      "anchorY": 52
+    },
+    "boss_xing_warden:left:atk": {
+      "x": 618,
+      "y": 138,
+      "w": 54,
+      "h": 52,
+      "anchorY": 52
     },
     "boss_xing_warden:back": {
-      "x": 416,
-      "y": 116,
-      "w": 44,
-      "h": 44,
-      "anchorY": 44
+      "x": 674,
+      "y": 138,
+      "w": 54,
+      "h": 52,
+      "anchorY": 52
     },
     "boss_xing_warden:back:1": {
-      "x": 462,
-      "y": 116,
-      "w": 44,
-      "h": 44,
-      "anchorY": 44
+      "x": 730,
+      "y": 138,
+      "w": 54,
+      "h": 52,
+      "anchorY": 52
     },
     "boss_xing_warden:back:2": {
-      "x": 508,
-      "y": 116,
-      "w": 44,
-      "h": 44,
-      "anchorY": 44
+      "x": 786,
+      "y": 138,
+      "w": 54,
+      "h": 52,
+      "anchorY": 52
+    },
+    "boss_xing_warden:back:atk": {
+      "x": 842,
+      "y": 138,
+      "w": 54,
+      "h": 52,
+      "anchorY": 52
     },
     "bleach_hound:front": {
       "x": 2,
-      "y": 162,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "y": 192,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "bleach_hound:front:1": {
-      "x": 32,
-      "y": 162,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 38,
+      "y": 192,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "bleach_hound:front:2": {
-      "x": 62,
-      "y": 162,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 74,
+      "y": 192,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
+    },
+    "bleach_hound:front:atk": {
+      "x": 110,
+      "y": 192,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "bleach_hound:right": {
-      "x": 92,
-      "y": 162,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 146,
+      "y": 192,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "bleach_hound:right:1": {
-      "x": 122,
-      "y": 162,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 182,
+      "y": 192,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "bleach_hound:right:2": {
-      "x": 152,
-      "y": 162,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 218,
+      "y": 192,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
+    },
+    "bleach_hound:right:atk": {
+      "x": 254,
+      "y": 192,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "bleach_hound:left": {
-      "x": 182,
-      "y": 162,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 290,
+      "y": 192,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "bleach_hound:left:1": {
-      "x": 212,
-      "y": 162,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 326,
+      "y": 192,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "bleach_hound:left:2": {
-      "x": 242,
-      "y": 162,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 362,
+      "y": 192,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
+    },
+    "bleach_hound:left:atk": {
+      "x": 398,
+      "y": 192,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "bleach_hound:back": {
-      "x": 272,
-      "y": 162,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 434,
+      "y": 192,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "bleach_hound:back:1": {
-      "x": 302,
-      "y": 162,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 470,
+      "y": 192,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "bleach_hound:back:2": {
-      "x": 332,
-      "y": 162,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 506,
+      "y": 192,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
+    },
+    "bleach_hound:back:atk": {
+      "x": 542,
+      "y": 192,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "quartz_stalker:front": {
       "x": 2,
-      "y": 188,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "y": 224,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "quartz_stalker:front:1": {
-      "x": 32,
-      "y": 188,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 38,
+      "y": 224,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "quartz_stalker:front:2": {
-      "x": 62,
-      "y": 188,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 74,
+      "y": 224,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
+    },
+    "quartz_stalker:front:atk": {
+      "x": 110,
+      "y": 224,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "quartz_stalker:right": {
-      "x": 92,
-      "y": 188,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 146,
+      "y": 224,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "quartz_stalker:right:1": {
-      "x": 122,
-      "y": 188,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 182,
+      "y": 224,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "quartz_stalker:right:2": {
-      "x": 152,
-      "y": 188,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 218,
+      "y": 224,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
+    },
+    "quartz_stalker:right:atk": {
+      "x": 254,
+      "y": 224,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "quartz_stalker:left": {
-      "x": 182,
-      "y": 188,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 290,
+      "y": 224,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "quartz_stalker:left:1": {
-      "x": 212,
-      "y": 188,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 326,
+      "y": 224,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "quartz_stalker:left:2": {
-      "x": 242,
-      "y": 188,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 362,
+      "y": 224,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
+    },
+    "quartz_stalker:left:atk": {
+      "x": 398,
+      "y": 224,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "quartz_stalker:back": {
-      "x": 272,
-      "y": 188,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 434,
+      "y": 224,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "quartz_stalker:back:1": {
-      "x": 302,
-      "y": 188,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 470,
+      "y": 224,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "quartz_stalker:back:2": {
-      "x": 332,
-      "y": 188,
-      "w": 28,
-      "h": 24,
-      "anchorY": 24
+      "x": 506,
+      "y": 224,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
+    },
+    "quartz_stalker:back:atk": {
+      "x": 542,
+      "y": 224,
+      "w": 34,
+      "h": 30,
+      "anchorY": 30
     },
     "static_imp:front": {
       "x": 2,
-      "y": 214,
-      "w": 24,
-      "h": 24,
-      "anchorY": 24
+      "y": 256,
+      "w": 30,
+      "h": 30,
+      "anchorY": 30
     },
     "static_imp:front:1": {
-      "x": 28,
-      "y": 214,
-      "w": 24,
-      "h": 24,
-      "anchorY": 24
+      "x": 34,
+      "y": 256,
+      "w": 30,
+      "h": 30,
+      "anchorY": 30
     },
     "static_imp:front:2": {
-      "x": 54,
-      "y": 214,
-      "w": 24,
-      "h": 24,
-      "anchorY": 24
+      "x": 66,
+      "y": 256,
+      "w": 30,
+      "h": 30,
+      "anchorY": 30
+    },
+    "static_imp:front:atk": {
+      "x": 98,
+      "y": 256,
+      "w": 30,
+      "h": 30,
+      "anchorY": 30
     },
     "static_imp:right": {
-      "x": 80,
-      "y": 214,
-      "w": 24,
-      "h": 24,
-      "anchorY": 24
+      "x": 130,
+      "y": 256,
+      "w": 30,
+      "h": 30,
+      "anchorY": 30
     },
     "static_imp:right:1": {
-      "x": 106,
-      "y": 214,
-      "w": 24,
-      "h": 24,
-      "anchorY": 24
+      "x": 162,
+      "y": 256,
+      "w": 30,
+      "h": 30,
+      "anchorY": 30
     },
     "static_imp:right:2": {
-      "x": 132,
-      "y": 214,
-      "w": 24,
-      "h": 24,
-      "anchorY": 24
+      "x": 194,
+      "y": 256,
+      "w": 30,
+      "h": 30,
+      "anchorY": 30
+    },
+    "static_imp:right:atk": {
+      "x": 226,
+      "y": 256,
+      "w": 30,
+      "h": 30,
+      "anchorY": 30
     },
     "static_imp:left": {
-      "x": 158,
-      "y": 214,
-      "w": 24,
-      "h": 24,
-      "anchorY": 24
+      "x": 258,
+      "y": 256,
+      "w": 30,
+      "h": 30,
+      "anchorY": 30
     },
     "static_imp:left:1": {
-      "x": 184,
-      "y": 214,
-      "w": 24,
-      "h": 24,
-      "anchorY": 24
+      "x": 290,
+      "y": 256,
+      "w": 30,
+      "h": 30,
+      "anchorY": 30
     },
     "static_imp:left:2": {
-      "x": 210,
-      "y": 214,
-      "w": 24,
-      "h": 24,
-      "anchorY": 24
+      "x": 322,
+      "y": 256,
+      "w": 30,
+      "h": 30,
+      "anchorY": 30
+    },
+    "static_imp:left:atk": {
+      "x": 354,
+      "y": 256,
+      "w": 30,
+      "h": 30,
+      "anchorY": 30
     },
     "static_imp:back": {
-      "x": 236,
-      "y": 214,
-      "w": 24,
-      "h": 24,
-      "anchorY": 24
+      "x": 386,
+      "y": 256,
+      "w": 30,
+      "h": 30,
+      "anchorY": 30
     },
     "static_imp:back:1": {
-      "x": 262,
-      "y": 214,
-      "w": 24,
-      "h": 24,
-      "anchorY": 24
+      "x": 418,
+      "y": 256,
+      "w": 30,
+      "h": 30,
+      "anchorY": 30
     },
     "static_imp:back:2": {
-      "x": 288,
-      "y": 214,
-      "w": 24,
-      "h": 24,
-      "anchorY": 24
+      "x": 450,
+      "y": 256,
+      "w": 30,
+      "h": 30,
+      "anchorY": 30
+    },
+    "static_imp:back:atk": {
+      "x": 482,
+      "y": 256,
+      "w": 30,
+      "h": 30,
+      "anchorY": 30
     },
     "quartz_knight:front": {
       "x": 2,
-      "y": 240,
-      "w": 40,
-      "h": 38,
-      "anchorY": 38
+      "y": 288,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
     },
     "quartz_knight:front:1": {
-      "x": 44,
-      "y": 240,
-      "w": 40,
-      "h": 38,
-      "anchorY": 38
+      "x": 52,
+      "y": 288,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
     },
     "quartz_knight:front:2": {
-      "x": 86,
-      "y": 240,
-      "w": 40,
-      "h": 38,
-      "anchorY": 38
+      "x": 102,
+      "y": 288,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "quartz_knight:front:atk": {
+      "x": 152,
+      "y": 288,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
     },
     "quartz_knight:right": {
-      "x": 128,
-      "y": 240,
-      "w": 40,
-      "h": 38,
-      "anchorY": 38
+      "x": 202,
+      "y": 288,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
     },
     "quartz_knight:right:1": {
-      "x": 170,
-      "y": 240,
-      "w": 40,
-      "h": 38,
-      "anchorY": 38
+      "x": 252,
+      "y": 288,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
     },
     "quartz_knight:right:2": {
-      "x": 212,
-      "y": 240,
-      "w": 40,
-      "h": 38,
-      "anchorY": 38
+      "x": 302,
+      "y": 288,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "quartz_knight:right:atk": {
+      "x": 352,
+      "y": 288,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
     },
     "quartz_knight:left": {
-      "x": 254,
-      "y": 240,
-      "w": 40,
-      "h": 38,
-      "anchorY": 38
+      "x": 402,
+      "y": 288,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
     },
     "quartz_knight:left:1": {
-      "x": 296,
-      "y": 240,
-      "w": 40,
-      "h": 38,
-      "anchorY": 38
+      "x": 452,
+      "y": 288,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
     },
     "quartz_knight:left:2": {
-      "x": 338,
-      "y": 240,
-      "w": 40,
-      "h": 38,
-      "anchorY": 38
+      "x": 502,
+      "y": 288,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "quartz_knight:left:atk": {
+      "x": 552,
+      "y": 288,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
     },
     "quartz_knight:back": {
-      "x": 380,
-      "y": 240,
-      "w": 40,
-      "h": 38,
-      "anchorY": 38
+      "x": 602,
+      "y": 288,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
     },
     "quartz_knight:back:1": {
-      "x": 422,
-      "y": 240,
-      "w": 40,
-      "h": 38,
-      "anchorY": 38
+      "x": 652,
+      "y": 288,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
     },
     "quartz_knight:back:2": {
-      "x": 464,
-      "y": 240,
-      "w": 40,
-      "h": 38,
-      "anchorY": 38
+      "x": 702,
+      "y": 288,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "quartz_knight:back:atk": {
+      "x": 752,
+      "y": 288,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
     },
     "boss_blight_root:front": {
       "x": 2,
-      "y": 280,
-      "w": 48,
-      "h": 46,
-      "anchorY": 46
+      "y": 336,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
     },
     "boss_blight_root:front:1": {
-      "x": 52,
-      "y": 280,
-      "w": 48,
-      "h": 46,
-      "anchorY": 46
+      "x": 60,
+      "y": 336,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
     },
     "boss_blight_root:front:2": {
-      "x": 102,
-      "y": 280,
-      "w": 48,
-      "h": 46,
-      "anchorY": 46
+      "x": 118,
+      "y": 336,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
+    },
+    "boss_blight_root:front:atk": {
+      "x": 176,
+      "y": 336,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
     },
     "boss_blight_root:right": {
-      "x": 152,
-      "y": 280,
-      "w": 48,
-      "h": 46,
-      "anchorY": 46
+      "x": 234,
+      "y": 336,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
     },
     "boss_blight_root:right:1": {
-      "x": 202,
-      "y": 280,
-      "w": 48,
-      "h": 46,
-      "anchorY": 46
+      "x": 292,
+      "y": 336,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
     },
     "boss_blight_root:right:2": {
-      "x": 252,
-      "y": 280,
-      "w": 48,
-      "h": 46,
-      "anchorY": 46
+      "x": 350,
+      "y": 336,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
+    },
+    "boss_blight_root:right:atk": {
+      "x": 408,
+      "y": 336,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
     },
     "boss_blight_root:left": {
-      "x": 302,
-      "y": 280,
-      "w": 48,
-      "h": 46,
-      "anchorY": 46
+      "x": 466,
+      "y": 336,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
     },
     "boss_blight_root:left:1": {
-      "x": 352,
-      "y": 280,
-      "w": 48,
-      "h": 46,
-      "anchorY": 46
+      "x": 524,
+      "y": 336,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
     },
     "boss_blight_root:left:2": {
-      "x": 402,
-      "y": 280,
-      "w": 48,
-      "h": 46,
-      "anchorY": 46
+      "x": 582,
+      "y": 336,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
+    },
+    "boss_blight_root:left:atk": {
+      "x": 640,
+      "y": 336,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
     },
     "boss_blight_root:back": {
-      "x": 452,
-      "y": 280,
-      "w": 48,
-      "h": 46,
-      "anchorY": 46
+      "x": 698,
+      "y": 336,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
     },
     "boss_blight_root:back:1": {
-      "x": 502,
-      "y": 280,
+      "x": 756,
+      "y": 336,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
+    },
+    "boss_blight_root:back:2": {
+      "x": 814,
+      "y": 336,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
+    },
+    "boss_blight_root:back:atk": {
+      "x": 872,
+      "y": 336,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
+    },
+    "cinder_imp:front": {
+      "x": 2,
+      "y": 392,
+      "w": 32,
+      "h": 32,
+      "anchorY": 32
+    },
+    "cinder_imp:front:1": {
+      "x": 36,
+      "y": 392,
+      "w": 32,
+      "h": 32,
+      "anchorY": 32
+    },
+    "cinder_imp:front:2": {
+      "x": 70,
+      "y": 392,
+      "w": 32,
+      "h": 32,
+      "anchorY": 32
+    },
+    "cinder_imp:front:atk": {
+      "x": 104,
+      "y": 392,
+      "w": 32,
+      "h": 32,
+      "anchorY": 32
+    },
+    "cinder_imp:right": {
+      "x": 138,
+      "y": 392,
+      "w": 32,
+      "h": 32,
+      "anchorY": 32
+    },
+    "cinder_imp:right:1": {
+      "x": 172,
+      "y": 392,
+      "w": 32,
+      "h": 32,
+      "anchorY": 32
+    },
+    "cinder_imp:right:2": {
+      "x": 206,
+      "y": 392,
+      "w": 32,
+      "h": 32,
+      "anchorY": 32
+    },
+    "cinder_imp:right:atk": {
+      "x": 240,
+      "y": 392,
+      "w": 32,
+      "h": 32,
+      "anchorY": 32
+    },
+    "cinder_imp:left": {
+      "x": 274,
+      "y": 392,
+      "w": 32,
+      "h": 32,
+      "anchorY": 32
+    },
+    "cinder_imp:left:1": {
+      "x": 308,
+      "y": 392,
+      "w": 32,
+      "h": 32,
+      "anchorY": 32
+    },
+    "cinder_imp:left:2": {
+      "x": 342,
+      "y": 392,
+      "w": 32,
+      "h": 32,
+      "anchorY": 32
+    },
+    "cinder_imp:left:atk": {
+      "x": 376,
+      "y": 392,
+      "w": 32,
+      "h": 32,
+      "anchorY": 32
+    },
+    "cinder_imp:back": {
+      "x": 410,
+      "y": 392,
+      "w": 32,
+      "h": 32,
+      "anchorY": 32
+    },
+    "cinder_imp:back:1": {
+      "x": 444,
+      "y": 392,
+      "w": 32,
+      "h": 32,
+      "anchorY": 32
+    },
+    "cinder_imp:back:2": {
+      "x": 478,
+      "y": 392,
+      "w": 32,
+      "h": 32,
+      "anchorY": 32
+    },
+    "cinder_imp:back:atk": {
+      "x": 512,
+      "y": 392,
+      "w": 32,
+      "h": 32,
+      "anchorY": 32
+    },
+    "amber_beetle:front": {
+      "x": 2,
+      "y": 426,
+      "w": 40,
+      "h": 30,
+      "anchorY": 30
+    },
+    "amber_beetle:front:1": {
+      "x": 44,
+      "y": 426,
+      "w": 40,
+      "h": 30,
+      "anchorY": 30
+    },
+    "amber_beetle:front:2": {
+      "x": 86,
+      "y": 426,
+      "w": 40,
+      "h": 30,
+      "anchorY": 30
+    },
+    "amber_beetle:front:atk": {
+      "x": 128,
+      "y": 426,
+      "w": 40,
+      "h": 30,
+      "anchorY": 30
+    },
+    "amber_beetle:right": {
+      "x": 170,
+      "y": 426,
+      "w": 40,
+      "h": 30,
+      "anchorY": 30
+    },
+    "amber_beetle:right:1": {
+      "x": 212,
+      "y": 426,
+      "w": 40,
+      "h": 30,
+      "anchorY": 30
+    },
+    "amber_beetle:right:2": {
+      "x": 254,
+      "y": 426,
+      "w": 40,
+      "h": 30,
+      "anchorY": 30
+    },
+    "amber_beetle:right:atk": {
+      "x": 296,
+      "y": 426,
+      "w": 40,
+      "h": 30,
+      "anchorY": 30
+    },
+    "amber_beetle:left": {
+      "x": 338,
+      "y": 426,
+      "w": 40,
+      "h": 30,
+      "anchorY": 30
+    },
+    "amber_beetle:left:1": {
+      "x": 380,
+      "y": 426,
+      "w": 40,
+      "h": 30,
+      "anchorY": 30
+    },
+    "amber_beetle:left:2": {
+      "x": 422,
+      "y": 426,
+      "w": 40,
+      "h": 30,
+      "anchorY": 30
+    },
+    "amber_beetle:left:atk": {
+      "x": 464,
+      "y": 426,
+      "w": 40,
+      "h": 30,
+      "anchorY": 30
+    },
+    "amber_beetle:back": {
+      "x": 506,
+      "y": 426,
+      "w": 40,
+      "h": 30,
+      "anchorY": 30
+    },
+    "amber_beetle:back:1": {
+      "x": 548,
+      "y": 426,
+      "w": 40,
+      "h": 30,
+      "anchorY": 30
+    },
+    "amber_beetle:back:2": {
+      "x": 590,
+      "y": 426,
+      "w": 40,
+      "h": 30,
+      "anchorY": 30
+    },
+    "amber_beetle:back:atk": {
+      "x": 632,
+      "y": 426,
+      "w": 40,
+      "h": 30,
+      "anchorY": 30
+    },
+    "amber_warrior:front": {
+      "x": 2,
+      "y": 458,
       "w": 48,
       "h": 46,
       "anchorY": 46
     },
-    "boss_blight_root:back:2": {
-      "x": 552,
-      "y": 280,
+    "amber_warrior:front:1": {
+      "x": 52,
+      "y": 458,
       "w": 48,
       "h": 46,
       "anchorY": 46
+    },
+    "amber_warrior:front:2": {
+      "x": 102,
+      "y": 458,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "amber_warrior:front:atk": {
+      "x": 152,
+      "y": 458,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "amber_warrior:right": {
+      "x": 202,
+      "y": 458,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "amber_warrior:right:1": {
+      "x": 252,
+      "y": 458,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "amber_warrior:right:2": {
+      "x": 302,
+      "y": 458,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "amber_warrior:right:atk": {
+      "x": 352,
+      "y": 458,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "amber_warrior:left": {
+      "x": 402,
+      "y": 458,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "amber_warrior:left:1": {
+      "x": 452,
+      "y": 458,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "amber_warrior:left:2": {
+      "x": 502,
+      "y": 458,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "amber_warrior:left:atk": {
+      "x": 552,
+      "y": 458,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "amber_warrior:back": {
+      "x": 602,
+      "y": 458,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "amber_warrior:back:1": {
+      "x": 652,
+      "y": 458,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "amber_warrior:back:2": {
+      "x": 702,
+      "y": 458,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "amber_warrior:back:atk": {
+      "x": 752,
+      "y": 458,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "boss_gilded_null:front": {
+      "x": 2,
+      "y": 506,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
+    },
+    "boss_gilded_null:front:1": {
+      "x": 60,
+      "y": 506,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
+    },
+    "boss_gilded_null:front:2": {
+      "x": 118,
+      "y": 506,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
+    },
+    "boss_gilded_null:front:atk": {
+      "x": 176,
+      "y": 506,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
+    },
+    "boss_gilded_null:right": {
+      "x": 234,
+      "y": 506,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
+    },
+    "boss_gilded_null:right:1": {
+      "x": 292,
+      "y": 506,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
+    },
+    "boss_gilded_null:right:2": {
+      "x": 350,
+      "y": 506,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
+    },
+    "boss_gilded_null:right:atk": {
+      "x": 408,
+      "y": 506,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
+    },
+    "boss_gilded_null:left": {
+      "x": 466,
+      "y": 506,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
+    },
+    "boss_gilded_null:left:1": {
+      "x": 524,
+      "y": 506,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
+    },
+    "boss_gilded_null:left:2": {
+      "x": 582,
+      "y": 506,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
+    },
+    "boss_gilded_null:left:atk": {
+      "x": 640,
+      "y": 506,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
+    },
+    "boss_gilded_null:back": {
+      "x": 698,
+      "y": 506,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
+    },
+    "boss_gilded_null:back:1": {
+      "x": 756,
+      "y": 506,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
+    },
+    "boss_gilded_null:back:2": {
+      "x": 814,
+      "y": 506,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
+    },
+    "boss_gilded_null:back:atk": {
+      "x": 872,
+      "y": 506,
+      "w": 56,
+      "h": 54,
+      "anchorY": 54
+    },
+    "void_wraith:front": {
+      "x": 2,
+      "y": 562,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "void_wraith:front:1": {
+      "x": 38,
+      "y": 562,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "void_wraith:front:2": {
+      "x": 74,
+      "y": 562,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "void_wraith:front:atk": {
+      "x": 110,
+      "y": 562,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "void_wraith:right": {
+      "x": 146,
+      "y": 562,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "void_wraith:right:1": {
+      "x": 182,
+      "y": 562,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "void_wraith:right:2": {
+      "x": 218,
+      "y": 562,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "void_wraith:right:atk": {
+      "x": 254,
+      "y": 562,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "void_wraith:left": {
+      "x": 290,
+      "y": 562,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "void_wraith:left:1": {
+      "x": 326,
+      "y": 562,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "void_wraith:left:2": {
+      "x": 362,
+      "y": 562,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "void_wraith:left:atk": {
+      "x": 398,
+      "y": 562,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "void_wraith:back": {
+      "x": 434,
+      "y": 562,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "void_wraith:back:1": {
+      "x": 470,
+      "y": 562,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "void_wraith:back:2": {
+      "x": 506,
+      "y": 562,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "void_wraith:back:atk": {
+      "x": 542,
+      "y": 562,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "prism_golem:front": {
+      "x": 2,
+      "y": 598,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "prism_golem:front:1": {
+      "x": 38,
+      "y": 598,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "prism_golem:front:2": {
+      "x": 74,
+      "y": 598,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "prism_golem:front:atk": {
+      "x": 110,
+      "y": 598,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "prism_golem:right": {
+      "x": 146,
+      "y": 598,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "prism_golem:right:1": {
+      "x": 182,
+      "y": 598,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "prism_golem:right:2": {
+      "x": 218,
+      "y": 598,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "prism_golem:right:atk": {
+      "x": 254,
+      "y": 598,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "prism_golem:left": {
+      "x": 290,
+      "y": 598,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "prism_golem:left:1": {
+      "x": 326,
+      "y": 598,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "prism_golem:left:2": {
+      "x": 362,
+      "y": 598,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "prism_golem:left:atk": {
+      "x": 398,
+      "y": 598,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "prism_golem:back": {
+      "x": 434,
+      "y": 598,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "prism_golem:back:1": {
+      "x": 470,
+      "y": 598,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "prism_golem:back:2": {
+      "x": 506,
+      "y": 598,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "prism_golem:back:atk": {
+      "x": 542,
+      "y": 598,
+      "w": 34,
+      "h": 34,
+      "anchorY": 34
+    },
+    "null_knight:front": {
+      "x": 2,
+      "y": 634,
+      "w": 44,
+      "h": 44,
+      "anchorY": 44
+    },
+    "null_knight:front:1": {
+      "x": 48,
+      "y": 634,
+      "w": 44,
+      "h": 44,
+      "anchorY": 44
+    },
+    "null_knight:front:2": {
+      "x": 94,
+      "y": 634,
+      "w": 44,
+      "h": 44,
+      "anchorY": 44
+    },
+    "null_knight:front:atk": {
+      "x": 140,
+      "y": 634,
+      "w": 44,
+      "h": 44,
+      "anchorY": 44
+    },
+    "null_knight:right": {
+      "x": 186,
+      "y": 634,
+      "w": 44,
+      "h": 44,
+      "anchorY": 44
+    },
+    "null_knight:right:1": {
+      "x": 232,
+      "y": 634,
+      "w": 44,
+      "h": 44,
+      "anchorY": 44
+    },
+    "null_knight:right:2": {
+      "x": 278,
+      "y": 634,
+      "w": 44,
+      "h": 44,
+      "anchorY": 44
+    },
+    "null_knight:right:atk": {
+      "x": 324,
+      "y": 634,
+      "w": 44,
+      "h": 44,
+      "anchorY": 44
+    },
+    "null_knight:left": {
+      "x": 370,
+      "y": 634,
+      "w": 44,
+      "h": 44,
+      "anchorY": 44
+    },
+    "null_knight:left:1": {
+      "x": 416,
+      "y": 634,
+      "w": 44,
+      "h": 44,
+      "anchorY": 44
+    },
+    "null_knight:left:2": {
+      "x": 462,
+      "y": 634,
+      "w": 44,
+      "h": 44,
+      "anchorY": 44
+    },
+    "null_knight:left:atk": {
+      "x": 508,
+      "y": 634,
+      "w": 44,
+      "h": 44,
+      "anchorY": 44
+    },
+    "null_knight:back": {
+      "x": 554,
+      "y": 634,
+      "w": 44,
+      "h": 44,
+      "anchorY": 44
+    },
+    "null_knight:back:1": {
+      "x": 600,
+      "y": 634,
+      "w": 44,
+      "h": 44,
+      "anchorY": 44
+    },
+    "null_knight:back:2": {
+      "x": 646,
+      "y": 634,
+      "w": 44,
+      "h": 44,
+      "anchorY": 44
+    },
+    "null_knight:back:atk": {
+      "x": 692,
+      "y": 634,
+      "w": 44,
+      "h": 44,
+      "anchorY": 44
+    },
+    "void_gatekeeper:front": {
+      "x": 2,
+      "y": 680,
+      "w": 50,
+      "h": 48,
+      "anchorY": 48
+    },
+    "void_gatekeeper:front:1": {
+      "x": 54,
+      "y": 680,
+      "w": 50,
+      "h": 48,
+      "anchorY": 48
+    },
+    "void_gatekeeper:front:2": {
+      "x": 106,
+      "y": 680,
+      "w": 50,
+      "h": 48,
+      "anchorY": 48
+    },
+    "void_gatekeeper:front:atk": {
+      "x": 158,
+      "y": 680,
+      "w": 50,
+      "h": 48,
+      "anchorY": 48
+    },
+    "void_gatekeeper:right": {
+      "x": 210,
+      "y": 680,
+      "w": 50,
+      "h": 48,
+      "anchorY": 48
+    },
+    "void_gatekeeper:right:1": {
+      "x": 262,
+      "y": 680,
+      "w": 50,
+      "h": 48,
+      "anchorY": 48
+    },
+    "void_gatekeeper:right:2": {
+      "x": 314,
+      "y": 680,
+      "w": 50,
+      "h": 48,
+      "anchorY": 48
+    },
+    "void_gatekeeper:right:atk": {
+      "x": 366,
+      "y": 680,
+      "w": 50,
+      "h": 48,
+      "anchorY": 48
+    },
+    "void_gatekeeper:left": {
+      "x": 418,
+      "y": 680,
+      "w": 50,
+      "h": 48,
+      "anchorY": 48
+    },
+    "void_gatekeeper:left:1": {
+      "x": 470,
+      "y": 680,
+      "w": 50,
+      "h": 48,
+      "anchorY": 48
+    },
+    "void_gatekeeper:left:2": {
+      "x": 522,
+      "y": 680,
+      "w": 50,
+      "h": 48,
+      "anchorY": 48
+    },
+    "void_gatekeeper:left:atk": {
+      "x": 574,
+      "y": 680,
+      "w": 50,
+      "h": 48,
+      "anchorY": 48
+    },
+    "void_gatekeeper:back": {
+      "x": 626,
+      "y": 680,
+      "w": 50,
+      "h": 48,
+      "anchorY": 48
+    },
+    "void_gatekeeper:back:1": {
+      "x": 678,
+      "y": 680,
+      "w": 50,
+      "h": 48,
+      "anchorY": 48
+    },
+    "void_gatekeeper:back:2": {
+      "x": 730,
+      "y": 680,
+      "w": 50,
+      "h": 48,
+      "anchorY": 48
+    },
+    "void_gatekeeper:back:atk": {
+      "x": 782,
+      "y": 680,
+      "w": 50,
+      "h": 48,
+      "anchorY": 48
+    },
+    "boss_the_eraser:front": {
+      "x": 2,
+      "y": 730,
+      "w": 60,
+      "h": 58,
+      "anchorY": 58
+    },
+    "boss_the_eraser:front:1": {
+      "x": 64,
+      "y": 730,
+      "w": 60,
+      "h": 58,
+      "anchorY": 58
+    },
+    "boss_the_eraser:front:2": {
+      "x": 126,
+      "y": 730,
+      "w": 60,
+      "h": 58,
+      "anchorY": 58
+    },
+    "boss_the_eraser:front:atk": {
+      "x": 188,
+      "y": 730,
+      "w": 60,
+      "h": 58,
+      "anchorY": 58
+    },
+    "boss_the_eraser:right": {
+      "x": 250,
+      "y": 730,
+      "w": 60,
+      "h": 58,
+      "anchorY": 58
+    },
+    "boss_the_eraser:right:1": {
+      "x": 312,
+      "y": 730,
+      "w": 60,
+      "h": 58,
+      "anchorY": 58
+    },
+    "boss_the_eraser:right:2": {
+      "x": 374,
+      "y": 730,
+      "w": 60,
+      "h": 58,
+      "anchorY": 58
+    },
+    "boss_the_eraser:right:atk": {
+      "x": 436,
+      "y": 730,
+      "w": 60,
+      "h": 58,
+      "anchorY": 58
+    },
+    "boss_the_eraser:left": {
+      "x": 498,
+      "y": 730,
+      "w": 60,
+      "h": 58,
+      "anchorY": 58
+    },
+    "boss_the_eraser:left:1": {
+      "x": 560,
+      "y": 730,
+      "w": 60,
+      "h": 58,
+      "anchorY": 58
+    },
+    "boss_the_eraser:left:2": {
+      "x": 622,
+      "y": 730,
+      "w": 60,
+      "h": 58,
+      "anchorY": 58
+    },
+    "boss_the_eraser:left:atk": {
+      "x": 684,
+      "y": 730,
+      "w": 60,
+      "h": 58,
+      "anchorY": 58
+    },
+    "boss_the_eraser:back": {
+      "x": 746,
+      "y": 730,
+      "w": 60,
+      "h": 58,
+      "anchorY": 58
+    },
+    "boss_the_eraser:back:1": {
+      "x": 808,
+      "y": 730,
+      "w": 60,
+      "h": 58,
+      "anchorY": 58
+    },
+    "boss_the_eraser:back:2": {
+      "x": 870,
+      "y": 730,
+      "w": 60,
+      "h": 58,
+      "anchorY": 58
+    },
+    "boss_the_eraser:back:atk": {
+      "x": 932,
+      "y": 730,
+      "w": 60,
+      "h": 58,
+      "anchorY": 58
     }
   },
   "monsters": {
     "null_slime": {
-      "w": 24,
-      "h": 22,
+      "w": 28,
+      "h": 26,
       "floating": false
     },
     "ash_hopper": {
-      "w": 26,
-      "h": 24,
+      "w": 32,
+      "h": 28,
       "floating": false
     },
     "thorn_archer": {
-      "w": 28,
-      "h": 24,
+      "w": 34,
+      "h": 30,
       "floating": false
     },
     "root_golem": {
-      "w": 38,
-      "h": 36,
+      "w": 46,
+      "h": 44,
       "floating": false
     },
     "boss_xing_warden": {
+      "w": 54,
+      "h": 52,
+      "floating": false
+    },
+    "bleach_hound": {
+      "w": 34,
+      "h": 30,
+      "floating": true
+    },
+    "quartz_stalker": {
+      "w": 34,
+      "h": 30,
+      "floating": false
+    },
+    "static_imp": {
+      "w": 30,
+      "h": 30,
+      "floating": true
+    },
+    "quartz_knight": {
+      "w": 48,
+      "h": 46,
+      "floating": false
+    },
+    "boss_blight_root": {
+      "w": 56,
+      "h": 54,
+      "floating": true
+    },
+    "cinder_imp": {
+      "w": 32,
+      "h": 32,
+      "floating": true
+    },
+    "amber_beetle": {
+      "w": 40,
+      "h": 30,
+      "floating": false
+    },
+    "amber_warrior": {
+      "w": 48,
+      "h": 46,
+      "floating": false
+    },
+    "boss_gilded_null": {
+      "w": 56,
+      "h": 54,
+      "floating": false
+    },
+    "void_wraith": {
+      "w": 34,
+      "h": 34,
+      "floating": true
+    },
+    "prism_golem": {
+      "w": 34,
+      "h": 34,
+      "floating": true
+    },
+    "null_knight": {
       "w": 44,
       "h": 44,
       "floating": false
     },
-    "bleach_hound": {
-      "w": 28,
-      "h": 24,
+    "void_gatekeeper": {
+      "w": 50,
+      "h": 48,
       "floating": true
     },
-    "quartz_stalker": {
-      "w": 28,
-      "h": 24,
-      "floating": false
-    },
-    "static_imp": {
-      "w": 24,
-      "h": 24,
-      "floating": true
-    },
-    "quartz_knight": {
-      "w": 40,
-      "h": 38,
-      "floating": false
-    },
-    "boss_blight_root": {
-      "w": 48,
-      "h": 46,
+    "boss_the_eraser": {
+      "w": 60,
+      "h": 58,
       "floating": true
     }
   }

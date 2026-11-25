@@ -218,8 +218,48 @@ function mapWeaponToRig(
   let weapon = "sword";
   let offWeapon: string | undefined;
 
-  if (def.id === "wpn_void_scythe") {
+  if (def.id === "hid_boss_eraser_edge" || def.id === "exo_wpn_blood_greatsword") {
+    weapon = "null_sever";
+  } else if (
+    def.id === "hid_craft_prism_blade" ||
+    def.id === "wpn_chroma_sovereign" ||
+    def.id === "sea_wpn_spring_katana"
+  ) {
+    weapon = "prism_blade";
+  } else if (def.id === "wpn_void_scythe") {
     weapon = "scythe";
+  } else if (def.id === "wpn_warden_cleaver" || def.id === "exo_wpn_thunder_halberd") {
+    weapon = "greataxe";
+  } else if (def.id === "wpn_quake_maul") {
+    weapon = "hammer";
+  } else if (
+    def.id === "hid_craft_nebula_staff" ||
+    def.id === "wpn_astral_scepter" ||
+    def.id === "wpn_chroma_scepter" ||
+    def.id === "exo_wpn_blackhole_orb" ||
+    def.id === "exo_wpn_phoenix_rod" ||
+    def.id === "sea_wpn_winter_staff"
+  ) {
+    weapon = "astral_staff";
+  } else if (
+    def.id === "hid_craft_eclipse_fangs" ||
+    def.id === "wpn_quantum_blades" ||
+    def.id === "wpn_magma_fangs" ||
+    def.id === "exo_wpn_phantom_boomerang" ||
+    def.id === "exo_wpn_venom_claws" ||
+    def.id === "sea_wpn_summer_blades"
+  ) {
+    weapon = "twin_quantum";
+    offWeapon = "twin_quantum";
+  } else if (
+    def.id === "hid_craft_nova_railgun" ||
+    def.id === "wpn_singularity_cannon" ||
+    def.id === "wpn_thermal_repeater" ||
+    def.id === "exo_wpn_tesla_coilgun" ||
+    def.id === "exo_wpn_rocket_barrage" ||
+    def.id === "sea_wpn_eclipse_cannon"
+  ) {
+    weapon = "rail_cannon";
   } else if (kind === "dagger" || shape === "daggers") {
     weapon = "dagger";
     offWeapon = "dagger";
@@ -230,7 +270,7 @@ function mapWeaponToRig(
   } else if (shape === "halberd") {
     weapon = "spear";
   } else if (kind === "axe") {
-    weapon = def.id === "wpn_quake_maul" ? "hammer" : "greatsword";
+    weapon = "greataxe";
   } else if (shape === "greatsword" || shape === "sovereign" || tier >= 3) {
     weapon = "greatsword";
   }
@@ -254,10 +294,10 @@ function mapWeaponToRig(
     goldD: mix(eU, hex("#2a1b10") >>> 0, 0.45) >>> 0,
   };
 
-  if (weapon === "staff") {
+  if (weapon === "staff" || weapon === "astral_staff") {
     weaponColors.wood = mix(bU, hex("#5e3c24") >>> 0, 0.4) >>> 0;
     weaponColors.woodD = mix(weaponColors.wood, hex("#180e08") >>> 0, 0.55) >>> 0;
-  } else if (weapon === "launcher") {
+  } else if (weapon === "launcher" || weapon === "rail_cannon") {
     weaponColors.olive = bU;
     weaponColors.oliveA = mix(bU, wU, 0.35) >>> 0;
     weaponColors.oliveD = mix(bU, hex("#101418") >>> 0, 0.5) >>> 0;
@@ -289,7 +329,13 @@ function buildAttackPose(
       by: -23,
       ffx: 11,
       fbx: -11,
-      two: hasWeapon && (weaponName === "greatsword" || weaponName === "spear"),
+      two:
+        hasWeapon &&
+        (weaponName === "greatsword" ||
+          weaponName === "prism_blade" ||
+          weaponName === "null_sever" ||
+          weaponName === "greataxe" ||
+          weaponName === "spear"),
     };
   }
 
@@ -499,18 +545,25 @@ function buildPoseForState(
 
   if (weaponName) {
     base.weapon = weaponName;
-    if (weaponName === "greatsword" || weaponName === "hammer" || weaponName === "scythe") {
+    if (
+      weaponName === "greatsword" ||
+      weaponName === "prism_blade" ||
+      weaponName === "null_sever" ||
+      weaponName === "greataxe" ||
+      weaponName === "hammer" ||
+      weaponName === "scythe"
+    ) {
       base.two = true;
       base.sa = 0.28;
-    } else if (weaponName === "staff") {
+    } else if (weaponName === "staff" || weaponName === "astral_staff") {
       base.sa = -1.15;
-    } else if (weaponName === "pistol" || weaponName === "launcher") {
+    } else if (weaponName === "pistol" || weaponName === "launcher" || weaponName === "rail_cannon") {
       base.sa = 0.0;
-      if (weaponName === "launcher") base.two = true;
+      if (weaponName === "launcher" || weaponName === "rail_cannon") base.two = true;
     }
   }
-  if (hasOffDagger && weaponName === "dagger") {
-    base.offWeapon = "dagger";
+  if (hasOffDagger && (weaponName === "dagger" || weaponName === "twin_quantum")) {
+    base.offWeapon = weaponName;
     base.sb = -0.3;
   }
 
@@ -581,7 +634,9 @@ function buildPoseForState(
 
   if (animState === "charge") {
     const deep = chargeBucket === 1;
-    const aimedRanged = weaponName === "pistol" || weaponName === "launcher";
+    const aimedRanged =
+      weaponName === "pistol" || weaponName === "launcher" || weaponName === "rail_cannon";
+    const isStaff = weaponName === "staff" || weaponName === "astral_staff";
     return {
       ...base,
       crouch: deep ? 5.5 : 4,
@@ -590,7 +645,7 @@ function buildPoseForState(
       fy: aimedRanged ? -21 + pitch * 5 : deep ? -21 : -20,
       bx: deep ? 5 : 6,
       by: -18,
-      sa: aimedRanged ? pitch : weaponName === "staff" ? -1.6 + pitch * 0.5 : deep ? -2.45 : -2.2,
+      sa: aimedRanged ? pitch : isStaff ? -1.6 + pitch * 0.5 : deep ? -2.45 : -2.2,
       ffx: deep ? 6 : 5,
       fbx: deep ? -5 : -4,
       armsFront: isBare,
@@ -649,7 +704,27 @@ function buildLoadoutKey(
   let headgear: PixelfxPosedTheme["headgear"] = "hair";
   let headRamp = preset.hairRamp;
   if (hDef) {
-    if (hDef.id === "hlm_prism_halo" || hDef.rarity === "legendary") {
+    if (hDef.id === "hlm_prism_halo" || hDef.id === "sea_hlm_eclipse_halo") {
+      headgear = "halo_crown";
+      headRamp = preset.hairRamp;
+    } else if (
+      hDef.id === "hid_boss_prism_visor" ||
+      hDef.id === "hlm_quartz_visor" ||
+      hDef.id === "exo_helm_frost_gaze"
+    ) {
+      headgear = "dragon_helm";
+      headRamp = rampFromHex(hDef.visualStyle?.primary ?? hDef.visualColor ?? "#26c4ff");
+    } else if (
+      hDef.id === "hid_craft_aethel_crown" ||
+      hDef.id === "hlm_amber_crown" ||
+      hDef.id === "exo_helm_storm_crown"
+    ) {
+      headgear = "royal_crown";
+      headRamp = rampFromHex(hDef.accentColor ?? hDef.visualStyle?.primary ?? "#ffe066");
+    } else if (hDef.id === "hlm_meadow_crest" || hDef.id === "sea_hlm_spring_crown") {
+      headgear = "antler_crest";
+      headRamp = rampFromHex(hDef.visualStyle?.primary ?? hDef.visualColor ?? "#44ee88");
+    } else if (hDef.rarity === "legendary") {
       headgear = "halo_crown";
       headRamp = preset.hairRamp;
     } else {
@@ -658,9 +733,23 @@ function buildLoadoutKey(
     }
   }
 
-  const backAccessory: PixelfxPosedTheme["backAccessory"] = aDef
-    ? preset.backAccessory
-    : "none";
+  let backAccessory: PixelfxPosedTheme["backAccessory"] = aDef ? preset.backAccessory : "none";
+  if (aDef) {
+    if (
+      aDef.id === "hid_craft_chroma_aegis" ||
+      aDef.id === "arm_prism_mantle" ||
+      aDef.id === "exo_armor_void_shroud" ||
+      aDef.rarity === "legendary"
+    ) {
+      backAccessory = "prism_wings";
+    } else if (aDef.id === "hid_boss_warden_mantle") {
+      backAccessory = "warden_roots";
+    } else if (aDef.id === "arm_amber_aegis" || aDef.id === "exo_armor_magma_core") {
+      backAccessory = "amber_thrusters";
+    } else if (aDef.id === "sea_arm_winter_cloak") {
+      backAccessory = "cape";
+    }
+  }
   const cloakRamp = aDef
     ? rampFromHex(aDef.accentColor ?? aDef.visualColor ?? RARITY_INFO[aDef.rarity].color, "#0e0a1a", "#ffffff")
     : preset.cloakRamp;
@@ -703,11 +792,11 @@ function buildLoadoutKey(
 
   const defaultAttackKind: HeroAttackKind = isBareHanded
     ? "punch_1"
-    : wRig.weapon === "staff"
+    : wRig.weapon === "staff" || wRig.weapon === "astral_staff"
       ? "cast_1"
-      : wRig.weapon === "pistol" || wRig.weapon === "launcher"
+      : wRig.weapon === "pistol" || wRig.weapon === "launcher" || wRig.weapon === "rail_cannon"
         ? "shoot"
-        : wRig.weapon === "dagger"
+        : wRig.weapon === "dagger" || wRig.weapon === "twin_quantum"
           ? "flurry_1"
           : "slash_1";
   const attackKind = extra?.attackKind ?? defaultAttackKind;
@@ -1011,19 +1100,65 @@ export function drawPixelfxHero(ctx: CanvasRenderingContext2D, opts: PixelfxHero
     ctx.restore();
   }
 
-  // Orbiting Accessory Pixel Rune (Ring / Amulet / Grimoire / Pix-Chip)
+  // Orbiting Accessory Pixel Relic (Grimoire / Prism Sigil / Spectrum Disc / Ring / Pix-Chip)
   const accInst = equipment.accessory;
   const accDef = accInst ? ITEMS[accInst.defId] : undefined;
   if (accDef && !hitFlash) {
-    const orbitR = 11 * rigScale * drawScale;
+    const orbitR = 11.5 * rigScale * drawScale;
     const ox = Math.round(x + Math.cos(time * 3.4) * orbitR);
     const oy = Math.round(y - 18 * rigScale * drawScale + Math.sin(time * 5.2) * (2.5 * drawScale));
     const col = bleached ? "#b8c0d0" : accDef.accentColor ?? RARITY_INFO[accDef.rarity].color;
-    const sz = Math.max(2, Math.round(3 * drawScale));
-    ctx.fillStyle = "#100c18";
-    ctx.fillRect(ox - 1, oy - 1, sz + 2, sz + 2);
-    ctx.fillStyle = col;
-    ctx.fillRect(ox, oy, sz, sz);
+    const pri = bleached ? "#9aa3b2" : accDef.visualColor ?? col;
+    const u = Math.max(1, Math.round(drawScale));
+    if (accDef.iconKind === "book") {
+      // Floating open pixel grimoire
+      ctx.fillStyle = "#100c18";
+      ctx.fillRect(ox - u * 3, oy - u * 2, u * 6, u * 4);
+      ctx.fillStyle = pri;
+      ctx.fillRect(ox - u * 2, oy - u, u * 4, u * 2);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(ox - u * 2, oy - u, u * 2, u);
+      ctx.fillStyle = col;
+      ctx.fillRect(ox + u * 0, oy - u, u * 2, u);
+    } else if (accDef.id === "hid_craft_siphon_sigil" || accDef.iconKind === "disc") {
+      // Rotating diamond prism sigil + twin counter-orbit spark
+      ctx.fillStyle = "#100c18";
+      ctx.fillRect(ox - u * 2, oy - u * 2, u * 5, u * 5);
+      ctx.fillStyle = pri;
+      ctx.fillRect(ox - u, oy - u, u * 3, u * 3);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(ox, oy, u, u);
+      const ox2 = Math.round(x - Math.cos(time * 3.4) * orbitR);
+      const oy2 = Math.round(y - 16 * rigScale * drawScale - Math.sin(time * 5.2) * (2.5 * drawScale));
+      ctx.fillStyle = col;
+      ctx.fillRect(ox2, oy2, u * 2, u * 2);
+    } else {
+      const sz = Math.max(2, Math.round(3 * drawScale));
+      ctx.fillStyle = "#100c18";
+      ctx.fillRect(ox - 1, oy - 1, sz + 2, sz + 2);
+      ctx.fillStyle = col;
+      ctx.fillRect(ox, oy, sz, sz);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(ox, oy, u, u);
+    }
+  }
+
+  // Special Legendary Boots glowing heel trail (Null Treads / Void Walkers)
+  const bootsDef = equipment.boots ? ITEMS[equipment.boots.defId] : undefined;
+  if (
+    bootsDef &&
+    (bootsDef.id === "hid_boss_null_treads" || bootsDef.id === "bts_void_walkers") &&
+    !hitFlash &&
+    !bleached
+  ) {
+    const u = Math.max(1, Math.round(drawScale));
+    const phase = Math.floor(time * 12) % 3;
+    const bx = Math.round(x - facing * (4 + phase * 2) * drawScale);
+    const by = Math.round(y - 2 * drawScale);
+    ctx.fillStyle = bootsDef.accentColor ?? "#5ef2ff";
+    ctx.fillRect(bx, by, u * 2, u);
+    ctx.fillStyle = bootsDef.visualColor ?? "#ff9922";
+    ctx.fillRect(bx - facing * u * 2, by - u, u, u);
   }
 
   // Active Buff / Aegis Energy Halo

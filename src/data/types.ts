@@ -148,6 +148,81 @@ export type EquipPassiveId =
   | "energy_siphon_magnet"
   | "set_resonance_echo";
 
+export type WeaponSkillId =
+  // Knight weapon skills
+  | "ws_shield_bash"
+  | "ws_gale_slash"
+  | "ws_warden_cleave"
+  | "ws_frost_crescent"
+  | "ws_halberd_impale"
+  | "ws_magma_eruption"
+  | "ws_tectonic_slam"
+  | "ws_prism_judgment"
+  | "ws_seven_prism_arc"
+  | "ws_void_sever"
+  | "ws_crimson_reap"
+  | "ws_thunder_smite"
+  | "ws_sakura_iaido"
+  // Mage weapon skills
+  | "ws_arcane_nova"
+  | "ws_thorn_bloom"
+  | "ws_chroma_vortex"
+  | "ws_solar_flare"
+  | "ws_starfall_barrage"
+  | "ws_nebula_collapse"
+  | "ws_blackhole_singularity"
+  | "ws_phoenix_sweep"
+  | "ws_blizzard_spire"
+  // Rogue weapon skills
+  | "ws_shadow_step"
+  | "ws_gale_daggers"
+  | "ws_frame_skip"
+  | "ws_blazing_flurry"
+  | "ws_reaper_hook"
+  | "ws_quantum_cross"
+  | "ws_eclipse_ambush"
+  | "ws_boomerang_chakram"
+  | "ws_venom_flurry"
+  | "ws_solstice_spin"
+  // Tinker weapon skills
+  | "ws_pulse_grenade"
+  | "ws_arc_shotgun"
+  | "ws_compile_turret"
+  | "ws_napalm_mortar"
+  | "ws_gravity_beam"
+  | "ws_orbital_strike"
+  | "ws_tesla_pylon"
+  | "ws_homing_rockets"
+  | "ws_eclipse_beam";
+
+export type ExoticSkillModId =
+  | "mod_chain_lightning"
+  | "mod_dash_frost_nova"
+  | "mod_flame_retaliate"
+  | "mod_ult_void_rift"
+  | "mod_dash_glitch_bomb"
+  | "mod_dash_quake_stomp"
+  | "mod_crit_meteor"
+  | "mod_skill_twin_prism"
+  | "mod_spring_bloom_heal"
+  | "mod_winter_frost_barrier"
+  | "mod_summer_solar_burn"
+  | "mod_eclipse_void_echo";
+
+export interface GachaSaveState {
+  pityEpic: Record<string, number>;
+  pityLegend: Record<string, number>;
+  totalRolls: number;
+  history: { itemId: string; rarity: Rarity; bannerId: string; at: number }[];
+}
+
+export type AutoSellMode = "off" | "common" | "uncommon" | "rare";
+
+export interface AutoSellSettings {
+  maxRarity: AutoSellMode;
+  includeOffClass?: boolean;
+}
+
 export type HiddenSource = "craft_only" | "boss_only";
 
 export interface HiddenCraftRecipeSpec {
@@ -202,6 +277,11 @@ export interface ItemDef {
   lore?: string;
   passiveId?: EquipPassiveId;
   passiveDesc?: string;
+  weaponSkillId?: WeaponSkillId;
+  exoticModId?: ExoticSkillModId;
+  dropOnly?: boolean;
+  seasonalBannerId?: string;
+  gachaKeyBiome?: BiomeId;
   pigmentElement?: InfusableElement;
   sellPrice: number;
   buyPrice?: number;
@@ -376,6 +456,8 @@ export interface EnemyDef {
     | "bruiser"
     | "mini_root_golem"
     | "mini_quartz_knight"
+    | "mini_amber_warrior"
+    | "mini_void_gatekeeper"
     | "boss_warden"
     | "boss_root"
     | "boss_amber"
@@ -404,12 +486,17 @@ export interface SaveDataV2 {
   };
   equipment: Partial<Record<EquipSlot, ItemInstance>>;
   bag: ItemInstance[];
+  bagCapacity?: number;
+  backpackTier?: number;
+  stash?: ItemInstance[];
+  autoSell?: AutoSellSettings;
   unlockedWaypoints: string[];
   openedChests: string[];
   discoveredLore?: string[];
   unlockedHiddenItems?: string[];
   defeatedBossIds?: string[];
   tutorialCompleted?: boolean;
+  gachaState?: GachaSaveState;
   quests: Record<string, QuestProgress>;
   stats: {
     kills: number;

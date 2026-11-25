@@ -12,6 +12,7 @@ import {
   getTierBadge,
 } from "../data/items";
 import { EQUIP_SLOTS, type EquipSlot, type ItemDef, type ItemInstance } from "../data/types";
+import { getWeaponSkillForItem } from "../data/weaponSkills";
 import { drawItemIcon } from "../graphics/itemIcons";
 import { clearFrame, createFrame, createFx } from "../vfx/pixelfx/core/index.js";
 import * as rarityAuraMod from "../vfx/pixelfx/fx/pixtel/rarity-aura.js";
@@ -203,6 +204,18 @@ export class ItemReviewTooltip {
           sourceKind,
         };
       }
+      const inStash = this.game.inv.findInStash(uid);
+      if (inStash) {
+        const def = ITEMS[inStash.defId];
+        if (!def) return null;
+        return {
+          def,
+          inst: inStash,
+          isEquipped: false,
+          equippedSlot: null,
+          sourceKind: "stash",
+        };
+      }
     }
 
     const defId = target.dataset.reviewDef;
@@ -333,6 +346,15 @@ export class ItemReviewTooltip {
         infuseNote += `<div class="review-doll-note" style="border-left-color:#ff88f2">★ Thức Tỉnh [+10]: <b>Khúc Xạ Lăng Kính (Prism)</b></div>`;
       }
 
+      const weaponSkill = def.slot === "weapon" ? getWeaponSkillForItem(def.id) : null;
+      const weaponSkillHtml = weaponSkill
+        ? `<div class="review-doll-note" style="border-left-color:${weaponSkill.accent};background:#efe4c6;color:#2e170a">⚔ <b>Kỹ Năng Vũ Khí [E]: ${weaponSkill.name}</b> (${weaponSkill.cooldown}s · ${ELEMENT_META[weaponSkill.element].name})<br/>${weaponSkill.detailDesc}</div>`
+        : "";
+      const exoticSourceHtml = def.dropOnly
+        ? `<div class="review-doll-note" style="border-left-color:#e03c68;color:#6b0c27">★ TRANG BỊ ĐỘC LẠ · Chỉ rơi khi hạ Quái & Boss (Không bán/không rèn)</div>`
+        : def.seasonalBannerId
+          ? `<div class="review-doll-note" style="border-left-color:#9b3fe0;color:#41126b">✦ ĐỘC QUYỀN RƯƠNG GACHA MÙA [G]</div>`
+          : "";
       const passiveHtml = def.passiveDesc
         ? `<div class="review-doll-note" style="border-left-color:#b85a14;color:#4a2308">✦ ${def.passiveDesc}</div>`
         : "";
@@ -367,6 +389,8 @@ export class ItemReviewTooltip {
 
       bodyHtml = `
         <div class="review-stats-grid">${statLines}</div>
+        ${weaponSkillHtml}
+        ${exoticSourceHtml}
         ${infuseNote}
         ${hiddenSourceNote}
         ${passiveHtml}
@@ -402,11 +426,13 @@ export class ItemReviewTooltip {
       footerLeft = sourceKind === "hud" ? "Click phím để dùng ngay" : `Đang giữ: <b>x${owned}</b>`;
     } else {
       const owned = this.game.inv.countItem(def.id);
+      const isGachaKey = Boolean(def.gachaKeyBiome);
       bodyHtml = `
         <div class="review-tags-row">
-          <span class="review-tag-chip">Khoáng sản & Chế tác</span>
+          <span class="review-tag-chip">${isGachaKey ? "🗝 Chìa Rương Gacha Mùa [G]" : "Khoáng sản & Chế tác"}</span>
           <span class="review-tag-chip">Trong túi: <b>x${owned}</b></span>
         </div>
+        ${isGachaKey ? `<div class="review-doll-note" style="border-left-color:#d266ff;color:#41126b">★ Nhấn phím [G] hoặc lại Đài Gacha Thị Trấn để mở Rương Mùa!</div>` : ""}
       `;
       footerLeft = `Trong túi: <b>x${owned}</b>`;
     }

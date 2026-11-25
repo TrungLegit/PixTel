@@ -1,4 +1,5 @@
 import type { RecipeDef } from "./types";
+import { GACHA_KEY_RECIPES } from "./gacha";
 import { HIDDEN_CRAFT_RECIPES } from "./hiddenItems";
 
 /**
@@ -374,6 +375,8 @@ export const FORGE_RECIPES: RecipeDef[] = [
     ],
     desc: "Kết tinh Trái Tim Thất Sắc Iris (Mọi Phản Ứng hồi +4% HP, +10 Stamina & N3 gắn Ấn Sắc Độ)!",
   },
+  // === CHẾ TẠO 4 CHÌA KHÓA RƯƠNG GACHA THEO MÙA (BIOME KEYS) ===
+  ...GACHA_KEY_RECIPES,
   // === BẢN VẼ CỔ VẬT ẨN (CRAFT-ONLY) ===
   ...HIDDEN_CRAFT_RECIPES,
 ];

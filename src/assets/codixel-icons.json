@@ -384,6 +384,480 @@
       "y": 168,
       "w": 24,
       "h": 24
+    },
+    "ui_backpack": {
+      "x": 0,
+      "y": 192,
+      "w": 24,
+      "h": 24
+    },
+    "ui_lock": {
+      "x": 24,
+      "y": 192,
+      "w": 24,
+      "h": 24
+    },
+    "skill_unarmed": {
+      "x": 48,
+      "y": 192,
+      "w": 24,
+      "h": 24
+    },
+    "skill_dash": {
+      "x": 72,
+      "y": 192,
+      "w": 24,
+      "h": 24
+    },
+    "skill_knight_lmb": {
+      "x": 96,
+      "y": 192,
+      "w": 24,
+      "h": 24
+    },
+    "skill_knight_e": {
+      "x": 120,
+      "y": 192,
+      "w": 24,
+      "h": 24
+    },
+    "skill_knight_q": {
+      "x": 144,
+      "y": 192,
+      "w": 24,
+      "h": 24
+    },
+    "skill_mage_lmb": {
+      "x": 168,
+      "y": 192,
+      "w": 24,
+      "h": 24
+    },
+    "skill_mage_e": {
+      "x": 0,
+      "y": 216,
+      "w": 24,
+      "h": 24
+    },
+    "skill_mage_q": {
+      "x": 24,
+      "y": 216,
+      "w": 24,
+      "h": 24
+    },
+    "skill_rogue_lmb": {
+      "x": 48,
+      "y": 216,
+      "w": 24,
+      "h": 24
+    },
+    "skill_rogue_e": {
+      "x": 72,
+      "y": 216,
+      "w": 24,
+      "h": 24
+    },
+    "skill_rogue_q": {
+      "x": 96,
+      "y": 216,
+      "w": 24,
+      "h": 24
+    },
+    "skill_tinker_lmb": {
+      "x": 120,
+      "y": 216,
+      "w": 24,
+      "h": 24
+    },
+    "skill_tinker_e": {
+      "x": 144,
+      "y": 216,
+      "w": 24,
+      "h": 24
+    },
+    "skill_tinker_q": {
+      "x": 168,
+      "y": 216,
+      "w": 24,
+      "h": 24
+    },
+    "wpn_prism_blade": {
+      "x": 0,
+      "y": 240,
+      "w": 24,
+      "h": 24
+    },
+    "wpn_eraser_edge": {
+      "x": 24,
+      "y": 240,
+      "w": 24,
+      "h": 24
+    },
+    "wpn_void_scythe": {
+      "x": 48,
+      "y": 240,
+      "w": 24,
+      "h": 24
+    },
+    "wpn_quake_maul": {
+      "x": 72,
+      "y": 240,
+      "w": 24,
+      "h": 24
+    },
+    "wpn_warden_cleaver": {
+      "x": 96,
+      "y": 240,
+      "w": 24,
+      "h": 24
+    },
+    "wpn_astral_scepter": {
+      "x": 120,
+      "y": 240,
+      "w": 24,
+      "h": 24
+    },
+    "wpn_quantum_blades": {
+      "x": 144,
+      "y": 240,
+      "w": 24,
+      "h": 24
+    },
+    "wpn_singularity_cannon": {
+      "x": 168,
+      "y": 240,
+      "w": 24,
+      "h": 24
+    },
+    "wpn_nebula_staff": {
+      "x": 0,
+      "y": 264,
+      "w": 24,
+      "h": 24
+    },
+    "wpn_eclipse_fangs": {
+      "x": 24,
+      "y": 264,
+      "w": 24,
+      "h": 24
+    },
+    "wpn_nova_railgun": {
+      "x": 48,
+      "y": 264,
+      "w": 24,
+      "h": 24
+    },
+    "helm_aethel_crown": {
+      "x": 72,
+      "y": 264,
+      "w": 24,
+      "h": 24
+    },
+    "helm_dragon_visor": {
+      "x": 96,
+      "y": 264,
+      "w": 24,
+      "h": 24
+    },
+    "armor_warden_mantle": {
+      "x": 120,
+      "y": 264,
+      "w": 24,
+      "h": 24
+    },
+    "armor_chroma_aegis": {
+      "x": 144,
+      "y": 264,
+      "w": 24,
+      "h": 24
+    },
+    "boots_null_treads": {
+      "x": 168,
+      "y": 264,
+      "w": 24,
+      "h": 24
+    },
+    "acc_siphon_sigil": {
+      "x": 0,
+      "y": 288,
+      "w": 24,
+      "h": 24
+    },
+    "ui_gacha_chest": {
+      "x": 24,
+      "y": 288,
+      "w": 24,
+      "h": 24
+    },
+    "key_spring": {
+      "x": 48,
+      "y": 288,
+      "w": 24,
+      "h": 24
+    },
+    "key_winter": {
+      "x": 72,
+      "y": 288,
+      "w": 24,
+      "h": 24
+    },
+    "key_summer": {
+      "x": 96,
+      "y": 288,
+      "w": 24,
+      "h": 24
+    },
+    "key_eclipse": {
+      "x": 120,
+      "y": 288,
+      "w": 24,
+      "h": 24
+    },
+    "exo_blood_gs": {
+      "x": 144,
+      "y": 288,
+      "w": 24,
+      "h": 24
+    },
+    "exo_thunder_halb": {
+      "x": 168,
+      "y": 288,
+      "w": 24,
+      "h": 24
+    },
+    "exo_blackhole_orb": {
+      "x": 0,
+      "y": 312,
+      "w": 24,
+      "h": 24
+    },
+    "exo_phoenix_rod": {
+      "x": 24,
+      "y": 312,
+      "w": 24,
+      "h": 24
+    },
+    "exo_boomerang_chakram": {
+      "x": 48,
+      "y": 312,
+      "w": 24,
+      "h": 24
+    },
+    "exo_venom_claws": {
+      "x": 72,
+      "y": 312,
+      "w": 24,
+      "h": 24
+    },
+    "exo_tesla_gun": {
+      "x": 96,
+      "y": 312,
+      "w": 24,
+      "h": 24
+    },
+    "exo_rocket_barrage": {
+      "x": 120,
+      "y": 312,
+      "w": 24,
+      "h": 24
+    },
+    "exo_storm_crown": {
+      "x": 144,
+      "y": 312,
+      "w": 24,
+      "h": 24
+    },
+    "exo_frost_gaze": {
+      "x": 168,
+      "y": 312,
+      "w": 24,
+      "h": 24
+    },
+    "exo_magma_armor": {
+      "x": 0,
+      "y": 336,
+      "w": 24,
+      "h": 24
+    },
+    "exo_void_shroud": {
+      "x": 24,
+      "y": 336,
+      "w": 24,
+      "h": 24
+    },
+    "exo_blink_boots": {
+      "x": 48,
+      "y": 336,
+      "w": 24,
+      "h": 24
+    },
+    "exo_quake_boots": {
+      "x": 72,
+      "y": 336,
+      "w": 24,
+      "h": 24
+    },
+    "exo_meteor_ring": {
+      "x": 96,
+      "y": 336,
+      "w": 24,
+      "h": 24
+    },
+    "exo_twin_prism": {
+      "x": 120,
+      "y": 336,
+      "w": 24,
+      "h": 24
+    },
+    "sea_spring_katana": {
+      "x": 144,
+      "y": 336,
+      "w": 24,
+      "h": 24
+    },
+    "sea_winter_staff": {
+      "x": 168,
+      "y": 336,
+      "w": 24,
+      "h": 24
+    },
+    "sea_summer_blades": {
+      "x": 0,
+      "y": 360,
+      "w": 24,
+      "h": 24
+    },
+    "sea_eclipse_cannon": {
+      "x": 24,
+      "y": 360,
+      "w": 24,
+      "h": 24
+    },
+    "sea_spring_crown": {
+      "x": 48,
+      "y": 360,
+      "w": 24,
+      "h": 24
+    },
+    "sea_winter_cloak": {
+      "x": 72,
+      "y": 360,
+      "w": 24,
+      "h": 24
+    },
+    "sea_summer_charm": {
+      "x": 96,
+      "y": 360,
+      "w": 24,
+      "h": 24
+    },
+    "sea_eclipse_halo": {
+      "x": 120,
+      "y": 360,
+      "w": 24,
+      "h": 24
+    },
+    "ws_gale_arc": {
+      "x": 144,
+      "y": 360,
+      "w": 24,
+      "h": 24
+    },
+    "ws_frost_wave": {
+      "x": 168,
+      "y": 360,
+      "w": 24,
+      "h": 24
+    },
+    "ws_quake_slam": {
+      "x": 0,
+      "y": 384,
+      "w": 24,
+      "h": 24
+    },
+    "ws_blood_wave": {
+      "x": 24,
+      "y": 384,
+      "w": 24,
+      "h": 24
+    },
+    "ws_thunder_bolt": {
+      "x": 48,
+      "y": 384,
+      "w": 24,
+      "h": 24
+    },
+    "ws_blackhole": {
+      "x": 72,
+      "y": 384,
+      "w": 24,
+      "h": 24
+    },
+    "ws_phoenix_flame": {
+      "x": 96,
+      "y": 384,
+      "w": 24,
+      "h": 24
+    },
+    "ws_starfall": {
+      "x": 120,
+      "y": 384,
+      "w": 24,
+      "h": 24
+    },
+    "ws_chakram": {
+      "x": 144,
+      "y": 384,
+      "w": 24,
+      "h": 24
+    },
+    "ws_venom_flurry": {
+      "x": 168,
+      "y": 384,
+      "w": 24,
+      "h": 24
+    },
+    "ws_tesla_pylon": {
+      "x": 0,
+      "y": 408,
+      "w": 24,
+      "h": 24
+    },
+    "ws_rocket_salvo": {
+      "x": 24,
+      "y": 408,
+      "w": 24,
+      "h": 24
+    },
+    "ui_stash_chest": {
+      "x": 48,
+      "y": 408,
+      "w": 24,
+      "h": 24
+    },
+    "ui_backpack_t1": {
+      "x": 72,
+      "y": 408,
+      "w": 24,
+      "h": 24
+    },
+    "ui_backpack_t2": {
+      "x": 96,
+      "y": 408,
+      "w": 24,
+      "h": 24
+    },
+    "ui_backpack_t3": {
+      "x": 120,
+      "y": 408,
+      "w": 24,
+      "h": 24
+    },
+    "ui_backpack_t4": {
+      "x": 144,
+      "y": 408,
+      "w": 24,
+      "h": 24
     }
   }
 }

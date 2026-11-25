@@ -3,6 +3,7 @@ import { ENEMIES } from "../data/enemies";
 import { rollBossHiddenDrops } from "../data/hiddenItems";
 import { ITEMS, RARITY_INFO } from "../data/items";
 import { rollEnemyDropTable } from "../data/lootTables";
+import { getWeaponSkillForItem } from "../data/weaponSkills";
 import { CHROMA_RAINBOW } from "../data/worldConfig";
 import {
   ELEMENT_META,
@@ -12,7 +13,13 @@ import {
   makeReactionKey,
   normalizeElement,
 } from "../data/elements";
-import type { ActiveBossLock, CanonicalElement, ElementType, InfusableElement } from "../data/types";
+import type {
+  ActiveBossLock,
+  CanonicalElement,
+  ElementType,
+  ExoticSkillModId,
+  InfusableElement,
+} from "../data/types";
 import type {
   EnemyAnimKind,
   EnemyEntity,
@@ -121,6 +128,52 @@ const ELEMENT_HIT_PRESET: Record<ElementType, string> = {
  */
 export class CombatSystem {
   private lastLevelWarnTime = 0;
+
+  private _consumeExoticMod(player: PlayerEntity, modId: ExoticSkillModId, icdSec: number): boolean {
+    if (!player.exoticMods || !player.exoticMods.has(modId)) return false;
+    if (!player.exoticIcds) player.exoticIcds = {};
+    if ((player.exoticIcds[modId] ?? 0) > 0) return false;
+    player.exoticIcds[modId] = icdSec;
+    return true;
+  }
+
+  private _triggerChainLightning(ctx: CombatContext, ox: number, oy: number, mult = 0.55, maxTargets = 3) {
+    const { vfx, spawner } = ctx;
+    const cands = spawner.enemies
+      .filter((en) => en.hp > 0 && Math.hypot(en.x - ox, en.y - oy) <= 135)
+      .sort((a, b) => Math.hypot(a.x - ox, a.y - oy) - Math.hypot(b.x - ox, b.y - oy))
+      .slice(0, maxTargets);
+    for (const tgt of cands) {
+      const { dmg, crit } = this._rollDamage(ctx, mult, 8, true, tgt);
+      vfx.spawnPooled("zap-hit", { x: tgt.x, y: tgt.y - 8, scale: 0.9 });
+      this.damageEnemy(ctx, tgt, dmg, crit, "zap-hit", "volt", 0, 0, 0.9);
+    }
+    if (cands.length > 0) sfx.playShoot(980);
+  }
+
+  private _triggerFlameRing(ctx: CombatContext, mult = 0.65) {
+    const { player, vfx, spawner } = ctx;
+    vfx.spawnPooled("explode-fire", { x: player.x, y: player.y - 6, scale: 1.0 });
+    for (const en of [...spawner.enemies]) {
+      const d = Math.hypot(en.x - player.x, en.y - player.y);
+      if (d <= 54 + en.radius) {
+        const { dmg, crit } = this._rollDamage(ctx, mult, 6, true, en);
+        en.burnTime = Math.max(en.burnTime, 2.5);
+        this.damageEnemy(ctx, en, dmg, crit, "hit-fire", "fire", (en.x - player.x) / (d || 1), (en.y - player.y) / (d || 1), 0.9);
+      }
+    }
+  }
+
+  private _alertCampPack(ctx: CombatContext, src: EnemyEntity) {
+    for (const ally of ctx.spawner.enemies) {
+      if (ally === src || ally.state !== "patrol") continue;
+      if (ally.campId === src.campId && Math.hypot(ally.x - src.x, ally.y - src.y) <= 125) {
+        ally.state = "aggro";
+        ally.alertTimer = 0.72;
+        ally.aiTimer = Math.min(ally.aiTimer, 0.65 + Math.random() * 0.4);
+      }
+    }
+  }
 
   private _rollDamage(
     ctx: CombatContext,
@@ -283,6 +336,11 @@ export class CombatSystem {
     const isFinisher = step === 2;
     const bonusElem = this._resolveWeaponElement(ctx, isFinisher);
     const ang = player.aimAngle;
+
+    // Exotic Mũ Lôi Đế: N3 finisher chains lightning to 3 targets!
+    if (isFinisher && this._consumeExoticMod(player, "mod_chain_lightning", 1.6)) {
+      this._triggerChainLightning(ctx, player.x + Math.cos(ang) * 24, player.y + Math.sin(ang) * 24, 0.52, 3);
+    }
 
     // Unarmed Bare-Handed Punch Combo when no valid class Weapon is equipped
     if (!ctx.inv.hasValidEquippedWeapon(player.classId)) {
@@ -546,8 +604,9 @@ export class CombatSystem {
     player.tectonicChargeBonus = false;
 
     const justMult = (justCharge ? 1.26 : 1.0) * tectonicMult;
-    const poiseMult = justCharge ? 2.5 : 1.85;
-    const bonusElem = this._resolveWeaponElement(ctx, true);
+    const hasSolarCharm = Boolean(player.exoticMods?.has("mod_summer_solar_burn"));
+    const poiseMult = (justCharge ? 2.5 : 1.85) + (hasSolarCharm ? 0.3 : 0);
+    const bonusElem = this._resolveWeaponElement(ctx, true) ?? (hasSolarCharm ? "fire" : undefined);
 
     const ang = player.aimAngle;
     this._syncFacingFromAngle(player, ang);
@@ -772,149 +831,767 @@ export class CombatSystem {
     }
   }
 
-  /** Class active skill [E] (Unlocked by equipping a class-compatible Weapon) */
+  /** Weapon-Driven Active Skill [E]: EVERY weapon has its own unique skill, icon, animation & VFX! */
   performSkillE(ctx: CombatContext) {
     const { player, vfx } = ctx;
-    if (!ctx.inv.hasValidEquippedWeapon(player.classId)) {
+    const wpn = ctx.inv.getValidEquippedWeapon(player.classId);
+    if (!wpn) {
       sfx.playForgeFail();
-      ctx.notify("🔒 Cần trang bị Vũ Khí đúng Class để mở khóa kỹ năng [E]!", "warn");
+      ctx.notify("🔒 Cần trang bị Vũ Khí đúng Class để mở khóa Kỹ Năng Vũ Khí [E]!", "warn");
       return;
     }
     if (player.skillCd > 0) return;
 
+    const ws = getWeaponSkillForItem(wpn.defId);
     const cdef = getClassDef(player.classId);
     const cdMult = Math.max(0.55, 1 + (player.skillCdPct || 0) / 100);
-    player.skillCd = cdef.baseStats.skillCooldown * cdMult;
+    player.skillCd = (ws?.cooldown ?? cdef.baseStats.skillCooldown) * cdMult;
     player.quickChargeTimer = 1.3; // Link E -> Quick Charge!
     const ang = player.aimAngle;
     const bonusElem = this._resolveWeaponElement(ctx, true);
+    const skillElem: ElementType = bonusElem ?? ws?.element ?? "prism";
+    const wsId = ws?.id ?? "ws_shield_bash";
+    const wpPos = this._weaponOrigin(player, ang, 13);
 
-    if (player.classId === "prism_knight") {
-      player.shieldTime = 1.05;
-      this._startAttackAnim(player, "beam", 0.34, ang);
-      sfx.playBlock();
-      vfx.spawnLive("impacts/shield-block", {
-        x: player.x,
-        y: player.y,
-        follow: player,
-        offsetX: 0,
-        offsetY: 0,
-        flip: Math.cos(ang) < 0,
-        angle: 0,
-        options: { palette: PAL.cyber },
-        priority: 4,
-        maxLife: 1.05,
-      });
-      this.firePrismBeam(ctx, ang, 1.85, bonusElem ?? "prism");
-      return;
+    // Execute Weapon-Specific Skill!
+    this._executeWeaponSkill(ctx, wsId, ang, skillElem, wpPos);
+
+    // Apply Exotic / Seasonal Skill-Altering Modifiers on [E]!
+    if (this._consumeExoticMod(player, "mod_chain_lightning", 1.6)) {
+      this._triggerChainLightning(ctx, player.x + Math.cos(ang) * 32, player.y + Math.sin(ang) * 32, 0.55, 3);
     }
-
-    if (player.classId === "chroma_mage") {
-      this._startAttackAnim(player, "cast_heavy", 0.34, ang);
-      const wpPos = this._weaponOrigin(player, ang, 14);
-      vfx.spawnPooled("crit-gold", { x: wpPos.x, y: wpPos.y, scale: 0.72 });
-      const tx = player.x + Math.cos(ang) * 64;
-      const ty = player.y + Math.sin(ang) * 64;
-      sfx.playMagic(1);
-      vfx.spawnLive("pixtel/chroma-vortex", {
-        x: tx,
-        y: ty,
-        options: { radius: 44 },
-        priority: 4,
-        maxLife: 3.1,
-      });
-      ctx.hazards.push({
-        uid: nextEntityUid(),
-        owner: "player",
-        kind: "vortex",
-        x: tx,
-        y: ty,
-        radius: 56,
-        delay: 0,
-        age: 0,
-        maxLife: 3.1,
-        tickTimer: 0,
-        damage: Math.round(player.atk * 0.58),
-        triggered: true,
-      });
-      return;
+    if (this._consumeExoticMod(player, "mod_flame_retaliate", 2.2)) {
+      this._triggerFlameRing(ctx, 0.62);
     }
-
-    if (player.classId === "bit_rogue") {
-      const ox = player.x;
-      const oy = player.y;
-      this._syncFacingFromAngle(player, ang);
-      sfx.playDash();
-      vfx.spawnLive("pixtel/frame-skip", {
-        x: ox,
-        y: oy,
-        options: { actor: sprites.getHero("bit_rogue", 0).actor },
-        priority: 4,
-        maxLife: 1.25,
-      });
-      ctx.hazards.push({
-        uid: nextEntityUid(),
-        owner: "player",
-        kind: "afterimage",
-        x: ox,
-        y: oy,
-        radius: 46,
-        delay: 0.75,
-        age: 0,
-        maxLife: 1.0,
-        tickTimer: 0,
-        damage: Math.round(player.atk * 2.5),
-        triggered: false,
-      });
-
-      player.dashing = 0.2;
-      player.invuln = Math.max(player.invuln, 0.36);
-      player.perfectDashWindow = 0.14;
-      player.dashVx = Math.cos(ang) * 340;
-      player.dashVy = Math.sin(ang) * 340;
-      return;
-    }
-
-    if (player.classId === "pixel_tinker") {
-      this._startAttackAnim(player, "cast_1", 0.28, ang);
-      const tx = player.x + Math.cos(ang) * 26;
-      const ty = player.y + Math.sin(ang) * 26;
-      const safeX = ctx.world.isBlocked(tx, ty, 6) ? player.x : tx;
-      const safeY = ctx.world.isBlocked(tx, ty, 6) ? player.y : ty;
-      if (ctx.turrets.length >= 2) {
-        ctx.turrets.shift();
+    if (this._consumeExoticMod(player, "mod_skill_twin_prism", 2.0)) {
+      for (const off of [-0.28, 0.28]) {
+        const { dmg, crit } = this._rollDamage(ctx, 0.58, 10, true);
+        this._spawnPlayerProj(ctx, {
+          x: wpPos.x,
+          y: wpPos.y,
+          angle: ang + off,
+          speed: 270,
+          radius: 5,
+          damage: dmg,
+          crit,
+          pierce: 0,
+          maxLife: 0.95,
+          preset: off < 0 ? "proj-icelance" : "proj-laser",
+          element: "prism",
+          hitPreset: "crit-gold",
+          homing: true,
+          poiseMult: 1.1,
+        });
       }
-      ctx.turrets.push({
-        uid: nextEntityUid(),
-        x: safeX,
-        y: safeY,
-        hp: 75 + player.level * 9,
-        maxHp: 75 + player.level * 9,
-        life: 0,
-        maxLife: 18,
-        fireCd: 0.42,
-        overclockTime: 0,
-        angle: ang,
-        hitFlash: 0,
-      });
-      sfx.playBlock();
-      vfx.spawnLive("pixtel/compile-turret", {
-        x: safeX,
-        y: safeY,
-        priority: 4,
-        maxLife: 1.1,
-      });
+    }
+    if (this._consumeExoticMod(player, "mod_eclipse_void_echo", 2.5)) {
+      player.overdrive = Math.min(100, player.overdrive + 6);
+      player.stamina = Math.min(player.maxStamina, player.stamina + 10);
+      vfx.spawnPooled("collect-burst-epic", { x: player.x, y: player.y - 10, scale: 0.7 });
     }
   }
 
-  /** Class Ultimate [Q] (Unlocked by equipping an Accessory + 100% Overdrive) */
+  private _executeWeaponSkill(
+    ctx: CombatContext,
+    wsId: string,
+    ang: number,
+    elem: ElementType,
+    wpPos: { x: number; y: number }
+  ) {
+    const { player, vfx } = ctx;
+    const dir = this._toDirectionalVfx(ang, 0.65);
+
+    switch (wsId) {
+      case "ws_shield_bash":
+      case "ws_prism_judgment": {
+        player.shieldTime = wsId === "ws_prism_judgment" ? 0.95 : 1.05;
+        this._startAttackAnim(player, "beam", 0.34, ang);
+        sfx.playBlock();
+        vfx.spawnLive("impacts/shield-block", {
+          x: player.x,
+          y: player.y,
+          follow: player,
+          offsetX: 0,
+          offsetY: 0,
+          flip: Math.cos(ang) < 0,
+          angle: 0,
+          options: { palette: PAL.cyber },
+          priority: 4,
+          maxLife: 1.0,
+        });
+        this.firePrismBeam(ctx, ang, wsId === "ws_prism_judgment" ? 1.95 : 1.75, elem);
+        return;
+      }
+      case "ws_gale_slash":
+      case "ws_seven_prism_arc":
+      case "ws_frost_crescent": {
+        this._startAttackAnim(player, "cleave", 0.34, ang);
+        sfx.playSlash(2);
+        const pal = wsId === "ws_frost_crescent" ? PAL.ice : wsId === "ws_gale_slash" ? PAL.heal : PAL.neon;
+        vfx.spawnLive("melee/heavy-cleave", {
+          x: player.x + Math.cos(ang) * 8,
+          y: player.y - 14 + Math.sin(ang) * 4,
+          follow: player,
+          offsetX: Math.cos(ang) * 8,
+          offsetY: -14 + Math.sin(ang) * 4,
+          angle: dir.angle,
+          flip: dir.flip,
+          durationScale: 1.5,
+          maxLife: 0.36,
+          options: { palette: pal },
+          priority: 4,
+        });
+        const count = wsId === "ws_seven_prism_arc" ? 3 : wsId === "ws_frost_crescent" ? 2 : 1;
+        const mult = count === 3 ? 0.92 : count === 2 ? 1.15 : 1.75;
+        const preset = wsId === "ws_frost_crescent" ? "proj-icelance" : wsId === "ws_gale_slash" ? "proj-emerald" : "proj-laser";
+        for (let i = 0; i < count; i++) {
+          const spread = count === 1 ? 0 : (i - (count - 1) / 2) * 0.22;
+          const { dmg, crit } = this._rollDamage(ctx, mult, 10, true);
+          this._spawnPlayerProj(ctx, {
+            x: wpPos.x,
+            y: wpPos.y,
+            angle: ang + spread,
+            speed: 265,
+            radius: 7,
+            damage: dmg,
+            crit,
+            pierce: 2,
+            maxLife: 0.72,
+            preset,
+            element: elem,
+            hitPreset: ELEMENT_HIT_PRESET[elem],
+            poiseMult: 1.5,
+          });
+        }
+        return;
+      }
+      case "ws_warden_cleave":
+      case "ws_tectonic_slam": {
+        this._startAttackAnim(player, "cleave", 0.4, ang);
+        sfx.playExplosion();
+        ctx.addShake(4.0);
+        const isQuake = wsId === "ws_tectonic_slam";
+        vfx.spawnPooled(isQuake ? "ground-slam-fire" : "ground-slam-nature", {
+          x: isQuake ? player.x : player.x + Math.cos(ang) * 22,
+          y: isQuake ? player.y : player.y + Math.sin(ang) * 22,
+        });
+        const cx = isQuake ? player.x : player.x + Math.cos(ang) * 20;
+        const cy = isQuake ? player.y : player.y + Math.sin(ang) * 20;
+        const rad = isQuake ? 70 : 58;
+        for (const e of [...ctx.spawner.enemies]) {
+          const d = Math.hypot(e.x - cx, e.y - cy);
+          if (d <= rad + e.radius) {
+            const { dmg, crit } = this._rollDamage(ctx, isQuake ? 2.15 : 2.1, 10, true, e);
+            if (!e.isBoss) e.rootTime = Math.max(e.rootTime, 1.15);
+            this.damageEnemy(ctx, e, dmg, crit, isQuake ? "ground-slam" : "hit-poison", elem, (e.x - cx) / (d || 1), (e.y - cy) / (d || 1), 2.5);
+          }
+        }
+        return;
+      }
+      case "ws_halberd_impale":
+      case "ws_void_sever":
+      case "ws_sakura_iaido":
+      case "ws_shadow_step":
+      case "ws_quantum_cross": {
+        const isShadow = wsId === "ws_shadow_step" || wsId === "ws_sakura_iaido" || wsId === "ws_void_sever";
+        this._startAttackAnim(player, isShadow ? "thrust" : "flurry_2", 0.34, ang);
+        sfx.playDash();
+        player.dashing = 0.18;
+        player.invuln = Math.max(player.invuln, 0.3);
+        player.dashVx = Math.cos(ang) * 320;
+        player.dashVy = Math.sin(ang) * 320;
+        const pal =
+          wsId === "ws_void_sever" ? PAL.shadow :
+          wsId === "ws_sakura_iaido" ? PAL.candy :
+          wsId === "ws_quantum_cross" ? PAL.cyber : PAL.ice;
+        vfx.spawnLive("melee/thrust", {
+          x: wpPos.x,
+          y: wpPos.y,
+          follow: player,
+          offsetX: wpPos.x - player.x,
+          offsetY: wpPos.y - player.y,
+          angle: dir.angle,
+          flip: dir.flip,
+          durationScale: 1.45,
+          maxLife: 0.38,
+          options: { palette: pal },
+          priority: 4,
+        });
+        if (wsId === "ws_sakura_iaido") {
+          player.stamina = Math.min(player.maxStamina, player.stamina + 12);
+        }
+        this._linePierceHit(
+          ctx,
+          player.x,
+          player.y,
+          ang,
+          wsId === "ws_halberd_impale" ? 115 : 96,
+          18,
+          wsId === "ws_void_sever" ? 2.25 : 2.0,
+          ELEMENT_HIT_PRESET[elem],
+          elem,
+          1.9
+        );
+        return;
+      }
+      case "ws_magma_eruption":
+      case "ws_phoenix_sweep": {
+        this._startAttackAnim(player, wsId === "ws_phoenix_sweep" ? "cast_heavy" : "cleave", 0.38, ang);
+        sfx.playExplosion();
+        vfx.spawnLive("melee/heavy-cleave", {
+          x: wpPos.x,
+          y: wpPos.y,
+          follow: player,
+          offsetX: wpPos.x - player.x,
+          offsetY: wpPos.y - player.y,
+          angle: dir.angle,
+          flip: dir.flip,
+          durationScale: 1.4,
+          maxLife: 0.4,
+          options: { palette: PAL.fire },
+          priority: 4,
+        });
+        for (const off of [-0.2, 0, 0.2]) {
+          const { dmg, crit } = this._rollDamage(ctx, 0.95, 8, true);
+          this._spawnPlayerProj(ctx, {
+            x: wpPos.x,
+            y: wpPos.y,
+            angle: ang + off,
+            speed: 245,
+            radius: 6,
+            damage: dmg,
+            crit,
+            pierce: 2,
+            maxLife: 0.72,
+            preset: "proj-fireball",
+            element: "fire",
+            hitPreset: "hit-fire",
+            poiseMult: 1.3,
+          });
+        }
+        for (let k = 1; k <= 2; k++) {
+          ctx.hazards.push({
+            uid: nextEntityUid(),
+            owner: "player",
+            kind: "flame_trail",
+            x: player.x + Math.cos(ang) * (28 * k),
+            y: player.y + Math.sin(ang) * (28 * k),
+            radius: 26,
+            delay: 0,
+            age: 0,
+            maxLife: 3.1,
+            tickTimer: 0.2,
+            damage: Math.max(5, Math.round(player.atk * 0.48)),
+            triggered: true,
+          });
+        }
+        return;
+      }
+      case "ws_crimson_reap": {
+        this._startAttackAnim(player, "cleave", 0.38, ang);
+        sfx.playSlash(2);
+        vfx.spawnLive("melee/heavy-cleave", {
+          x: wpPos.x,
+          y: wpPos.y,
+          follow: player,
+          offsetX: wpPos.x - player.x,
+          offsetY: wpPos.y - player.y,
+          angle: dir.angle,
+          flip: dir.flip,
+          durationScale: 1.4,
+          maxLife: 0.42,
+          options: { palette: PAL.blood },
+          priority: 4,
+        });
+        let hitAny = false;
+        for (const e of [...ctx.spawner.enemies]) {
+          const dx = e.x - player.x;
+          const dy = e.y - player.y;
+          const d = Math.hypot(dx, dy);
+          if (d <= 66 + e.radius) {
+            let diff = Math.atan2(dy, dx) - ang;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            if (Math.abs(diff) <= 1.25 || d <= 20) {
+              hitAny = true;
+              const { dmg, crit } = this._rollDamage(ctx, 2.05, 12, true, e);
+              this.damageEnemy(ctx, e, dmg, crit, "hit-fire", elem, dx / (d || 1), dy / (d || 1), 1.6);
+            }
+          }
+        }
+        if (hitAny) {
+          const heal = Math.max(6, Math.round(player.maxHp * 0.08));
+          player.hp = Math.min(player.maxHp, player.hp + heal);
+          vfx.spawnPooled("heal-burst", { x: player.x, y: player.y - 8, scale: 0.85 });
+          vfx.spawnDamageText(player.x, player.y - 16, `+${heal} HP`, { color: "#ff6688" });
+        }
+        return;
+      }
+      case "ws_thunder_smite": {
+        this._startAttackAnim(player, "cast_heavy", 0.38, ang);
+        sfx.playExplosion();
+        ctx.addShake(3.4);
+        for (let k = 1; k <= 3; k++) {
+          const bx = player.x + Math.cos(ang) * (28 * k);
+          const by = player.y + Math.sin(ang) * (28 * k);
+          vfx.spawnPooled("boss-smite", { x: bx, y: by, scale: 0.82 });
+          vfx.spawnPooled("zap-hit", { x: bx, y: by - 6, scale: 0.9 });
+          for (const e of [...ctx.spawner.enemies]) {
+            if (Math.hypot(e.x - bx, e.y - by) <= 32 + e.radius) {
+              const { dmg, crit } = this._rollDamage(ctx, 1.35, 10, true, e);
+              if (!e.isBoss) e.stunTime = Math.max(e.stunTime, 0.45);
+              this.damageEnemy(ctx, e, dmg, crit, "zap-hit", "volt", 0, 0, 1.4);
+            }
+          }
+        }
+        return;
+      }
+      case "ws_arcane_nova":
+      case "ws_blizzard_spire": {
+        this._startAttackAnim(player, "cast_heavy", 0.34, ang);
+        sfx.playMagic(1);
+        const isIce = wsId === "ws_blizzard_spire";
+        const cx = isIce ? player.x + Math.cos(ang) * 52 : player.x;
+        const cy = isIce ? player.y + Math.sin(ang) * 52 : player.y;
+        vfx.spawnPooled(isIce ? "ice-nova" : "explode-plasma", { x: cx, y: cy - 4, scale: 1.0 });
+        for (const e of [...ctx.spawner.enemies]) {
+          const d = Math.hypot(e.x - cx, e.y - cy);
+          if (d <= 58 + e.radius) {
+            const { dmg, crit } = this._rollDamage(ctx, 1.7, 8, true, e);
+            if (isIce) e.slowTime = Math.max(e.slowTime, 3.2);
+            this.damageEnemy(ctx, e, dmg, crit, isIce ? "hit-ice" : "hit-cyan", elem, (e.x - cx) / (d || 1), (e.y - cy) / (d || 1), 1.4);
+          }
+        }
+        if (isIce) {
+          for (let k = 0; k < 6; k++) {
+            const a = ang + (k / 6) * Math.PI * 2;
+            const { dmg, crit } = this._rollDamage(ctx, 0.72, 6, true);
+            this._spawnPlayerProj(ctx, {
+              x: cx,
+              y: cy - 6,
+              angle: a,
+              speed: 225,
+              radius: 5,
+              damage: dmg,
+              crit,
+              pierce: 1,
+              maxLife: 0.65,
+              preset: "proj-icelance",
+              element: "ice",
+              hitPreset: "hit-ice",
+              poiseMult: 0.9,
+            });
+          }
+        }
+        return;
+      }
+      case "ws_thorn_bloom": {
+        this._startAttackAnim(player, "cast_heavy", 0.34, ang);
+        sfx.playMagic(2);
+        const tx = player.x + Math.cos(ang) * 56;
+        const ty = player.y + Math.sin(ang) * 56;
+        vfx.spawnPooled("boss-thorns", { x: tx, y: ty, scale: 0.95 });
+        vfx.spawnPooled("acid-splash", { x: tx, y: ty - 4, scale: 0.9 });
+        for (const e of [...ctx.spawner.enemies]) {
+          if (Math.hypot(e.x - tx, e.y - ty) <= 48 + e.radius) {
+            const { dmg, crit } = this._rollDamage(ctx, 1.85, 8, true, e);
+            if (!e.isBoss) e.rootTime = Math.max(e.rootTime, 1.2);
+            this.damageEnemy(ctx, e, dmg, crit, "hit-poison", "nature", 0, 0, 1.4);
+          }
+        }
+        ctx.hazards.push({
+          uid: nextEntityUid(),
+          owner: "player",
+          kind: "acid_pool",
+          x: tx,
+          y: ty,
+          radius: 34,
+          delay: 0,
+          age: 0,
+          maxLife: 2.8,
+          tickTimer: 0.3,
+          damage: Math.max(4, Math.round(player.atk * 0.45)),
+          triggered: true,
+        });
+        return;
+      }
+      case "ws_chroma_vortex":
+      case "ws_nebula_collapse":
+      case "ws_blackhole_singularity": {
+        this._startAttackAnim(player, "cast_heavy", 0.36, ang);
+        vfx.spawnPooled("crit-gold", { x: wpPos.x, y: wpPos.y, scale: 0.72 });
+        const tx = player.x + Math.cos(ang) * 64;
+        const ty = player.y + Math.sin(ang) * 64;
+        sfx.playMagic(1);
+        const rad = wsId === "ws_blackhole_singularity" ? 68 : 56;
+        vfx.spawnLive("pixtel/chroma-vortex", {
+          x: tx,
+          y: ty,
+          options: { radius: rad - 10 },
+          priority: 4,
+          maxLife: 3.1,
+        });
+        ctx.hazards.push({
+          uid: nextEntityUid(),
+          owner: "player",
+          kind: "vortex",
+          x: tx,
+          y: ty,
+          radius: rad,
+          delay: 0,
+          age: 0,
+          maxLife: wsId === "ws_blackhole_singularity" ? 3.4 : 3.1,
+          tickTimer: 0,
+          damage: Math.round(player.atk * (wsId === "ws_blackhole_singularity" ? 0.68 : 0.58)),
+          triggered: true,
+        });
+        if (wsId === "ws_nebula_collapse") {
+          for (let k = 0; k < 6; k++) {
+            const sa = ang + (k / 6) * Math.PI * 2;
+            const { dmg, crit } = this._rollDamage(ctx, 0.58, 10, true);
+            this._spawnPlayerProj(ctx, {
+              x: tx,
+              y: ty - 6,
+              angle: sa,
+              speed: 225,
+              radius: 5,
+              damage: dmg,
+              crit,
+              pierce: 0,
+              maxLife: 0.9,
+              preset: "proj-void",
+              element: elem,
+              hitPreset: "explode-plasma",
+              homing: true,
+              poiseMult: 0.9,
+            });
+          }
+        }
+        return;
+      }
+      case "ws_solar_flare":
+      case "ws_starfall_barrage":
+      case "ws_napalm_mortar":
+      case "ws_orbital_strike": {
+        this._startAttackAnim(player, "cast_heavy", 0.38, ang);
+        sfx.playMagic(2);
+        const count = wsId === "ws_starfall_barrage" ? 3 : wsId === "ws_solar_flare" ? 1 : 2;
+        if (wsId === "ws_orbital_strike") {
+          this.firePrismBeam(ctx, ang, 1.55, elem);
+        }
+        for (let k = 0; k < count; k++) {
+          const dist = 48 + k * 28;
+          const mx = player.x + Math.cos(ang + (k - (count - 1) / 2) * 0.28) * dist;
+          const my = player.y + Math.sin(ang + (k - (count - 1) / 2) * 0.28) * dist;
+          const delay = 0.34 + k * 0.16;
+          vfx.spawnLive("pixtel/boss-telegraph", {
+            x: mx,
+            y: my,
+            options: { radius: 30, shape: "circle", palette: wsId === "ws_starfall_barrage" ? PAL.candy : PAL.fire },
+            priority: 4,
+            maxLife: delay + 0.08,
+          });
+          ctx.hazards.push({
+            uid: nextEntityUid(),
+            owner: "player",
+            kind: "meteor",
+            x: mx,
+            y: my,
+            radius: 40,
+            delay,
+            age: 0,
+            maxLife: delay + 0.28,
+            tickTimer: 0,
+            damage: Math.round(player.atk * (count === 1 ? 2.15 : 1.45)),
+            triggered: false,
+          });
+        }
+        return;
+      }
+      case "ws_frame_skip":
+      case "ws_eclipse_ambush": {
+        const ox = player.x;
+        const oy = player.y;
+        this._syncFacingFromAngle(player, ang);
+        sfx.playDash();
+        vfx.spawnLive("pixtel/frame-skip", {
+          x: ox,
+          y: oy,
+          options: { actor: sprites.getHero(player.classId, 0).actor },
+          priority: 4,
+          maxLife: 1.15,
+        });
+        ctx.hazards.push({
+          uid: nextEntityUid(),
+          owner: "player",
+          kind: "afterimage",
+          x: ox,
+          y: oy,
+          radius: 46,
+          delay: 0.72,
+          age: 0,
+          maxLife: 0.96,
+          tickTimer: 0,
+          damage: Math.round(player.atk * 2.25),
+          triggered: false,
+        });
+        player.dashing = 0.2;
+        player.invuln = Math.max(player.invuln, 0.34);
+        player.perfectDashWindow = 0.14;
+        player.dashVx = Math.cos(ang) * 335;
+        player.dashVy = Math.sin(ang) * 335;
+        if (wsId === "ws_eclipse_ambush") {
+          for (const off of [-0.22, 0, 0.22]) {
+            const { dmg, crit } = this._rollDamage(ctx, 0.78, 20, true);
+            this._spawnPlayerProj(ctx, {
+              x: wpPos.x,
+              y: wpPos.y,
+              angle: ang + off,
+              speed: 285,
+              radius: 5,
+              damage: dmg,
+              crit,
+              pierce: 1,
+              maxLife: 0.7,
+              preset: "proj-void",
+              element: "void",
+              hitPreset: "explode-void",
+              poiseMult: 1.1,
+            });
+          }
+        }
+        return;
+      }
+      case "ws_gale_daggers":
+      case "ws_boomerang_chakram":
+      case "ws_arc_shotgun": {
+        this._startAttackAnim(player, wsId === "ws_arc_shotgun" ? "shoot_heavy" : "flurry_2", 0.3, ang);
+        sfx.playShoot(wsId === "ws_arc_shotgun" ? 780 : 620);
+        const isChakram = wsId === "ws_boomerang_chakram";
+        const count = isChakram ? 2 : 5;
+        const spreadStep = isChakram ? 0.18 : 0.14;
+        for (let i = 0; i < count; i++) {
+          const sa = ang + (i - (count - 1) / 2) * spreadStep;
+          const { dmg, crit } = this._rollDamage(ctx, isChakram ? 1.25 : 0.62, 14, true);
+          this._spawnPlayerProj(ctx, {
+            x: wpPos.x,
+            y: wpPos.y,
+            angle: sa,
+            speed: isChakram ? 255 : 295,
+            radius: isChakram ? 7 : 5,
+            damage: dmg,
+            crit,
+            pierce: isChakram ? 3 : 1,
+            maxLife: isChakram ? 0.92 : 0.65,
+            preset: wsId === "ws_arc_shotgun" ? "proj-laser" : "proj-shuriken",
+            element: elem,
+            hitPreset: ELEMENT_HIT_PRESET[elem],
+            poiseMult: 1.1,
+          });
+        }
+        return;
+      }
+      case "ws_blazing_flurry":
+      case "ws_solstice_spin":
+      case "ws_reaper_hook":
+      case "ws_venom_flurry": {
+        this._startAttackAnim(player, "spin", 0.36, ang);
+        sfx.playSlash(2);
+        const pal =
+          wsId === "ws_venom_flurry" ? PAL.poison :
+          wsId === "ws_reaper_hook" ? PAL.shadow : PAL.fire;
+        vfx.spawnLive("melee/spin-slash", {
+          x: player.x,
+          y: player.y - 12,
+          follow: player,
+          offsetX: 0,
+          offsetY: -12,
+          angle: 0,
+          durationScale: 1.5,
+          maxLife: 0.4,
+          options: { palette: pal, radius: 54 },
+          priority: 4,
+        });
+        if (wsId === "ws_reaper_hook") {
+          this._pullEnemiesAround(ctx, player.x, player.y, 76, 22);
+        }
+        if (wsId === "ws_solstice_spin") {
+          player.speedBuffTime = Math.max(player.speedBuffTime, 2.5);
+          player.speedBuffPct = Math.max(player.speedBuffPct, 0.25);
+          for (let k = 0; k < 6; k++) {
+            const a = ang + (k / 6) * Math.PI * 2;
+            const { dmg, crit } = this._rollDamage(ctx, 0.65, 12, true);
+            this._spawnPlayerProj(ctx, {
+              x: player.x,
+              y: player.y - 10,
+              angle: a,
+              speed: 230,
+              radius: 5,
+              damage: dmg,
+              crit,
+              pierce: 0,
+              maxLife: 0.62,
+              preset: "proj-amber",
+              element: "fire",
+              hitPreset: "hit-fire",
+              poiseMult: 0.9,
+            });
+          }
+        }
+        for (const e of [...ctx.spawner.enemies]) {
+          const d = Math.hypot(e.x - player.x, e.y - player.y);
+          if (d <= 58 + e.radius) {
+            const { dmg, crit } = this._rollDamage(ctx, 1.95, 16, true, e);
+            if (wsId === "ws_reaper_hook") e.enrageBuffTime = 0;
+            this.damageEnemy(ctx, e, dmg, crit, ELEMENT_HIT_PRESET[elem], elem, 0, 0, 1.4);
+          }
+        }
+        if (wsId === "ws_venom_flurry") {
+          ctx.hazards.push({
+            uid: nextEntityUid(),
+            owner: "player",
+            kind: "acid_pool",
+            x: player.x + Math.cos(ang) * 20,
+            y: player.y + Math.sin(ang) * 20,
+            radius: 32,
+            delay: 0,
+            age: 0,
+            maxLife: 3.0,
+            tickTimer: 0.3,
+            damage: Math.max(4, Math.round(player.atk * 0.45)),
+            triggered: true,
+          });
+        }
+        return;
+      }
+      case "ws_compile_turret":
+      case "ws_tesla_pylon": {
+        this._startAttackAnim(player, "cast_1", 0.28, ang);
+        const tx = player.x + Math.cos(ang) * 26;
+        const ty = player.y + Math.sin(ang) * 26;
+        const safeX = ctx.world.isBlocked(tx, ty, 6) ? player.x : tx;
+        const safeY = ctx.world.isBlocked(tx, ty, 6) ? player.y : ty;
+        if (ctx.turrets.length >= 2) {
+          ctx.turrets.shift();
+        }
+        ctx.turrets.push({
+          uid: nextEntityUid(),
+          x: safeX,
+          y: safeY,
+          hp: 85 + player.level * 10,
+          maxHp: 85 + player.level * 10,
+          life: 0,
+          maxLife: 18,
+          fireCd: 0.38,
+          overclockTime: wsId === "ws_tesla_pylon" ? 3.5 : 0,
+          angle: ang,
+          hitFlash: 0,
+        });
+        sfx.playBlock();
+        vfx.spawnLive("pixtel/compile-turret", {
+          x: safeX,
+          y: safeY,
+          priority: 4,
+          maxLife: 1.1,
+        });
+        if (wsId === "ws_tesla_pylon") {
+          this._triggerChainLightning(ctx, safeX, safeY, 0.85, 3);
+        }
+        return;
+      }
+      case "ws_pulse_grenade": {
+        this._startAttackAnim(player, "shoot_heavy", 0.32, ang);
+        sfx.playExplosion();
+        const tx = player.x + Math.cos(ang) * 58;
+        const ty = player.y + Math.sin(ang) * 58;
+        vfx.spawnPooled("explode-plasma", { x: tx, y: ty - 4, scale: 1.0 });
+        vfx.spawnPooled("zap-hit", { x: tx, y: ty - 4, scale: 0.9 });
+        for (const e of [...ctx.spawner.enemies]) {
+          const d = Math.hypot(e.x - tx, e.y - ty);
+          if (d <= 50 + e.radius) {
+            const { dmg, crit } = this._rollDamage(ctx, 1.9, 10, true, e);
+            if (!e.isBoss) e.stunTime = Math.max(e.stunTime, 0.55);
+            this.damageEnemy(ctx, e, dmg, crit, "zap-hit", "volt", (e.x - tx) / (d || 1), (e.y - ty) / (d || 1), 1.6);
+          }
+        }
+        return;
+      }
+      case "ws_homing_rockets": {
+        this._startAttackAnim(player, "shoot_heavy", 0.34, ang);
+        sfx.playShoot(480);
+        for (let k = 0; k < 5; k++) {
+          const sa = ang + (k - 2) * 0.24;
+          const { dmg, crit } = this._rollDamage(ctx, 0.68, 8, true);
+          this._spawnPlayerProj(ctx, {
+            x: wpPos.x,
+            y: wpPos.y,
+            angle: sa,
+            speed: 235,
+            radius: 5,
+            damage: dmg,
+            crit,
+            pierce: 0,
+            maxLife: 1.05,
+            preset: "proj-fireball",
+            element: "fire",
+            hitPreset: "explode-fire",
+            homing: true,
+            poiseMult: 1.1,
+          });
+        }
+        return;
+      }
+      case "ws_gravity_beam":
+      case "ws_eclipse_beam": {
+        this._startAttackAnim(player, "beam", 0.36, ang);
+        sfx.playLaser();
+        vfx.spawnLive("pixtel/prism-beam", {
+          x: wpPos.x,
+          y: wpPos.y,
+          follow: player,
+          offsetX: wpPos.x - player.x,
+          offsetY: wpPos.y - player.y,
+          angle: ang,
+          startTime: 0.04,
+          maxLife: 0.65,
+          options: { length: 155, palette: PAL.neon },
+          priority: 5,
+        });
+        this._linePierceHit(ctx, player.x, player.y, ang, 156, 18, 2.15, "explode-void", "void", 1.8);
+        if (wsId === "ws_gravity_beam") {
+          this._pullEnemiesAround(ctx, player.x + Math.cos(ang) * 76, player.y + Math.sin(ang) * 76, 65, 22);
+        } else {
+          for (const off of [-0.26, 0.26]) {
+            const { dmg, crit } = this._rollDamage(ctx, 0.72, 10, true);
+            this._spawnPlayerProj(ctx, {
+              x: wpPos.x,
+              y: wpPos.y,
+              angle: ang + off,
+              speed: 250,
+              radius: 5,
+              damage: dmg,
+              crit,
+              pierce: 0,
+              maxLife: 0.95,
+              preset: "proj-void",
+              element: "void",
+              hitPreset: "explode-void",
+              homing: true,
+              poiseMult: 1.0,
+            });
+          }
+        }
+        return;
+      }
+      default: {
+        this.firePrismBeam(ctx, ang, 1.8, elem);
+      }
+    }
+  }
+
+  /** Fixed Character Class Signature Skill [Q] (1 fixed skill per Class — unlocked whenever Overdrive = 100%) */
   performUltimateQ(ctx: CombatContext) {
     const { player, vfx, colorSys } = ctx;
-    if (!ctx.inv.equipment.accessory) {
-      sfx.playForgeFail();
-      ctx.notify("🔒 Cần trang bị Phụ Kiện để mở khóa Tuyệt Kỹ [Q]!", "warn");
-      return;
-    }
     if (player.overdrive < 100) {
       ctx.notify(`Chưa đủ năng lượng Tuyệt Kỹ (${Math.floor(player.overdrive)}/100)!`, "warn");
       return;
@@ -926,6 +1603,27 @@ export class CombatSystem {
 
     // Every Ultimate [Q] unleashes a local Chroma Restoration burst!
     colorSys.triggerWave(player.x, player.y, 110, 240);
+
+    // Exotic Áo Choàng Hư Ảnh: Ultimate [Q] also summons a pulling Void Vortex!
+    if (player.exoticMods?.has("mod_ult_void_rift")) {
+      const vx = player.x + Math.cos(player.aimAngle) * 44;
+      const vy = player.y + Math.sin(player.aimAngle) * 44;
+      vfx.spawnLive("pixtel/chroma-vortex", { x: vx, y: vy, options: { radius: 46 }, priority: 4, maxLife: 3.0 });
+      ctx.hazards.push({
+        uid: nextEntityUid(),
+        owner: "player",
+        kind: "vortex",
+        x: vx,
+        y: vy,
+        radius: 58,
+        delay: 0,
+        age: 0,
+        maxLife: 3.0,
+        tickTimer: 0,
+        damage: Math.round(player.atk * 0.62),
+        triggered: true,
+      });
+    }
 
     vfx.spawnLive("pixtel/overdrive-aura", {
       x: player.x,
@@ -1058,6 +1756,49 @@ export class CombatSystem {
       for (const e of [...ctx.spawner.enemies]) {
         if (Math.hypot(e.x - player.x, e.y - player.y) <= 46 + e.radius) {
           this.damageEnemy(ctx, e, Math.max(4, Math.round(player.atk * 0.45)), false, "hit-cyan", "wind", 0, 0, 0.8);
+        }
+      }
+    }
+
+    // Exotic Dash Modifiers (balanced with ICDs!)
+    if (this._consumeExoticMod(player, "mod_dash_frost_nova", 2.4)) {
+      vfx.spawnPooled("ice-nova", { x: player.x, y: player.y - 4, scale: 0.85 });
+      for (const e of [...ctx.spawner.enemies]) {
+        if (Math.hypot(e.x - player.x, e.y - player.y) <= 54 + e.radius) {
+          e.slowTime = Math.max(e.slowTime, 2.6);
+          this.damageEnemy(ctx, e, Math.max(5, Math.round(player.atk * 0.58)), false, "hit-ice", "ice", 0, 0, 0.9);
+        }
+      }
+    }
+    if (this._consumeExoticMod(player, "mod_dash_glitch_bomb", 2.2)) {
+      vfx.spawnLive("pixtel/frame-skip", {
+        x: player.x,
+        y: player.y,
+        options: { actor: sprites.getHero(player.classId, 0).actor },
+        priority: 3,
+        maxLife: 0.85,
+      });
+      ctx.hazards.push({
+        uid: nextEntityUid(),
+        owner: "player",
+        kind: "afterimage",
+        x: player.x,
+        y: player.y,
+        radius: 42,
+        delay: 0.6,
+        age: 0,
+        maxLife: 0.85,
+        tickTimer: 0,
+        damage: Math.round(player.atk * 1.35),
+        triggered: false,
+      });
+    }
+    if (this._consumeExoticMod(player, "mod_dash_quake_stomp", 2.4)) {
+      vfx.spawnPooled("ground-slam-fire", { x: player.x, y: player.y, scale: 0.85 });
+      for (const e of [...ctx.spawner.enemies]) {
+        const d = Math.hypot(e.x - player.x, e.y - player.y);
+        if (d <= 52 + e.radius) {
+          this.damageEnemy(ctx, e, Math.max(6, Math.round(player.atk * 1.2)), false, "ground-slam", "quake", (e.x - player.x) / (d || 1), (e.y - player.y) / (d || 1), 1.8);
         }
       }
     }
@@ -1540,7 +2281,12 @@ export class CombatSystem {
 
     e.hp -= mitigated;
     e.hitFlash = 0.13;
-    e.state = "aggro";
+    e.hurtTilt = 0.16;
+    if (e.state === "patrol") {
+      e.state = "aggro";
+      e.alertTimer = 0.65;
+      this._alertCampPack(ctx, e);
+    }
 
     const kb = e.isBoss ? (e.vulnTime > 0 ? 5 : 2) : 7;
     if (kbX !== 0 || kbY !== 0) {
@@ -1557,6 +2303,30 @@ export class CombatSystem {
     if (crit) {
       ctx.addShake(2.0);
       ctx.addHitstop(0.025);
+      // Exotic Nhẫn Mưa Sao Băng: Crits call a falling meteor (ICD 3.0s)
+      if (this._consumeExoticMod(ctx.player, "mod_crit_meteor", 3.0)) {
+        ctx.vfx.spawnLive("pixtel/boss-telegraph", {
+          x: e.x,
+          y: e.y,
+          options: { radius: 24, shape: "circle", palette: PAL.fire },
+          priority: 3,
+          maxLife: 0.42,
+        });
+        ctx.hazards.push({
+          uid: nextEntityUid(),
+          owner: "player",
+          kind: "meteor",
+          x: e.x,
+          y: e.y,
+          radius: 32,
+          delay: 0.38,
+          age: 0,
+          maxLife: 0.62,
+          tickTimer: 0,
+          damage: Math.round(ctx.player.atk * 1.45),
+          triggered: false,
+        });
+      }
     }
 
     const odGain =
@@ -2113,6 +2883,13 @@ export class CombatSystem {
       sfx.playExplosion();
     }
 
+    // Seasonal Vòng Hoa Xuân Sắc: Elemental reactions heal +4% MaxHP (ICD 4.0s)
+    if (this._consumeExoticMod(ctx.player, "mod_spring_bloom_heal", 4.0)) {
+      const hAmt = Math.max(4, Math.round(ctx.player.maxHp * 0.04));
+      ctx.player.hp = Math.min(ctx.player.maxHp, ctx.player.hp + hAmt);
+      ctx.vfx.spawnPooled("heal-burst", { x: ctx.player.x, y: ctx.player.y - 8, scale: 0.72 });
+    }
+
     ctx.vfx.spawnDamageText(e.x, e.y - 18, `${label} ${dmg}!`, {
       crit: true,
       color,
@@ -2288,14 +3065,27 @@ export class CombatSystem {
     }
 
     const gap = attackerLevel !== undefined ? attackerLevel - player.level : 0;
-    const threatMult = gap > 2 ? 1 + Math.min(0.85, (gap - 2) * 0.12) : 1.0;
-    const defMult = 100 / (100 + Math.max(0, player.def) * 2.2);
+    const threatMult = gap > 1 ? 1 + Math.min(1.1, (gap - 1) * 0.14) : 1.0;
+    const defMult = 100 / (100 + Math.max(0, player.def) * 2.0);
     const mitigated = Math.max(2, Math.round(rawAmount * threatMult * defMult));
     const shieldScale = player.defBuffTime > 0 || player.aegisTime > 0 ? 1 - Math.min(0.6, player.defBuffPct || 0.35) : 1;
     const dmg = Math.max(1, Math.round(mitigated * shieldScale));
     player.hp = Math.max(0, player.hp - dmg);
     player.hitFlash = 0.22;
-    player.invuln = 0.55;
+    player.invuln = 0.38;
+
+    // Exotic / Seasonal Defensive Retaliations!
+    if (this._consumeExoticMod(player, "mod_flame_retaliate", 2.2)) {
+      this._triggerFlameRing(ctx, 0.58);
+    }
+    if (this._consumeExoticMod(player, "mod_winter_frost_barrier", 3.5)) {
+      vfx.spawnPooled("ice-shatter", { x: player.x, y: player.y - 6, scale: 0.85 });
+      for (const en of ctx.spawner.enemies) {
+        if (Math.hypot(en.x - player.x, en.y - player.y) <= 58 + en.radius) {
+          en.slowTime = Math.max(en.slowTime, 2.5);
+        }
+      }
+    }
     if (appliesBleach) {
       player.bleachDebuffTime = 4.5;
     }
@@ -2372,6 +3162,13 @@ export class CombatSystem {
       if (player.defBuffTime <= 0) player.defBuffPct = 0;
     }
     if (player.aegisTime > 0) player.aegisTime = Math.max(0, player.aegisTime - dt);
+    if (player.potCd && player.potCd > 0) player.potCd = Math.max(0, player.potCd - dt);
+    if (player.exoticIcds) {
+      for (const k of Object.keys(player.exoticIcds) as ExoticSkillModId[]) {
+        const v = player.exoticIcds[k];
+        if (v && v > 0) player.exoticIcds[k] = Math.max(0, v - dt);
+      }
+    }
 
     // Orbiting Grimoire / Satellite Passive (cycles all 8 Infusable Elements!)
     if (player.hasOrbitGrimoire) {
@@ -2866,6 +3663,9 @@ export class CombatSystem {
       const e = spawner.enemies[i];
       if (!e) continue;
       if (e.hitFlash > 0) e.hitFlash = Math.max(0, e.hitFlash - dt);
+      if (e.spawnAnimTime && e.spawnAnimTime > 0) e.spawnAnimTime = Math.max(0, e.spawnAnimTime - dt);
+      if (e.alertTimer && e.alertTimer > 0) e.alertTimer = Math.max(0, e.alertTimer - dt);
+      if (e.hurtTilt && e.hurtTilt > 0) e.hurtTilt = Math.max(0, e.hurtTilt - dt);
       if (e.reactionIcd > 0) e.reactionIcd = Math.max(0, e.reactionIcd - dt);
       if (e.rootTime > 0) e.rootTime = Math.max(0, e.rootTime - dt);
       if (e.stunTime > 0) e.stunTime = Math.max(0, e.stunTime - dt);
@@ -2995,6 +3795,8 @@ export class CombatSystem {
       if (e.state === "patrol") {
         if (!tgtInTown && distToPlayer <= edef.aggroRadius) {
           e.state = "aggro";
+          e.alertTimer = 0.72;
+          this._alertCampPack(ctx, e);
           if (e.isBoss) sfx.playBossRoar();
         }
       } else if (e.state === "aggro") {
@@ -3049,7 +3851,7 @@ export class CombatSystem {
       if (e.animTime <= 0) {
         this._setEnemyDirFromAngle(e, rawAng);
       }
-      const cdRate = e.disruptTime > 0 ? 0.68 : 1.0; // Disrupt slows enemy attack cadence by ~32%!
+      const cdRate = e.disruptTime > 0 ? 0.72 : 1.18; // Rebalanced sharper enemy cadence (+18% active pace; Disrupt still cuts speed!)
       e.aiTimer -= dt * cdRate;
       e.specialTimer -= dt * cdRate;
       e.walkTime += dt;
@@ -3112,7 +3914,13 @@ export class CombatSystem {
         }
         if (
           e.aiTimer <= 0 &&
-          distToPlayer <= (edef.ai === "mini_root_golem" || edef.ai === "mini_quartz_knight" ? 115 : 95)
+          distToPlayer <=
+            (edef.ai === "mini_root_golem" ||
+            edef.ai === "mini_quartz_knight" ||
+            edef.ai === "mini_amber_warrior" ||
+            edef.ai === "mini_void_gatekeeper"
+              ? 122
+              : 95)
         ) {
           this._triggerEnemySkill(ctx, e, edef.ai, rawAng, distToPlayer);
         }
@@ -3700,24 +4508,125 @@ export class CombatSystem {
       return;
     }
 
-    // 11. AMBER BEETLE (amber_beetle): Húc Lửa Hổ Phách / Đập Nham Thạch
+    // 11. THẰN LẰN DUNG NHAM (amber_beetle): Phun Vệt Dung Nham / Quật Đuôi Gai Lửa
     if (e.defId === "amber_beetle") {
       if ((step & 1) === 0) {
-        this._startEnemyAnim(e, "amber_roll", 0.56, ang);
+        this._startEnemyAnim(e, "ember_cast", 0.56, ang);
         e.aiTimer = 2.05;
-        e.dashTime = 0.34;
-        e.dashVx = Math.cos(ang) * 195;
-        e.dashVy = Math.sin(ang) * 195;
-        vfx.spawnPooled("explode-fire", { x: e.x, y: e.y - 4, scale: 0.55 });
+        const sx = e.x + Math.cos(ang) * 10;
+        const sy = e.y - 7 + Math.sin(ang) * 5;
+        vfx.spawnPooled("muzzle-fire", { x: sx, y: sy, angle: ang, scale: 0.85 });
+        for (const off of [-0.14, 0, 0.14]) {
+          const sa = ang + off;
+          ctx.projectiles.push({
+            uid: nextEntityUid(),
+            owner: "enemy",
+            x: sx,
+            y: sy,
+            vx: Math.cos(sa) * 142,
+            vy: Math.sin(sa) * 142,
+            angle: sa,
+            radius: 4,
+            damage: Math.round(e.atk * 0.82),
+            crit: false,
+            pierce: 0,
+            life: 0,
+            maxLife: 1.1,
+            preset: "proj-fireball",
+            hitSet: new Set(),
+          });
+        }
+        // Bubbling lava streak hazard ahead of the salamander
+        ctx.hazards.push({
+          uid: nextEntityUid(),
+          owner: "enemy",
+          kind: "flame_trail",
+          x: e.x + Math.cos(ang) * 30,
+          y: e.y + Math.sin(ang) * 30,
+          radius: 22,
+          delay: 0,
+          age: 0,
+          maxLife: 3.0,
+          tickTimer: 0.35,
+          damage: Math.max(5, Math.round(e.atk * 0.48)),
+          triggered: true,
+        });
       } else {
-        this._startEnemyAnim(e, "molten_slam", 0.68, ang);
+        // Quật Đuôi Gai Lửa: fiery sweeping tail arc!
+        this._startEnemyAnim(e, "claw_clamp", 0.54, ang);
+        e.aiTimer = 1.95;
+        const dir = this._toDirectionalVfx(ang, 0.65);
+        vfx.spawnLive("melee/spin-slash", {
+          x: e.x,
+          y: e.y - 6,
+          follow: e,
+          offsetX: 0,
+          offsetY: -6,
+          angle: dir.angle,
+          flip: dir.flip,
+          durationScale: 1.35,
+          maxLife: 0.44,
+          options: { palette: PAL.fire, radius: 40 },
+          priority: 3,
+        });
+        vfx.spawnPooled("explode-fire", {
+          x: e.x + Math.cos(ang) * 16,
+          y: e.y - 4 + Math.sin(ang) * 10,
+          scale: 0.65,
+        });
+        this._enemyConeHitPlayer(ctx, e, ang, 42, 1.7, 1.18);
+      }
+      return;
+    }
+
+    // 12. HỎA HỒN NHỰA CÂY (cinder_imp): Lao Nổ Nhựa Lửa / Vụ Nổ Tự Hủy
+    if (e.defId === "cinder_imp") {
+      if ((step & 1) === 0) {
+        // Lao Nổ Nhựa Lửa: blazing comet dash + fire burst!
+        this._startEnemyAnim(e, "amber_roll", 0.54, ang);
+        e.aiTimer = 1.9;
+        e.dashTime = 0.32;
+        e.dashVx = Math.cos(ang) * 208;
+        e.dashVy = Math.sin(ang) * 208;
+        vfx.spawnPooled("explode-fire", { x: e.x, y: e.y - 8, scale: 0.62 });
+        vfx.spawnLive("status/haste", {
+          x: e.x,
+          y: e.y - 8,
+          follow: e,
+          offsetY: -8,
+          options: { palette: PAL.fire },
+          priority: 2,
+          maxLife: 0.4,
+        });
+        const sx = e.x + Math.cos(ang) * 9;
+        const sy = e.y - 9 + Math.sin(ang) * 5;
+        ctx.projectiles.push({
+          uid: nextEntityUid(),
+          owner: "enemy",
+          x: sx,
+          y: sy,
+          vx: Math.cos(ang) * 168,
+          vy: Math.sin(ang) * 168,
+          angle: ang,
+          radius: 4,
+          damage: e.atk,
+          crit: false,
+          pierce: 0,
+          life: 0,
+          maxLife: 1.45,
+          preset: "proj-fireball",
+          hitSet: new Set(),
+        });
+      } else {
+        // Vụ Nổ Tự Hủy: superheated resin detonation + radial sparks!
+        this._startEnemyAnim(e, "ember_volley", 0.68, ang);
         e.aiTimer = 2.2;
         vfx.spawnLive("pixtel/boss-telegraph", {
           x: e.x,
           y: e.y,
-          options: { radius: 34, shape: "circle", palette: PAL.fire },
+          options: { radius: 36, shape: "circle", palette: PAL.fire },
           priority: 3,
-          maxLife: 0.68,
+          maxLife: 0.66,
         });
         ctx.hazards.push({
           uid: nextEntityUid(),
@@ -3725,89 +4634,267 @@ export class CombatSystem {
           kind: "boss_slam",
           x: e.x,
           y: e.y,
-          radius: 36,
-          delay: 0.64,
+          radius: 38,
+          delay: 0.62,
           age: 0,
           maxLife: 0.9,
           tickTimer: 0,
-          damage: Math.round(e.atk * 1.2),
+          damage: Math.round(e.atk * 1.25),
           vfxPreset: "ground-slam-fire",
+          triggered: false,
+        });
+        for (let k = 0; k < 6; k++) {
+          const sa = ang + (k / 6) * Math.PI * 2;
+          ctx.projectiles.push({
+            uid: nextEntityUid(),
+            owner: "enemy",
+            x: e.x + Math.cos(sa) * 6,
+            y: e.y - 9 + Math.sin(sa) * 5,
+            vx: Math.cos(sa) * 130,
+            vy: Math.sin(sa) * 130,
+            angle: sa,
+            radius: 4,
+            damage: Math.round(e.atk * 0.78),
+            crit: false,
+            pierce: 0,
+            life: 0,
+            maxLife: 0.95,
+            preset: "proj-amber",
+            hitSet: new Set(),
+          });
+        }
+      }
+      return;
+    }
+
+    // 13. CHIẾN BINH HỔ PHÁCH — BOSS PHỤ (amber_warrior): Đập Búa Chấn Động / Sóng Nham Thạch / Cuồng Nộ Hổ Phách
+    if (e.defId === "amber_warrior") {
+      const m = step % 3;
+      if (m === 0) {
+        // Đập Búa Chấn Động: molten hammer ring slam!
+        this._startEnemyAnim(e, "molten_slam", 0.74, ang);
+        e.aiTimer = 2.15;
+        vfx.spawnLive("pixtel/boss-telegraph", {
+          x: e.x,
+          y: e.y,
+          options: { radius: 46, shape: "circle", palette: PAL.fire },
+          priority: 4,
+          maxLife: 0.74,
+        });
+        ctx.hazards.push({
+          uid: nextEntityUid(),
+          owner: "enemy",
+          kind: "boss_slam",
+          x: e.x,
+          y: e.y,
+          radius: 48,
+          delay: 0.7,
+          age: 0,
+          maxLife: 0.95,
+          tickTimer: 0,
+          damage: Math.round(e.atk * 1.32),
+          vfxPreset: "ground-slam-fire",
+          triggered: false,
+        });
+      } else if (m === 1) {
+        // Sóng Nham Thạch: directional erupting magma spikes!
+        this._startEnemyAnim(e, "ember_cast", 0.62, ang);
+        e.aiTimer = 2.1;
+        const dir = this._toDirectionalVfx(ang, 0.7);
+        vfx.spawnLive("melee/heavy-cleave", {
+          x: e.x + Math.cos(ang) * 10,
+          y: e.y - 14 + Math.sin(ang) * 6,
+          follow: e,
+          offsetX: Math.cos(ang) * 10,
+          offsetY: -14 + Math.sin(ang) * 6,
+          angle: dir.angle,
+          flip: dir.flip,
+          durationScale: 1.35,
+          maxLife: 0.45,
+          options: { palette: PAL.fire },
+          priority: 4,
+        });
+        for (let k = 0; k < 3; k++) {
+          const tx = e.x + Math.cos(ang) * (32 + k * 32);
+          const ty = e.y + Math.sin(ang) * (32 + k * 32);
+          vfx.spawnLive("pixtel/boss-telegraph", {
+            x: tx,
+            y: ty,
+            options: { radius: 22, shape: "circle", palette: PAL.fire },
+            priority: 4,
+            maxLife: 0.56 + k * 0.14,
+          });
+          ctx.hazards.push({
+            uid: nextEntityUid(),
+            owner: "enemy",
+            kind: "boss_slam",
+            x: tx,
+            y: ty,
+            radius: 24,
+            delay: 0.52 + k * 0.14,
+            age: 0,
+            maxLife: 0.8 + k * 0.14,
+            tickTimer: 0,
+            damage: Math.round(e.atk * 1.15),
+            vfxPreset: "ground-slam-fire",
+            triggered: false,
+          });
+        }
+      } else {
+        // Cuồng Nộ Hổ Phách: flame aura rage buff + radial amber shards!
+        this._startEnemyAnim(e, "ember_volley", 0.64, ang, true);
+        e.aiTimer = 2.1;
+        e.enrageBuffTime = 5.5;
+        e.guardTime = 1.6;
+        vfx.spawnPooled("explode-fire", { x: e.x, y: e.y - 12, scale: 0.95 });
+        vfx.spawnLive("pixtel/overdrive-aura", {
+          x: e.x,
+          y: e.y - 14,
+          follow: e,
+          offsetX: 0,
+          offsetY: -14,
+          options: { palette: PAL.fire },
+          priority: 4,
+          maxLife: 1.6,
+        });
+        for (let k = 0; k < 6; k++) {
+          const sa = ang + (k / 6) * Math.PI * 2;
+          ctx.projectiles.push({
+            uid: nextEntityUid(),
+            owner: "enemy",
+            x: e.x + Math.cos(sa) * 8,
+            y: e.y - 14 + Math.sin(sa) * 6,
+            vx: Math.cos(sa) * 145,
+            vy: Math.sin(sa) * 145,
+            angle: sa,
+            radius: 4,
+            damage: Math.round(e.atk * 0.88),
+            crit: false,
+            pierce: 0,
+            life: 0,
+            maxLife: 1.3,
+            preset: "proj-amber",
+            hitSet: new Set(),
+          });
+        }
+      }
+      return;
+    }
+
+    // 14. KHỐI LỖI CỔ ĐẠI (prism_golem): Bắn Đạn Dấu Cộng (8 hướng) / Xung Điện Lỗi
+    if (e.defId === "prism_golem") {
+      if ((step & 1) === 0) {
+        // Bắn Đạn Dấu Cộng: 8-way glowing violet cross bolts!
+        this._startEnemyAnim(e, "void_barrage", 0.54, ang);
+        e.aiTimer = 1.95;
+        vfx.spawnPooled("explode-void", { x: e.x, y: e.y - 10, scale: 0.82 });
+        for (let k = 0; k < 8; k++) {
+          const sa = (k / 8) * Math.PI * 2;
+          ctx.projectiles.push({
+            uid: nextEntityUid(),
+            owner: "enemy",
+            x: e.x + Math.cos(sa) * 8,
+            y: e.y - 10 + Math.sin(sa) * 6,
+            vx: Math.cos(sa) * 142,
+            vy: Math.sin(sa) * 142,
+            angle: sa,
+            radius: 4,
+            damage: Math.round(e.atk * 0.88),
+            crit: false,
+            pierce: 0,
+            life: 0,
+            maxLife: 1.4,
+            preset: (k & 1) === 0 ? "proj-void" : "proj-laser",
+            hitSet: new Set(),
+          });
+        }
+      } else {
+        // Xung Điện Lỗi: glitch lightning shockwave ring!
+        this._startEnemyAnim(e, "void_slam", 0.7, ang);
+        e.aiTimer = 2.15;
+        vfx.spawnLive("pixtel/boss-telegraph", {
+          x: e.x,
+          y: e.y,
+          options: { radius: 42, shape: "circle", palette: PAL.neon },
+          priority: 3,
+          maxLife: 0.7,
+        });
+        for (let k = 0; k < 4; k++) {
+          const za = (k / 4) * Math.PI * 2 + 0.4;
+          vfx.spawnPooled("zap-hit", {
+            x: e.x + Math.cos(za) * 24,
+            y: e.y - 8 + Math.sin(za) * 18,
+            scale: 0.72,
+          });
+        }
+        ctx.hazards.push({
+          uid: nextEntityUid(),
+          owner: "enemy",
+          kind: "boss_slam",
+          x: e.x,
+          y: e.y,
+          radius: 44,
+          delay: 0.65,
+          age: 0,
+          maxLife: 0.92,
+          tickTimer: 0,
+          damage: Math.round(e.atk * 1.28),
+          vfxPreset: "ground-slam-void",
           triggered: false,
         });
       }
       return;
     }
 
-    // 12. CINDER IMP (cinder_imp): Bắn Cầu Than Rực
-    if (e.defId === "cinder_imp") {
-      this._startEnemyAnim(e, "ember_cast", 0.42, ang);
-      e.aiTimer = 1.6;
-      const sx = e.x + Math.cos(ang) * 8;
-      const sy = e.y - 8 + Math.sin(ang) * 5;
-      vfx.spawnPooled("muzzle-fire", { x: sx, y: sy, angle: ang, scale: 0.72 });
-      ctx.projectiles.push({
-        uid: nextEntityUid(),
-        owner: "enemy",
-        x: sx,
-        y: sy,
-        vx: Math.cos(ang) * 155,
-        vy: Math.sin(ang) * 155,
-        angle: ang,
-        radius: 4,
-        damage: e.atk,
-        crit: false,
-        pierce: 0,
-        life: 0,
-        maxLife: 1.7,
-        preset: "proj-fireball",
-        hitSet: new Set(),
-      });
-      return;
-    }
-
-    // 13. PRISM GOLEM (prism_golem): Chấn Động Hư Không / Pháo Đài Tàn Tích
-    if (e.defId === "prism_golem") {
+    // 15. BÓNG NHIỄU (void_wraith): Dịch Chuyển Glitch / Cào Nhiễu Trắng
+    if (e.defId === "void_wraith") {
       if ((step & 1) === 0) {
-        this._startEnemyAnim(e, "void_slam", 0.68, ang);
-        e.aiTimer = 2.1;
-        vfx.spawnLive("pixtel/boss-telegraph", {
-          x: e.x,
-          y: e.y,
-          options: { radius: 38, shape: "circle", palette: PAL.shadow },
-          priority: 3,
-          maxLife: 0.68,
-        });
-        ctx.hazards.push({
-          uid: nextEntityUid(),
-          owner: "enemy",
-          kind: "boss_slam",
-          x: e.x,
-          y: e.y,
-          radius: 40,
-          delay: 0.64,
-          age: 0,
-          maxLife: 0.9,
-          tickTimer: 0,
-          damage: Math.round(e.atk * 1.25),
-          vfxPreset: "ground-slam-void",
-          triggered: false,
-        });
+        // Dịch Chuyển Glitch: static blink dash!
+        const dashAng = ang + (Math.random() < 0.5 ? 0.95 : -0.95);
+        this._startEnemyAnim(e, "void_blink", 0.44, dashAng);
+        e.aiTimer = 1.5;
+        e.dashTime = 0.25;
+        e.dashVx = Math.cos(dashAng) * 218;
+        e.dashVy = Math.sin(dashAng) * 218;
+        vfx.spawnLive("scifi/glitch", { x: e.x, y: e.y - 10, follow: e, offsetY: -10, priority: 3, maxLife: 0.42 });
+        vfx.spawnLive("pixtel/frame-skip", { x: e.x, y: e.y - 10, priority: 2, maxLife: 0.35 });
       } else {
-        this._startEnemyAnim(e, "void_barrage", 0.5, ang);
-        e.aiTimer = 1.95;
-        vfx.spawnPooled("explode-void", { x: e.x, y: e.y - 8, scale: 0.78 });
-        for (let k = 0; k < 6; k++) {
-          const sa = ang + (k / 6) * Math.PI * 2;
+        // Cào Nhiễu Trắng: white-violet glitch claw rake + static blades!
+        this._startEnemyAnim(e, "dive_slash", 0.48, ang);
+        e.aiTimer = 1.65;
+        e.dashTime = 0.2;
+        e.dashVx = Math.cos(ang) * 175;
+        e.dashVy = Math.sin(ang) * 175;
+        const dir = this._toDirectionalVfx(ang, 0.7);
+        const offX = Math.cos(ang) * 8;
+        const offY = -12 + Math.sin(ang) * 5;
+        vfx.spawnLive("melee/double-slash", {
+          x: e.x + offX,
+          y: e.y + offY,
+          follow: e,
+          offsetX: offX,
+          offsetY: offY,
+          angle: dir.angle,
+          flip: dir.flip,
+          durationScale: 1.45,
+          maxLife: 0.38,
+          options: { palette: PAL.neon },
+          priority: 3,
+        });
+        vfx.spawnPooled("muzzle-void", { x: e.x + offX, y: e.y + offY, angle: ang, scale: 0.75 });
+        this._enemyConeHitPlayer(ctx, e, ang, 40, 1.25, 1.05);
+        for (const off of [-0.15, 0.15]) {
+          const sa = ang + off;
           ctx.projectiles.push({
             uid: nextEntityUid(),
             owner: "enemy",
             x: e.x + Math.cos(sa) * 7,
-            y: e.y - 8 + Math.sin(sa) * 5,
-            vx: Math.cos(sa) * 135,
-            vy: Math.sin(sa) * 135,
+            y: e.y - 10 + Math.sin(sa) * 5,
+            vx: Math.cos(sa) * 162,
+            vy: Math.sin(sa) * 162,
             angle: sa,
             radius: 4,
-            damage: Math.round(e.atk * 0.9),
+            damage: Math.round(e.atk * 0.84),
             crit: false,
             pierce: 0,
             life: 0,
@@ -3820,40 +4907,151 @@ export class CombatSystem {
       return;
     }
 
-    // 14. VOID WRAITH (void_wraith): Lướt Nhiễu / Liên Hoàn Đạn Hư Không
-    if (e.defId === "void_wraith") {
+    // 16. HIỆP SĨ VÔ SẮC (null_knight): Liên Trảm Vô Sắc / Lướt Chém Nhiễu
+    if (e.defId === "null_knight") {
       if ((step & 1) === 0) {
-        const dashAng = ang + (Math.random() < 0.5 ? 1.1 : -1.1);
-        this._startEnemyAnim(e, "void_blink", 0.4, dashAng);
-        e.aiTimer = 1.55;
-        e.dashTime = 0.24;
-        e.dashVx = Math.cos(dashAng) * 200;
-        e.dashVy = Math.sin(dashAng) * 200;
-        vfx.spawnLive("scifi/glitch", { x: e.x, y: e.y - 8, follow: e, offsetY: -8, priority: 3, maxLife: 0.42 });
+        // Liên Trảm Vô Sắc: twin silver-void greatsword cross slashes!
+        this._startEnemyAnim(e, "halberd_sweep", 0.52, ang);
+        e.aiTimer = 1.75;
+        const dir = this._toDirectionalVfx(ang, 0.65);
+        const offX = Math.cos(ang) * 8;
+        const offY = -16 + Math.sin(ang) * 5;
+        vfx.spawnLive("melee/double-slash", {
+          x: e.x + offX,
+          y: e.y + offY,
+          follow: e,
+          offsetX: offX,
+          offsetY: offY,
+          angle: dir.angle,
+          flip: dir.flip,
+          durationScale: 1.35,
+          maxLife: 0.42,
+          options: { palette: PAL.ice, radius: 46 },
+          priority: 3,
+        });
+        vfx.spawnPooled("parry-cyan", {
+          x: e.x + Math.cos(ang) * 16,
+          y: e.y - 12 + Math.sin(ang) * 8,
+          scale: 0.78,
+        });
+        this._enemyConeHitPlayer(ctx, e, ang, 46, 1.38, 1.18);
       } else {
-        this._startEnemyAnim(e, "void_barrage", 0.44, ang);
-        e.aiTimer = 1.65;
-        vfx.spawnPooled("muzzle-void", { x: e.x + Math.cos(ang) * 8, y: e.y - 9, angle: ang, scale: 0.75 });
-        for (const off of [-0.14, 0.14]) {
-          const sa = ang + off;
+        // Lướt Chém Nhiễu: glitch-phantom greatsword dash!
+        this._startEnemyAnim(e, "crystal_lunge", 0.56, ang);
+        e.aiTimer = 1.95;
+        e.dashTime = 0.3;
+        e.dashVx = Math.cos(ang) * 235;
+        e.dashVy = Math.sin(ang) * 235;
+        const dir = this._toDirectionalVfx(ang, 0.85);
+        const offX = Math.cos(ang) * 10;
+        const offY = -16 + Math.sin(ang) * 6;
+        vfx.spawnLive("scifi/glitch", { x: e.x, y: e.y - 14, follow: e, offsetY: -14, priority: 3, maxLife: 0.42 });
+        vfx.spawnLive("pixtel/frame-skip", { x: e.x, y: e.y - 14, priority: 3, maxLife: 0.38 });
+        vfx.spawnLive("melee/thrust", {
+          x: e.x + offX,
+          y: e.y + offY,
+          follow: e,
+          offsetX: offX,
+          offsetY: offY,
+          angle: dir.angle,
+          flip: dir.flip,
+          durationScale: 1.35,
+          maxLife: 0.44,
+          options: { palette: PAL.neon },
+          priority: 4,
+        });
+        this._enemyLineHitPlayer(ctx, e, ang, 76, 14, 1.1);
+      }
+      return;
+    }
+
+    // 17. KẺ GÁC CỔNG HƯ VÔ — BOSS PHỤ (void_gatekeeper): Vòng Cổ Ngữ Đa Hướng / Khiên Nhiễu Trắng / Tia Hư Vô
+    if (e.defId === "void_gatekeeper") {
+      const m = step % 3;
+      if (m === 0) {
+        // Vòng Cổ Ngữ Đa Hướng: 8-direction violet rune circle volley!
+        this._startEnemyAnim(e, "void_barrage", 0.62, ang, true);
+        e.aiTimer = 2.0;
+        vfx.spawnPooled("portal-void", { x: e.x, y: e.y - 18, scale: 0.95 });
+        vfx.spawnPooled("explode-void", { x: e.x, y: e.y - 18, scale: 0.78 });
+        for (let k = 0; k < 8; k++) {
+          const sa = ang + (k / 8) * Math.PI * 2;
           ctx.projectiles.push({
             uid: nextEntityUid(),
             owner: "enemy",
-            x: e.x + Math.cos(sa) * 7,
-            y: e.y - 8 + Math.sin(sa) * 5,
-            vx: Math.cos(sa) * 160,
-            vy: Math.sin(sa) * 160,
+            x: e.x + Math.cos(sa) * 12,
+            y: e.y - 18 + Math.sin(sa) * 8,
+            vx: Math.cos(sa) * 150,
+            vy: Math.sin(sa) * 150,
             angle: sa,
-            radius: 4,
-            damage: Math.round(e.atk * 0.85),
+            radius: 5,
+            damage: Math.round(e.atk * 0.9),
             crit: false,
             pierce: 0,
             life: 0,
-            maxLife: 1.6,
+            maxLife: 1.55,
             preset: "proj-void",
             hitSet: new Set(),
           });
         }
+      } else if (m === 1) {
+        // Khiên Nhiễu Trắng: white-violet glitch hexagonal shield barrier!
+        this._startEnemyAnim(e, "quartz_shield", 0.58, ang, true);
+        e.aiTimer = 2.05;
+        e.guardTime = 2.8;
+        if (e.maxBleachShield > 0 && e.bleachShield < e.maxBleachShield * 0.4) {
+          e.bleachShield = Math.min(e.maxBleachShield, e.bleachShield + Math.round(e.maxBleachShield * 0.25));
+        }
+        vfx.spawnLive("impacts/shield-block", {
+          x: e.x,
+          y: e.y - 4,
+          follow: e,
+          offsetX: 0,
+          offsetY: -4,
+          flip: Math.cos(ang) < 0,
+          angle: 0,
+          options: { palette: PAL.neon },
+          priority: 4,
+          maxLife: 0.48,
+        });
+        vfx.spawnLive("pixtel/hex-shield", {
+          x: e.x,
+          y: e.y - 19,
+          follow: e,
+          offsetX: 0,
+          offsetY: -19,
+          options: { palette: PAL.neon, radius: 24 },
+          priority: 4,
+          maxLife: 2.7,
+        });
+        vfx.spawnLive("scifi/glitch", { x: e.x, y: e.y - 18, follow: e, offsetY: -18, priority: 3, maxLife: 0.45 });
+      } else {
+        // Tia Hư Vô: devastating violet void beam!
+        this._startEnemyAnim(e, "thin_laser", 0.72, ang);
+        e.aiTimer = 2.15;
+        const offX = Math.cos(ang) * 12;
+        const offY = -19 + Math.sin(ang) * 6;
+        vfx.spawnPooled("muzzle-void", { x: e.x + offX, y: e.y + offY, angle: ang, scale: 0.9 });
+        vfx.spawnLive("pixtel/prism-beam", {
+          x: e.x + offX,
+          y: e.y + offY,
+          follow: e,
+          offsetX: offX,
+          offsetY: offY,
+          angle: ang,
+          startTime: 0.03,
+          maxLife: 0.68,
+          options: { length: 148, palette: PAL.neon },
+          priority: 5,
+        });
+        for (const frac of [0.4, 0.78]) {
+          vfx.spawnPooled("zap-hit", {
+            x: e.x + offX + Math.cos(ang) * 140 * frac,
+            y: e.y + offY + Math.sin(ang) * 140 * frac,
+            scale: 0.68,
+          });
+        }
+        this._enemyLineHitPlayer(ctx, e, ang, 150, 13, 1.24);
       }
       return;
     }
@@ -4066,35 +5264,147 @@ export class CombatSystem {
             hitSet: new Set(),
           });
         }
-      } else {
-        if (ai === "boss_amber") {
-          this._startEnemyAnim(b, "ember_volley", 0.5, toPlayerAng);
-          vfx.spawnPooled("explode-fire", { x: b.x, y: b.y - 10, scale: 0.85 });
-        } else {
-          this._startEnemyAnim(b, "void_barrage", 0.52, toPlayerAng);
-          vfx.spawnLive("scifi/glitch", { x: b.x, y: b.y - 10, follow: b, offsetY: -10, priority: 3, maxLife: 0.45 });
-        }
-        const count = ai === "boss_eraser" ? (b.phase === 3 ? 12 : 9) : enraged ? 8 : 6;
-        const preset = ai === "boss_amber" ? "proj-fireball" : "proj-void";
-        for (let i = 0; i < count; i++) {
-          const a = toPlayerAng + (i * Math.PI * 2) / count + disruptJitter;
-          ctx.projectiles.push({
-            uid: nextEntityUid(),
-            owner: "enemy",
-            x: b.x,
-            y: b.y - 6,
-            vx: Math.cos(a) * 140,
-            vy: Math.sin(a) * 140,
-            angle: a,
-            radius: 5,
-            damage: Math.round(b.atk * 0.85),
-            crit: false,
-            pierce: 0,
-            life: 0,
-            maxLife: 2.0,
-            preset,
-            hitSet: new Set(),
+      } else if (ai === "boss_amber") {
+        // CHÚA TỂ HỔ PHÁCH (boss_gilded_null): Kẹp Càng Dung Nham / Mưa Mảnh Hổ Phách!
+        const alt = (b.skillCycle++) & 1;
+        if (alt === 0) {
+          this._startEnemyAnim(b, "claw_clamp", 0.56, toPlayerAng);
+          b.dashTime = 0.26;
+          b.dashVx = Math.cos(toPlayerAng) * 195;
+          b.dashVy = Math.sin(toPlayerAng) * 195;
+          const dir = this._toDirectionalVfx(toPlayerAng, 0.65);
+          const offX = Math.cos(toPlayerAng) * 12;
+          const offY = -18 + Math.sin(toPlayerAng) * 6;
+          vfx.spawnLive("melee/heavy-cleave", {
+            x: b.x + offX,
+            y: b.y + offY,
+            follow: b,
+            offsetX: offX,
+            offsetY: offY,
+            angle: dir.angle,
+            flip: dir.flip,
+            durationScale: 1.35,
+            maxLife: 0.45,
+            options: { palette: PAL.fire },
+            priority: 5,
           });
+          vfx.spawnPooled("explode-fire", { x: b.x + offX, y: b.y + offY, scale: 0.9 });
+          this._enemyConeHitPlayer(ctx, b, toPlayerAng, 56, 1.35, 1.2);
+          for (const off of [-0.2, 0, 0.2]) {
+            const a = toPlayerAng + off + disruptJitter;
+            ctx.projectiles.push({
+              uid: nextEntityUid(),
+              owner: "enemy",
+              x: b.x + offX,
+              y: b.y + offY,
+              vx: Math.cos(a) * 160,
+              vy: Math.sin(a) * 160,
+              angle: a,
+              radius: 5,
+              damage: Math.round(b.atk * 0.85),
+              crit: false,
+              pierce: 0,
+              life: 0,
+              maxLife: 1.7,
+              preset: "proj-fireball",
+              hitSet: new Set(),
+            });
+          }
+        } else {
+          this._startEnemyAnim(b, "ember_volley", 0.54, toPlayerAng, true);
+          vfx.spawnPooled("explode-fire", { x: b.x, y: b.y - 16, scale: 0.92 });
+          const count = enraged ? 8 : 6;
+          for (let i = 0; i < count; i++) {
+            const a = toPlayerAng + (i * Math.PI * 2) / count + disruptJitter;
+            ctx.projectiles.push({
+              uid: nextEntityUid(),
+              owner: "enemy",
+              x: b.x,
+              y: b.y - 16,
+              vx: Math.cos(a) * 145,
+              vy: Math.sin(a) * 145,
+              angle: a,
+              radius: 5,
+              damage: Math.round(b.atk * 0.85),
+              crit: false,
+              pierce: 0,
+              life: 0,
+              maxLife: 2.0,
+              preset: (i & 1) === 0 ? "proj-amber" : "proj-fireball",
+              hitSet: new Set(),
+            });
+          }
+        }
+      } else {
+        // THE ERASER: Quét Xóa Sắc Màu / Tia Tẩy Trắng!
+        const alt = (b.skillCycle++) & 1;
+        if (alt === 0) {
+          // Quét Xóa Sắc Màu: wide color-erasing crescent wave + void volley!
+          this._startEnemyAnim(b, "void_barrage", 0.58, toPlayerAng);
+          const dir = this._toDirectionalVfx(toPlayerAng, 0.65);
+          const offX = Math.cos(toPlayerAng) * 12;
+          const offY = -20 + Math.sin(toPlayerAng) * 6;
+          vfx.spawnLive("melee/heavy-cleave", {
+            x: b.x + offX,
+            y: b.y + offY,
+            follow: b,
+            offsetX: offX,
+            offsetY: offY,
+            angle: dir.angle,
+            flip: dir.flip,
+            durationScale: 1.3,
+            maxLife: 0.48,
+            options: { palette: PAL.neon },
+            priority: 5,
+          });
+          vfx.spawnLive("scifi/glitch", { x: b.x, y: b.y - 18, follow: b, offsetY: -18, priority: 4, maxLife: 0.48 });
+          const count = b.phase === 3 ? 12 : 9;
+          for (let i = 0; i < count; i++) {
+            const a = toPlayerAng + (i * Math.PI * 2) / count + disruptJitter;
+            ctx.projectiles.push({
+              uid: nextEntityUid(),
+              owner: "enemy",
+              x: b.x,
+              y: b.y - 18,
+              vx: Math.cos(a) * 146,
+              vy: Math.sin(a) * 146,
+              angle: a,
+              radius: 5,
+              damage: Math.round(b.atk * 0.85),
+              crit: false,
+              pierce: 0,
+              life: 0,
+              maxLife: 2.0,
+              preset: (i & 1) === 0 ? "proj-void" : "proj-laser",
+              hitSet: new Set(),
+            });
+          }
+        } else {
+          // Tia Tẩy Trắng: blinding white-violet eraser beam!
+          this._startEnemyAnim(b, "thin_laser", 0.78, toPlayerAng);
+          const beamAng = toPlayerAng + disruptJitter;
+          const offX = Math.cos(beamAng) * 14;
+          const offY = -22 + Math.sin(beamAng) * 6;
+          vfx.spawnLive("pixtel/prism-beam", {
+            x: b.x + offX,
+            y: b.y + offY,
+            follow: b,
+            offsetX: offX,
+            offsetY: offY,
+            angle: beamAng,
+            startTime: 0.04,
+            maxLife: 0.74,
+            options: { length: 175, palette: PAL.neon },
+            priority: 6,
+          });
+          for (const frac of [0.35, 0.72]) {
+            vfx.spawnPooled("zap-hit", {
+              x: b.x + offX + Math.cos(beamAng) * 165 * frac,
+              y: b.y + offY + Math.sin(beamAng) * 165 * frac,
+              scale: 0.8,
+            });
+          }
+          this._enemyLineHitPlayer(ctx, b, beamAng, 174, 15, 1.15);
         }
       }
     }
@@ -4219,49 +5529,93 @@ export class CombatSystem {
           }
         }
       } else if (ai === "boss_amber") {
-        // Gilded Null (Qiongqi): Molten Slam + Flame Trails!
-        this._startEnemyAnim(b, "molten_slam", 0.82, toPlayerAng);
-        vfx.spawnLive("pixtel/boss-telegraph", {
-          x: b.x,
-          y: b.y,
-          options: { radius: 52, shape: "circle", palette: PAL.fire },
-          priority: 5,
-          maxLife: 0.9,
-        });
-        ctx.hazards.push({
-          uid: nextEntityUid(),
-          owner: "enemy",
-          kind: "boss_slam",
-          x: b.x,
-          y: b.y,
-          radius: 56,
-          delay: 0.85,
-          age: 0,
-          maxLife: 1.1,
-          tickTimer: 0,
-          damage: Math.round(b.atk * 1.35),
-          vfxPreset: "ground-slam-fire",
-          triggered: false,
-        });
-        if (enraged) {
+        // CHÚA TỂ HỔ PHÁCH (boss_gilded_null): Mưa Mảnh Hổ Phách / Vùng Trói Nhựa Sôi!
+        const alt = (b.skillCycle++) & 1;
+        if (alt === 0) {
+          this._startEnemyAnim(b, "shard_rain", 0.78, toPlayerAng, true);
+          vfx.spawnPooled("explode-fire", { x: b.x, y: b.y - 16, scale: 0.92 });
+          for (let k = 0; k < (enraged ? 4 : 3); k++) {
+            const tx = player.x + (k === 0 ? 0 : (Math.random() - 0.5) * 76);
+            const ty = player.y + (k === 0 ? 0 : (Math.random() - 0.5) * 76);
+            vfx.spawnLive("pixtel/boss-telegraph", {
+              x: tx,
+              y: ty,
+              options: { radius: 28, shape: "circle", palette: PAL.volt },
+              priority: 5,
+              maxLife: 0.86,
+            });
+            ctx.hazards.push({
+              uid: nextEntityUid(),
+              owner: "enemy",
+              kind: "boss_slam",
+              x: tx,
+              y: ty,
+              radius: 30,
+              delay: 0.82,
+              age: 0,
+              maxLife: 1.08,
+              tickTimer: 0,
+              damage: Math.round(b.atk * 1.28),
+              vfxPreset: "ground-slam-fire",
+              triggered: false,
+            });
+          }
+        } else {
+          // Vùng Trói Nhựa Sôi: molten slam + boiling amber resin pools!
+          this._startEnemyAnim(b, "molten_slam", 0.82, toPlayerAng);
+          vfx.spawnLive("pixtel/boss-telegraph", {
+            x: b.x,
+            y: b.y,
+            options: { radius: 52, shape: "circle", palette: PAL.fire },
+            priority: 5,
+            maxLife: 0.9,
+          });
           ctx.hazards.push({
             uid: nextEntityUid(),
             owner: "enemy",
-            kind: "flame_trail",
+            kind: "boss_slam",
             x: b.x,
             y: b.y,
-            radius: 30,
-            delay: 0,
+            radius: 56,
+            delay: 0.85,
             age: 0,
-            maxLife: 3.5,
-            tickTimer: 0.3,
-            damage: Math.round(b.atk * 0.55),
-            triggered: true,
+            maxLife: 1.1,
+            tickTimer: 0,
+            damage: Math.round(b.atk * 1.35),
+            vfxPreset: "ground-slam-fire",
+            triggered: false,
           });
+          const poolCount = enraged ? 3 : 2;
+          for (let k = 0; k < poolCount; k++) {
+            const pa = toPlayerAng + (k - 0.5) * 1.1;
+            ctx.hazards.push({
+              uid: nextEntityUid(),
+              owner: "enemy",
+              kind: "flame_trail",
+              x: k === 0 ? b.x : b.x + Math.cos(pa) * 38,
+              y: k === 0 ? b.y : b.y + Math.sin(pa) * 38,
+              radius: 30,
+              delay: 0,
+              age: 0,
+              maxLife: 3.6,
+              tickTimer: 0.3,
+              damage: Math.round(b.atk * 0.55),
+              triggered: true,
+            });
+          }
         }
       } else {
-        // World Boss THE ERASER: Floor Erase Zones + Cross / Diagonal Lasers!
-        this._startEnemyAnim(b, "erase_cast", 0.85, toPlayerAng);
+        // World Boss THE ERASER: Bão Nhiễu Toàn Sàn (Floor Erase Zones + Glitch Lightning + Cross Lasers!)
+        this._startEnemyAnim(b, "erase_cast", 0.88, toPlayerAng, true);
+        vfx.spawnLive("pixtel/prism-storm", {
+          x: b.x,
+          y: b.y - 20,
+          follow: b,
+          offsetX: 0,
+          offsetY: -20,
+          maxLife: 1.0,
+          priority: 5,
+        });
         for (let k = 0; k < (b.phase === 3 ? 4 : 3); k++) {
           const tx = player.x + (k === 0 ? 0 : (Math.random() - 0.5) * 92);
           const ty = player.y + (k === 0 ? 0 : (Math.random() - 0.5) * 92);
@@ -4272,6 +5626,7 @@ export class CombatSystem {
             priority: 5,
             maxLife: 1.0,
           });
+          vfx.spawnPooled("zap-hit", { x: tx, y: ty - 8, scale: 0.75 });
           ctx.hazards.push({
             uid: nextEntityUid(),
             owner: "enemy",

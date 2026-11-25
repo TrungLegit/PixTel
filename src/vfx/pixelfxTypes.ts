@@ -55,8 +55,24 @@ export interface PixelfxActor {
 
 export interface PixelfxPosedTheme {
   bareHands?: boolean;
-  headgear?: "hair" | "plume_helm" | "wizard_hat" | "assassin_hood" | "tinker_goggles" | "halo_crown";
-  backAccessory?: "none" | "cape" | "scarf" | "volt_pack";
+  headgear?:
+    | "hair"
+    | "plume_helm"
+    | "wizard_hat"
+    | "assassin_hood"
+    | "tinker_goggles"
+    | "halo_crown"
+    | "dragon_helm"
+    | "royal_crown"
+    | "antler_crest";
+  backAccessory?:
+    | "none"
+    | "cape"
+    | "scarf"
+    | "volt_pack"
+    | "prism_wings"
+    | "warden_roots"
+    | "amber_thrusters";
   shielded?: boolean;
   shell?: number[];
   core?: number[];

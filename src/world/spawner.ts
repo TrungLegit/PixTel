@@ -214,6 +214,9 @@ export class WorldSpawner {
           dashTime: 0,
           guardTime: 0,
           skillCycle: 0,
+          spawnAnimTime: vfx ? 0.52 : 0,
+          alertTimer: 0,
+          hurtTilt: 0,
           element: null,
           elementTime: 0,
           reactionIcd: 0,
@@ -337,6 +340,18 @@ export class WorldSpawner {
             ? "mat_quartz_shard"
             : "pot_hp";
     this.spawnItemLoot(chest.x + 4, chest.y + 13, bonusId, 2);
+
+    // Boss Main Chests always award a matching Biome Seasonal Gacha Key!
+    const bossKeyMap: Record<string, string> = {
+      camp_meadow_boss: "key_season_spring",
+      camp_quartz_boss: "key_season_winter",
+      camp_amber_boss: "key_season_summer",
+      camp_world_boss: "key_season_eclipse",
+    };
+    const keyId = bossKeyMap[chest.campId];
+    if (keyId) {
+      this.spawnItemLoot(chest.x, chest.y + 15, keyId, 1);
+    }
   }
 
   spawnGoldLoot(x: number, y: number, gold: number) {

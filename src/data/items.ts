@@ -10,6 +10,8 @@ import type {
   StatBonus,
 } from "./types";
 import { EQUIPMENT_ITEMS, RARITY_ENHANCE_MULT, STARTER_WEAPON_BY_CLASS, TIER_INFO } from "./equipments";
+import { EXOTIC_ITEMS } from "./exoticItems";
+import { GACHA_KEY_ITEMS, SEASONAL_ITEMS } from "./gacha";
 import { HIDDEN_ITEMS } from "./hiddenItems";
 
 export const CLASS_DISPLAY_NAMES: Record<ClassId, string> = {
@@ -671,6 +673,13 @@ export const ITEMS: Record<string, ItemDef> = {
 
   // === EXCLUSIVE HIDDEN ITEMS (craft_only & boss_only) ===
   ...HIDDEN_ITEMS,
+
+  // === V3.0 EXOTIC SKILL-ALTERING GEAR (MOB/BOSS DROP ONLY) ===
+  ...EXOTIC_ITEMS,
+
+  // === V3.0 BIOME GACHA KEYS & SEASONAL GACHA EXCLUSIVES ===
+  ...GACHA_KEY_ITEMS,
+  ...SEASONAL_ITEMS,
 };
 
 /** Kho hàng của Thương Nhân Mira (gồm tiêu thụ T1-T4, vũ khí T1-T2 các class & 8 loại Bột Sắc Tố) */
@@ -873,7 +882,12 @@ export function getDismantleShardYield(inst: ItemInstance): number {
 
 export function pickRandomEquipByRarity(rarity: Rarity, preferredClassId?: ClassId): string {
   const pool = Object.values(ITEMS).filter(
-    (it) => it.category === "equipment" && it.rarity === rarity && !it.isHidden
+    (it) =>
+      it.category === "equipment" &&
+      it.rarity === rarity &&
+      !it.isHidden &&
+      !it.dropOnly &&
+      !it.seasonalBannerId
   );
   if (pool.length === 0) return resolveClassReward(preferredClassId ?? "prism_knight", "meadow_weapon");
   if (preferredClassId && Math.random() < 0.6) {

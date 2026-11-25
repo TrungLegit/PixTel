@@ -1,7 +1,10 @@
 import { getClassDef } from "../data/classes";
 import { ENEMIES } from "../data/enemies";
+import { GACHA_BANNERS } from "../data/gacha";
 import { CONSUMABLE_GROUP_LABELS, ITEMS, getTierBadge } from "../data/items";
 import { LORE_TABLETS } from "../data/lore";
+import type { ClassId } from "../data/types";
+import { getWeaponSkillForItem } from "../data/weaponSkills";
 import {
   BIOME_CONFIGS,
   TILE_SIZE,
@@ -11,13 +14,22 @@ import {
   WORLD_COLS,
   WORLD_ROWS,
 } from "../data/worldConfig";
-import { onCodixelReady } from "../graphics/codixelAtlas";
+import { drawCodixelIcon, onCodixelReady } from "../graphics/codixelAtlas";
 import { ELEMENT_META } from "../data/elements";
 import { ELEMENT_DISPLAY } from "../systems/forgeSystem";
 import { BEGINNER_PRACTICE_STEPS } from "./TutorialModal";
 import { uiRarityFx } from "../vfx/uiRarityFx";
 import type { PixTelOpenWorldGame } from "../game";
 import { sfx } from "../audio/chiptuneSynth";
+
+const CLASS_SKILL_ICONS: Record<ClassId, { lmb: string; skill: string; ult: string }> = {
+  prism_knight: { lmb: "skill_knight_lmb", skill: "skill_knight_e", ult: "skill_knight_q" },
+  chroma_mage: { lmb: "skill_mage_lmb", skill: "skill_mage_e", ult: "skill_mage_q" },
+  bit_rogue: { lmb: "skill_rogue_lmb", skill: "skill_rogue_e", ult: "skill_rogue_q" },
+  pixel_tinker: { lmb: "skill_tinker_lmb", skill: "skill_tinker_e", ult: "skill_tinker_q" },
+};
+
+type HudTipKind = "bag" | "gacha" | "lmb" | "skill" | "ult" | "dash";
 
 const ELEMENT_LABELS = [
   { name: "HỎA", color: "#ff5533" },
@@ -42,9 +54,14 @@ export class HudUI {
   private toastContainer: HTMLElement;
   private tutorialBannerEl: HTMLElement | null;
   private partyBoxEl: HTMLElement | null;
+  private skillTooltipEl: HTMLElement | null;
+  private hoveredTipKind: HudTipKind | null = null;
+  private hoveredSlotEl: HTMLElement | null = null;
+  private lastTipSig = "";
   private lastTutorialStepKey = "";
   private lastPartySig = "";
   private cachedHotbarIcons = ["", "", "", ""];
+  private cachedSkillIcons: Record<string, string> = {};
   onToggleTouch?: () => void;
 
   constructor(game: PixTelOpenWorldGame) {
@@ -56,13 +73,17 @@ export class HudUI {
     this.toastContainer = document.getElementById("toast-stack")!;
     this.tutorialBannerEl = document.getElementById("hud-tutorial-banner");
     this.partyBoxEl = document.getElementById("hud-party-box");
+    this.skillTooltipEl = document.getElementById("hud-skill-tooltip");
 
     onCodixelReady(() => {
       this.cachedHotbarIcons.fill("");
+      this.cachedSkillIcons = {};
+      this.lastTipSig = "";
       this.update();
     });
 
     // Quick toolbar buttons
+    document.getElementById("hud-btn-gacha")?.addEventListener("click", () => this.game.toggleModal("gacha"));
     document.getElementById("hud-btn-coop")?.addEventListener("click", () => this.game.toggleModal("coop"));
     document.getElementById("hud-btn-touch")?.addEventListener("click", () => {
       sfx.playUiClick();
@@ -75,6 +96,8 @@ export class HudUI {
     document.getElementById("hud-btn-help")?.addEventListener("click", () => this.game.toggleModal("tutorial"));
     document.getElementById("hud-btn-map")!.addEventListener("click", () => this.game.toggleModal("world_map"));
     document.getElementById("hud-btn-bag")!.addEventListener("click", () => this.game.toggleModal("inventory"));
+    document.getElementById("slot-bag")?.addEventListener("click", () => this.game.toggleModal("inventory"));
+    document.getElementById("slot-gacha")?.addEventListener("click", () => this.game.toggleModal("gacha"));
     document.getElementById("hud-stat-pts-btn")?.addEventListener("click", () => this.game.toggleModal("inventory"));
     document.getElementById("hud-btn-quest")!.addEventListener("click", () => this.game.toggleModal("journal"));
     document.getElementById("hud-btn-save")!.addEventListener("click", () => this.game.saveGame(true));
@@ -85,6 +108,23 @@ export class HudUI {
     document.getElementById("hud-btn-pause")!.addEventListener("click", () => this.game.toggleModal("pause"));
 
     this.miniCanvas.addEventListener("click", () => this.game.toggleModal("world_map"));
+
+    // Hover tooltips for Pixel Backpack & Skill Icons (only shows description on hover!)
+    const tipSlots = this.hudRoot.querySelectorAll<HTMLElement>("[data-hud-tip]");
+    tipSlots.forEach((slotEl) => {
+      const kind = slotEl.dataset.hudTip as HudTipKind;
+      slotEl.addEventListener("mouseenter", () => {
+        this.hoveredTipKind = kind;
+        this.hoveredSlotEl = slotEl;
+        this.lastTipSig = "";
+        this._renderSkillTooltip();
+      });
+      slotEl.addEventListener("mouseleave", () => {
+        if (this.hoveredSlotEl === slotEl) {
+          this.hideSkillTooltip();
+        }
+      });
+    });
 
     // Clickable consumable buttons [1]-[4]
     document.getElementById("slot-c1")!.addEventListener("click", () => this.game.useConsumableSlot(1));
@@ -97,6 +137,26 @@ export class HudUI {
 
   setVisible(show: boolean) {
     this.hudRoot.classList.toggle("hidden", !show);
+    if (!show) this.hideSkillTooltip();
+  }
+
+  hideSkillTooltip() {
+    this.hoveredTipKind = null;
+    this.hoveredSlotEl = null;
+    this.lastTipSig = "";
+    this.skillTooltipEl?.classList.add("hidden");
+  }
+
+  private _paintCodixelCanvas(canvasId: string, iconKey: string) {
+    if (this.cachedSkillIcons[canvasId] === iconKey) return;
+    const cv = document.getElementById(canvasId) as HTMLCanvasElement | null;
+    if (!cv) return;
+    const ctx = cv.getContext("2d");
+    if (!ctx) return;
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    if (drawCodixelIcon(ctx, iconKey, 0, 0, cv.width)) {
+      this.cachedSkillIcons[canvasId] = iconKey;
+    }
   }
 
   toast(msg: string, tone: "info" | "good" | "warn" | "epic" = "info") {
@@ -310,57 +370,108 @@ export class HudUI {
         .join("");
     }
 
-    // Equipment-gated LMB / [E] / [Q] Skill Bar
+    // Pixel Backpack & Seasonal Gacha Chest Buttons (front of bottom bar)
+    const bpTier = this.game.inv.backpackTier;
+    const bagIconKey = bpTier > 0 ? `ui_backpack_t${Math.min(4, bpTier)}` : "ui_backpack";
+    this._paintCodixelCanvas("bag-slot-icon", bagIconKey);
+    const bagCountEl = document.getElementById("bag-slot-count");
+    if (bagCountEl) {
+      bagCountEl.textContent = `${this.game.inv.bag.length}/${this.game.inv.bagCapacity}`;
+    }
+    const bagPtsEl = document.getElementById("bag-slot-pts");
+    if (bagPtsEl) {
+      bagPtsEl.classList.toggle("hidden", p.statPoints <= 0);
+      if (p.statPoints > 0) bagPtsEl.textContent = `+${p.statPoints}`;
+    }
+
+    this._paintCodixelCanvas("gacha-slot-icon", "ui_gacha_chest");
+    const totalGachaKeys = GACHA_BANNERS.reduce((sum, b) => sum + this.game.inv.countItem(b.keyItemId), 0);
+    const gachaCntEl = document.getElementById("gacha-slot-count");
+    if (gachaCntEl) {
+      gachaCntEl.textContent = `🗝${totalGachaKeys}`;
+    }
+    document.getElementById("slot-gacha")?.classList.toggle("has-keys", totalGachaKeys > 0);
+    document.getElementById("hud-btn-gacha")?.classList.toggle("has-keys", totalGachaKeys > 0);
+
+    // Weapon-Driven Pixel Skill Icon Bar:
+    // LMB (Fixed Class Basic + Charge), [E] (Dynamic Weapon Skill per equipped weapon!), [Q] (Fixed Class Signature Skill!), [SPC] (Dash)
     const eqWeapon = this.game.inv.getValidEquippedWeapon(p.classId);
-    const eqAccessory = this.game.inv.equipment.accessory;
-    const lmbNameEl = document.getElementById("skill-lmb-name");
+    const weaponSkill = eqWeapon ? getWeaponSkillForItem(eqWeapon.defId) : null;
+    const skillSet = CLASS_SKILL_ICONS[p.classId] ?? CLASS_SKILL_ICONS.prism_knight;
+
+    this._paintCodixelCanvas("skill-lmb-icon", eqWeapon ? skillSet.lmb : "skill_unarmed");
+    this._paintCodixelCanvas("skill-e-icon", weaponSkill ? weaponSkill.iconKey : skillSet.skill);
+    this._paintCodixelCanvas("skill-q-icon", skillSet.ult);
+    this._paintCodixelCanvas("skill-dash-icon", "skill_dash");
+
     const lmbSub = document.getElementById("skill-lmb-sub");
-    if (!eqWeapon) {
-      if (lmbNameEl) lmbNameEl.textContent = "Đấm Tay Không";
-      if (lmbSub) {
-        lmbSub.textContent = p.comboTimer > 0 ? `ĐẤM ${p.comboStep === 0 ? 3 : p.comboStep}/3` : "TAY KHÔNG";
+    if (lmbSub) {
+      let badgeTxt = "";
+      if (eqWeapon && p.quickChargeTimer > 0) {
+        badgeTxt = "⚡";
+      } else if (p.comboTimer > 0) {
+        badgeTxt = `${p.comboStep === 0 ? 3 : p.comboStep}/3`;
       }
-    } else {
-      if (lmbNameEl) lmbNameEl.textContent = cdef.skills.lmb.name;
-      if (lmbSub) {
-        lmbSub.textContent =
-          p.quickChargeTimer > 0
-            ? "TỤ NHANH!"
-            : p.comboTimer > 0
-              ? `NHỊP ${p.comboStep === 0 ? 3 : p.comboStep}/3`
-              : "COMBO";
-      }
+      lmbSub.textContent = badgeTxt;
+      lmbSub.classList.toggle("hidden", badgeTxt.length === 0);
     }
 
     const slotE = document.getElementById("slot-skill-e")!;
-    if (!eqWeapon) {
+    const eLock = document.getElementById("skill-e-lock");
+    const eCdEl = document.getElementById("skill-e-cd")!;
+    const eVeil = document.getElementById("skill-e-veil");
+    if (!eqWeapon || !weaponSkill) {
       slotE.classList.add("locked");
       slotE.classList.remove("on-cd");
-      document.getElementById("skill-e-name")!.textContent = "🔒 Cần Vũ Khí";
-      document.getElementById("skill-e-cd")!.textContent = "KHÓA";
+      slotE.style.removeProperty("--ws-accent");
+      eLock?.classList.remove("hidden");
+      this._paintCodixelCanvas("skill-e-lock", "ui_lock");
+      eCdEl.classList.add("hidden");
+      if (eVeil) eVeil.style.height = "0%";
     } else {
       slotE.classList.remove("locked");
-      document.getElementById("skill-e-name")!.textContent = cdef.skills.skill.name.replace(/\s*\(E\)/, "");
-      document.getElementById("skill-e-cd")!.textContent = p.skillCd > 0 ? `${p.skillCd.toFixed(1)}s` : "READY";
-      slotE.classList.toggle("on-cd", p.skillCd > 0);
+      slotE.style.setProperty("--ws-accent", weaponSkill.accent);
+      eLock?.classList.add("hidden");
+      const onCd = p.skillCd > 0;
+      slotE.classList.toggle("on-cd", onCd);
+      eCdEl.textContent = onCd ? `${p.skillCd.toFixed(1)}s` : "";
+      eCdEl.classList.toggle("hidden", !onCd);
+      if (eVeil) {
+        const effMaxCd = Math.max(0.5, weaponSkill.cooldown * Math.max(0.45, 1 + p.skillCdPct));
+        const pct = onCd ? Math.min(100, (p.skillCd / effMaxCd) * 100) : 0;
+        eVeil.style.height = `${pct}%`;
+      }
     }
 
+    // [Q] Fixed Class Signature Skill (always unlocked, requires 100% Overdrive!)
     const ultPct = Math.floor(p.overdrive);
     const slotQ = document.getElementById("slot-skill-q")!;
-    if (!eqAccessory) {
-      slotQ.classList.add("locked");
-      slotQ.classList.remove("ult-ready");
-      document.getElementById("skill-q-name")!.textContent = "🔒 Cần Phụ Kiện";
-      document.getElementById("skill-q-cd")!.textContent = "KHÓA";
-    } else {
-      slotQ.classList.remove("locked");
-      document.getElementById("skill-q-name")!.textContent = cdef.skills.ult.name.replace(/\s*\(Q\)/, "");
-      document.getElementById("skill-q-cd")!.textContent = ultPct >= 100 ? "SẴN SÀNG!" : `${ultPct}%`;
-      slotQ.classList.toggle("ult-ready", ultPct >= 100);
+    const qLock = document.getElementById("skill-q-lock");
+    const qCdEl = document.getElementById("skill-q-cd")!;
+    const qGauge = document.getElementById("skill-q-gauge");
+    slotQ.classList.remove("locked");
+    qLock?.classList.add("hidden");
+    qCdEl.classList.remove("hidden");
+    qCdEl.textContent = ultPct >= 100 ? "★" : `${ultPct}%`;
+    slotQ.classList.toggle("ult-ready", ultPct >= 100);
+    if (qGauge) qGauge.style.height = `${Math.min(100, ultPct)}%`;
+
+    const dashOnCd = p.dashCd > 0;
+    const dashCdEl = document.getElementById("skill-dash-cd")!;
+    const dashVeil = document.getElementById("skill-dash-veil");
+    dashCdEl.textContent = dashOnCd ? `${p.dashCd.toFixed(1)}s` : "";
+    dashCdEl.classList.toggle("hidden", !dashOnCd);
+    document.getElementById("slot-dash")!.classList.toggle("on-cd", dashOnCd);
+    if (dashVeil) {
+      const pct = dashOnCd ? Math.min(100, (p.dashCd / Math.max(0.4, cdef.baseStats.dashCooldown)) * 100) : 0;
+      dashVeil.style.height = `${pct}%`;
     }
 
-    document.getElementById("skill-dash-cd")!.textContent = p.dashCd > 0 ? `${p.dashCd.toFixed(1)}s` : "READY";
-    document.getElementById("slot-dash")!.classList.toggle("on-cd", p.dashCd > 0);
+    if (this.game.activeModal !== null) {
+      this.hideSkillTooltip();
+    } else if (this.hoveredTipKind) {
+      this._renderSkillTooltip();
+    }
 
     // Quick Smart Consumables [1] [2] [3] [4] with codixel icons & Tier badges
     const fallbackDefIds = ["pot_hp_small", "pot_stamina_minor", "pot_might_brew", "pot_aegis_flask"];
@@ -387,7 +498,11 @@ export class HudUI {
         btnEl.title = `[${slotNum}] ${grpInfo.label}`;
       }
 
-      document.getElementById(`c${slotNum}-qty`)!.textContent = `x${totalCnt}`;
+      const isHpPotCd = slotNum === 1 && (p.potCd ?? 0) > 0;
+      btnEl.classList.toggle("on-cd", isHpPotCd);
+      document.getElementById(`c${slotNum}-qty`)!.textContent = isHpPotCd
+        ? `${(p.potCd ?? 0).toFixed(1)}s`
+        : `x${totalCnt}`;
       const tierEl = document.getElementById(`c${slotNum}-tier`)!;
       tierEl.textContent = tInfo.badge;
       tierEl.style.color = tInfo.color;
@@ -514,7 +629,11 @@ export class HudUI {
     }
     for (const camp of WORLD_CAMPS) {
       const isBoss = camp.id.includes("boss");
-      if (isBoss) plot(camp.tx, camp.ty, "#ff3355", 5);
+      if (isBoss) {
+        plot(camp.tx, camp.ty, "#ff3355", 5);
+      } else {
+        plot(camp.tx, camp.ty, "#ff9944", 2);
+      }
     }
     for (const ch of this.game.spawner.chests) {
       if (ch.state !== "opened") {
@@ -529,5 +648,189 @@ export class HudUI {
 
     const blink = (Math.floor(this.game.time * 4) & 1) === 0;
     plot(ptx, pty, blink ? "#ffffff" : "#5ef2ff", 4);
+  }
+
+  private _renderSkillTooltip() {
+    const tipEl = this.skillTooltipEl;
+    const kind = this.hoveredTipKind;
+    const slotEl = this.hoveredSlotEl;
+    if (!tipEl || !kind || !slotEl || !this.game.running || this.game.activeModal !== null) {
+      tipEl?.classList.add("hidden");
+      return;
+    }
+
+    const p = this.game.player;
+    const cdef = getClassDef(p.classId);
+    const skillSet = CLASS_SKILL_ICONS[p.classId] ?? CLASS_SKILL_ICONS.prism_knight;
+    const eqWeapon = this.game.inv.getValidEquippedWeapon(p.classId);
+    const eqWpnDef = eqWeapon ? ITEMS[eqWeapon.defId] : undefined;
+    const weaponSkill = eqWeapon ? getWeaponSkillForItem(eqWeapon.defId) : null;
+
+    let iconKey = "ui_backpack";
+    let name = "";
+    let keyTag = "";
+    let statusCls: "ok" | "cd" | "warn" | "gold" = "ok";
+    let statusTxt = "";
+    let desc = "";
+    let extraBlock = "";
+    let footLeft = "";
+    let footRight = "";
+
+    if (kind === "bag") {
+      const bpTier = this.game.inv.backpackTier;
+      iconKey = bpTier > 0 ? `ui_backpack_t${Math.min(4, bpTier)}` : "ui_backpack";
+      name = "Túi Đồ & Trang Bị";
+      keyTag = "I / B";
+      const asMode = this.game.inv.autoSell.maxRarity;
+      const asLbl =
+        asMode === "common" ? "Trắng" : asMode === "uncommon" ? "≤ Lục" : asMode === "rare" ? "≤ Lam" : "Tắt";
+      statusCls = p.statPoints > 0 ? "gold" : "ok";
+      statusTxt =
+        p.statPoints > 0
+          ? `✨ Có +${p.statPoints} Điểm Tiềm Năng chưa cộng!`
+          : `Kho đồ ${this.game.inv.bag.length}/${this.game.inv.bagCapacity} ô · Auto-Bán: ${asLbl}`;
+      desc =
+        "Mở hành trang mở rộng tới 80 ô, bật Auto-Bán đồ phẩm thấp, mua nâng cấp Balo, cộng Điểm Tiềm Năng & quản lý 5 ô trang bị.";
+      extraBlock = `<b>Rương Cá Nhân tại Spawn:</b> Đang cất ${this.game.inv.stash.length}/80 ô · Lại gần nhấn [F] để cất/lấy đồ.`;
+      footLeft = `💰 Vàng: ${this.game.inv.gold} G`;
+      footRight = "Nhấn chuột để mở";
+    } else if (kind === "gacha") {
+      iconKey = "ui_gacha_chest";
+      name = "Đài Rương Gacha Theo Mùa";
+      keyTag = "G";
+      const keyParts = GACHA_BANNERS.map(
+        (b) => `${b.seasonTag.split("·")[0].trim()}: <b>x${this.game.inv.countItem(b.keyItemId)}</b>`
+      );
+      const totalKeys = GACHA_BANNERS.reduce((s, b) => s + this.game.inv.countItem(b.keyItemId), 0);
+      statusCls = totalKeys > 0 ? "gold" : "cd";
+      statusTxt = totalKeys > 0 ? `🗝 Đang sở hữu ${totalKeys} Chìa Rương Mùa!` : "Săn quái từng vùng hoặc rèn tại Kael để kiếm Chìa!";
+      desc =
+        "Mở 4 Rương Mùa (Xuân / Đông / Hạ / Nhật Thực) bằng Chìa Khóa riêng từng quần xã. Bảo hiểm Pity 10/25 minh bạch & cơ chế Lật Kèo Đổi Màu siêu hồi hộp!";
+      extraBlock = `<b>Chìa hiện có:</b> ${keyParts.join(" · ")}`;
+      footLeft = `Tổng lượt mở: ${this.game.gacha.totalRolls}`;
+      footRight = "Nhấn [G] để mở";
+    } else if (kind === "lmb") {
+      iconKey = eqWeapon ? skillSet.lmb : "skill_unarmed";
+      keyTag = "LMB / GIỮ";
+      if (!eqWeapon) {
+        name = "Đấm Tay Không";
+        statusCls = "warn";
+        statusTxt = `✊ Chưa cầm vũ khí (${cdef.weaponType})`;
+        desc =
+          "Combo 3 cú đấm cận chiến cơ bản & Đấm Móc Tụ Lực (Giữ LMB). Hãy nhặt hoặc mua vũ khí đúng Class để mở khóa bộ chiêu thức đặc trưng!";
+        extraBlock = `<b>Chiêu khi có vũ khí:</b> ${cdef.skills.lmb.name} — ${cdef.skills.lmb.desc}`;
+      } else {
+        name = cdef.skills.lmb.name;
+        statusCls = p.quickChargeTimer > 0 ? "gold" : "ok";
+        statusTxt =
+          p.quickChargeTimer > 0
+            ? "⚡ TỤ NHANH SẴN SÀNG (Just-Charge)"
+            : `⚔ ${eqWpnDef?.name ?? cdef.weaponType}${eqWeapon.enhanceLevel > 0 ? ` +${eqWeapon.enhanceLevel}` : ""}`;
+        desc = cdef.skills.lmb.desc;
+        extraBlock = `<b>${cdef.skills.charge.name}:</b> ${cdef.skills.charge.desc}`;
+      }
+      footLeft = `Class: ${cdef.vnName}`;
+      footRight = `Tốc đánh: ${cdef.baseStats.atkCooldown}s`;
+    } else if (kind === "skill") {
+      iconKey = weaponSkill ? weaponSkill.iconKey : skillSet.skill;
+      name = weaponSkill ? weaponSkill.name : "Kỹ Năng Vũ Khí";
+      keyTag = "E / RMB";
+      if (!eqWeapon || !weaponSkill) {
+        statusCls = "warn";
+        statusTxt = `🔒 KHÓA — Cần cầm ${cdef.weaponType} đúng Class`;
+        desc = "Mỗi vũ khí mang 1 Kỹ Năng [E] hoàn toàn riêng biệt. Đổi vũ khí sẽ đổi ngay biểu tượng, chiêu thức & hiệu ứng chiến đấu!";
+        footLeft = "Gắn vào Vũ Khí đang cầm";
+        footRight = cdef.vnName;
+      } else {
+        const effCd = Math.max(0.5, weaponSkill.cooldown * Math.max(0.45, 1 + p.skillCdPct));
+        const elMeta = ELEMENT_META[weaponSkill.element];
+        if (p.skillCd > 0) {
+          statusCls = "cd";
+          statusTxt = `⏳ Đang hồi chiêu (${p.skillCd.toFixed(1)}s) · ${eqWpnDef?.name ?? ""}`;
+        } else {
+          statusCls = "gold";
+          statusTxt = `✦ SKILL VŨ KHÍ · ${eqWpnDef?.name ?? cdef.weaponType}`;
+        }
+        desc = weaponSkill.detailDesc;
+        const modCnt = p.exoticMods?.size ?? 0;
+        extraBlock = `<b>Hệ nguyên tố:</b> <span style="color:${elMeta.color}">${elMeta.name}</span> · Đổi vũ khí khác để đổi chiêu [E]!${
+          modCnt > 0 ? ` · <span style="color:#ffe066">★ ${modCnt} Biến Thể Độc Lạ đang kích hoạt</span>` : ""
+        }`;
+        footLeft = `Hồi chiêu: ${effCd.toFixed(1)}s`;
+        footRight = `Vũ khí ${cdef.vnName}`;
+      }
+    } else if (kind === "ult") {
+      iconKey = skillSet.ult;
+      name = cdef.skills.ult.name.replace(/\s*\(Q\)/, "");
+      keyTag = "Q · CỐ ĐỊNH";
+      const ultPct = Math.floor(p.overdrive);
+      if (ultPct >= 100) {
+        statusCls = "gold";
+        statusTxt = "★ NỘ 100% — SẴN SÀNG KÍCH NỔ TUYỆT KỸ CLASS!";
+      } else {
+        statusCls = "cd";
+        statusTxt = `⚡ Kỹ Năng Cố Định Class · Nộ ${ultPct}% / 100%`;
+      }
+      desc = cdef.skills.ult.desc;
+      footLeft = "Tích Nộ qua đòn đánh & Phản Ứng";
+      footRight = cdef.vnName;
+    } else {
+      iconKey = "skill_dash";
+      name = "Chroma Dash & Né Hoàn Hảo";
+      keyTag = "SPACE";
+      if (p.dashCd > 0) {
+        statusCls = "cd";
+        statusTxt = `⏳ Đang hồi chiêu (${p.dashCd.toFixed(1)}s)`;
+      } else {
+        statusCls = "ok";
+        statusTxt = "💨 SẴN SÀNG LƯỚT NÉ";
+      }
+      desc =
+        "Lướt nhanh bất tử thoáng qua theo hướng di chuyển (tiêu hao Thể Lực). Lướt đúng khoảnh khắc đòn đánh địch chạm tới sẽ kích hoạt CHROMA DODGE — làm chậm thời gian & cường hóa đòn Phản Kích!";
+      footLeft = `Hồi chiêu: ${cdef.baseStats.dashCooldown}s`;
+      footRight = `Thể Lực: ${Math.floor(p.stamina)}/${p.maxStamina}`;
+    }
+
+    const sig = `${kind}|${p.classId}|${iconKey}|${statusTxt}|${footLeft}|${footRight}`;
+    if (sig !== this.lastTipSig) {
+      this.lastTipSig = sig;
+      tipEl.innerHTML = `
+        <div class="hst-head">
+          <div class="hst-icon-wrap">
+            <canvas id="hst-icon-cv" class="hst-icon" width="34" height="34"></canvas>
+          </div>
+          <div class="hst-title-col">
+            <div class="hst-name-row">
+              <span class="hst-name">${name}</span>
+              <span class="hst-key">${keyTag}</span>
+            </div>
+            <div class="hst-status ${statusCls}">${statusTxt}</div>
+          </div>
+        </div>
+        <div class="hst-desc">${desc}</div>
+        ${extraBlock ? `<div class="hst-sub-block">${extraBlock}</div>` : ""}
+        <div class="hst-foot">
+          <span>${footLeft}</span>
+          <span>${footRight}</span>
+        </div>
+      `;
+      const iconCv = tipEl.querySelector("#hst-icon-cv") as HTMLCanvasElement | null;
+      if (iconCv) {
+        const ictx = iconCv.getContext("2d");
+        if (ictx) {
+          ictx.imageSmoothingEnabled = false;
+          drawCodixelIcon(ictx, iconKey, 0, 0, iconCv.width);
+        }
+      }
+    }
+
+    tipEl.classList.remove("hidden");
+    const rect = slotEl.getBoundingClientRect();
+    const tw = tipEl.offsetWidth || 286;
+    const th = tipEl.offsetHeight || 130;
+    const left = Math.max(10, Math.min(window.innerWidth - tw - 10, rect.left + rect.width / 2 - tw / 2));
+    const top = Math.max(10, rect.top - th - 10);
+    tipEl.style.left = `${Math.round(left)}px`;
+    tipEl.style.top = `${Math.round(top)}px`;
   }
 }

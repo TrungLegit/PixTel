@@ -82,19 +82,27 @@ export class WorldMapModalUI {
     drawLbl("HỔ PHÁCH (LV10-15)", 34, 152, "#ffaa44");
     drawLbl("PHẾ TÍCH (LV15-20)", 124, 152, "#e088ff");
 
-    // Boss Arenas
+    // Combat Farming Zones (orange diamonds) & Boss Arenas (red skulls)
     for (const camp of WORLD_CAMPS) {
-      if (!camp.id.includes("boss")) continue;
       const x = Math.round(camp.tx * scale);
       const y = Math.round(camp.ty * scale);
-      ctx.fillStyle = "#100c18";
-      ctx.fillRect(x - 5, y - 5, 10, 10);
-      ctx.fillStyle = "#ff2e55";
-      ctx.fillRect(x - 4, y - 4, 8, 8);
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(x - 2, y - 2, 1, 1);
-      ctx.fillRect(x + 1, y - 2, 1, 1);
-      ctx.fillRect(x - 2, y + 1, 4, 1);
+      if (camp.id.includes("boss")) {
+        ctx.fillStyle = "#100c18";
+        ctx.fillRect(x - 5, y - 5, 10, 10);
+        ctx.fillStyle = "#ff2e55";
+        ctx.fillRect(x - 4, y - 4, 8, 8);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(x - 2, y - 2, 1, 1);
+        ctx.fillRect(x + 1, y - 2, 1, 1);
+        ctx.fillRect(x - 2, y + 1, 4, 1);
+      } else {
+        ctx.fillStyle = "#100c18";
+        ctx.fillRect(x - 3, y - 3, 6, 6);
+        ctx.fillStyle = camp.hasLockedChest ? "#ffaa33" : "#ff7744";
+        ctx.fillRect(x - 2, y - 2, 4, 4);
+        ctx.fillStyle = "#fff4cc";
+        ctx.fillRect(x - 1, y - 1, 1, 1);
+      }
     }
 
     // Chroma Waypoints
@@ -121,11 +129,12 @@ export class WorldMapModalUI {
     ctx.fillRect(px - 1, py - 1, 3, 3);
 
     // Stats & Fast Travel Waypoint List
+    const farmZoneCount = WORLD_CAMPS.filter((c) => !c.id.includes("boss")).length;
     const lock = this.game.activeBossLock;
     if (lock) {
       this.statsEl.innerHTML = `<span style="color:#ff5577">🔒 ĐANG PHONG ẤN TRONG LÃNH ĐỊA ${lock.bossName} — KHÔNG THỂ DỊCH CHUYỂN!</span> · Màu: ${this.game.colorSys.getProgressPct()}%`;
     } else {
-      this.statsEl.textContent = `Khôi phục sắc màu: ${this.game.colorSys.getProgressPct()}% · Trụ đã mở: ${this.game.colorSys.unlockedWaypoints.size}/${WAYPOINTS.length}`;
+      this.statsEl.textContent = `Khôi phục màu: ${this.game.colorSys.getProgressPct()}% · Trụ: ${this.game.colorSys.unlockedWaypoints.size}/${WAYPOINTS.length} · Khu Farm Quái: ${farmZoneCount}`;
     }
 
     this.listEl.innerHTML = WAYPOINTS.map((wp) => {

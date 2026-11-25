@@ -9,6 +9,8 @@ import {
   BOSS_ARENAS,
   CHROMA_RAINBOW,
   CLASS_ALTAR_POS,
+  GACHA_ALTAR_POS,
+  STORAGE_CHEST_POS,
   TILE_SIZE,
   TOWN_NPCS,
   WAYPOINTS,
@@ -39,6 +41,7 @@ import {
 
 export type EquipmentMap = Partial<Record<EquipSlot, ItemInstance>>;
 import { sprites } from "./graphics/pixelSprites";
+import { drawCodixelIcon } from "./graphics/codixelAtlas";
 import { drawItemIcon } from "./graphics/itemIcons";
 import { TileRenderer } from "./graphics/tileRenderer";
 import { VfxManager } from "./vfx/vfxManager";
@@ -56,6 +59,7 @@ import type {
 import { InventorySystem, recalculatePlayerStats } from "./systems/inventorySystem";
 import { QuestSystem } from "./systems/questSystem";
 import { ForgeSystem } from "./systems/forgeSystem";
+import { GachaSystem } from "./systems/gachaSystem";
 import { SaveSystem } from "./systems/saveSystem";
 import { CombatSystem, type CombatContext } from "./systems/combat";
 import { CoopClient, type WebSocketFactory } from "./net/coopClient";
@@ -73,7 +77,9 @@ export type ModalId =
   | "class_select"
   | "dialogue"
   | "inventory"
+  | "stash"
   | "forge"
+  | "gacha"
   | "world_map"
   | "journal"
   | "tutorial"
@@ -117,6 +123,7 @@ export class PixTelOpenWorldGame {
   readonly inv = new InventorySystem();
   readonly quests = new QuestSystem();
   readonly forge = new ForgeSystem();
+  readonly gacha = new GachaSystem();
   readonly saveSys = new SaveSystem();
   readonly combat = new CombatSystem();
   readonly coop: CoopClient;
@@ -290,6 +297,9 @@ export class PixTelOpenWorldGame {
       hasEnergySiphon: false,
       hasSetResonance: false,
       grimoireTimer: 1.5,
+      exoticMods: new Set(),
+      exoticIcds: {},
+      potCd: 0,
       perfectDashWindow: 0,
       chromaCounterTimer: 0,
       dashComboPreserveTimer: 0,
@@ -378,6 +388,7 @@ export class PixTelOpenWorldGame {
 
     this.inv.resetStarterKit(classId);
     this.quests.reset();
+    this.gacha.reset();
     this.colorSys.reset();
     this.discoveredLore.clear();
     this.defeatedBossIds.clear();
@@ -421,9 +432,15 @@ export class PixTelOpenWorldGame {
     this.lastBarrierWarn = 0;
     this.vfx.clearAll();
 
-    this.inv.loadState(data.player.gold, data.equipment, data.bag);
+    this.inv.loadState(data.player.gold, data.equipment, data.bag, {
+      bagCapacity: data.bagCapacity,
+      backpackTier: data.backpackTier,
+      stash: data.stash,
+      autoSell: data.autoSell,
+    });
     const unequipped = this.inv.unequipIncompatibleForClass(data.classId);
     this.quests.loadState(data.quests);
+    this.gacha.importState(data.gachaState);
     this.colorSys.loadUnlocked(data.unlockedWaypoints);
     this.discoveredLore = new Set(data.discoveredLore ?? []);
     this.defeatedBossIds = new Set(data.defeatedBossIds ?? []);
@@ -526,6 +543,10 @@ export class PixTelOpenWorldGame {
       },
       equipment: this.inv.equipment,
       bag: this.inv.bag,
+      bagCapacity: this.inv.bagCapacity,
+      backpackTier: this.inv.backpackTier,
+      stash: this.inv.stash,
+      autoSell: { ...this.inv.autoSell },
       unlockedWaypoints: Array.from(this.colorSys.unlockedWaypoints),
       openedChests: this.spawner.getOpenedChestIds(),
       discoveredLore: Array.from(this.discoveredLore),
@@ -533,6 +554,7 @@ export class PixTelOpenWorldGame {
       defeatedBossIds: Array.from(this.defeatedBossIds),
       tutorialCompleted: this.tutorialCompleted,
       quests: this.quests.exportState(),
+      gachaState: this.gacha.exportState(),
       stats: { ...this.stats },
     };
     const ok = this.saveSys.save(data);
@@ -1372,8 +1394,7 @@ export class PixTelOpenWorldGame {
         this.quests.recordEvent("activate_waypoint", pkt.wpId, 1);
         const wp = WAYPOINTS.find((w) => w.id === pkt.wpId);
         if (wp) {
-          this.spawner.spawnWaypointChromaChest(wp, this.vfx);
-          this.ui.onToast(`🌈 Đồng đội đã thắp sáng ${wp.name}! Rương Sắc Màu đã hiện ra!`, "epic");
+          this.ui.onToast(`🌈 Đồng đội đã thắp sáng ${wp.name}! Đã mở Dịch Chuyển Nhanh [M]!`, "epic");
         }
         this.tileRenderer.syncOverviewMap(this.world, this.colorSys);
         this.ui.onHudUpdate();
@@ -1491,9 +1512,18 @@ export class PixTelOpenWorldGame {
       );
       return false;
     }
+    const isHpPot = def.consumableKind === "hp_potion" || def.consumableSpec?.group === "hp";
+    if (isHpPot && (this.player.potCd ?? 0) > 0) {
+      sfx.playUiClick();
+      this.ui.onToast(`Bình máu đang hồi (${(this.player.potCd ?? 0).toFixed(1)}s)!`, "warn");
+      return false;
+    }
     if (!this.inv.consumeItem(defId, 1)) {
       this.ui.onToast(`Đã hết ${def.name}! Mua thêm tại Thương Nhân Mira.`, "warn");
       return false;
+    }
+    if (isHpPot) {
+      this.player.potCd = 2.5;
     }
 
     if (def.consumableKind === "chroma_coating") {
@@ -1601,6 +1631,18 @@ export class PixTelOpenWorldGame {
       return;
     }
 
+    if (t.kind === "gacha_altar") {
+      sfx.playBagOpen();
+      this.setModal("gacha");
+      return;
+    }
+
+    if (t.kind === "stash_chest") {
+      sfx.playChestOpen();
+      this.setModal("stash");
+      return;
+    }
+
     if (t.kind === "waypoint") {
       this._activateWaypoint(t.wp);
       return;
@@ -1699,7 +1741,7 @@ export class PixTelOpenWorldGame {
         sfx.playQuestComplete();
         this.ui.onToast(`Hoàn thành mục tiêu nhiệm vụ: ${q.title}!`, "good");
       }
-      const spawnedChest = this.spawner.spawnWaypointChromaChest(wp, this.vfx);
+      this.inv.gold += 30;
       if (this.coop.isConnected) {
         this.coop.send({
           type: "waypoint_unlocked",
@@ -1710,9 +1752,7 @@ export class PixTelOpenWorldGame {
         });
       }
       this.ui.onToast(
-        spawnedChest
-          ? `ĐÃ KÍCH HOẠT ${wp.name.toUpperCase()}! Rương Sắc Màu đã mở khóa ngay bên cạnh!`
-          : `ĐÃ KÍCH HOẠT ${wp.name.toUpperCase()}! Khôi phục sắc màu & mở Dịch Chuyển Nhanh [M]!`,
+        `ĐÃ KÍCH HOẠT ${wp.name.toUpperCase()}! Khôi phục sắc màu, +30G & mở Dịch Chuyển Nhanh [M]!`,
         "epic"
       );
       this.saveGame(false);
@@ -1770,8 +1810,23 @@ export class PixTelOpenWorldGame {
         this.spawner.groundLoot.splice(idx, 1);
         return;
       }
+      // Auto-Sell Low-Rarity Equipment on pickup (never sells Exotic / Hidden / Seasonal / +N!)
+      const autoRes = this.inv.tryAutoSellInstance(loot.item, this.player.classId);
+      if (autoRes.sold) {
+        this.spawner.groundLoot.splice(idx, 1);
+        sfx.playBuy();
+        this.vfx.spawnPooled("collect-burst", { x: loot.x, y: loot.y });
+        this.vfx.spawnDamageText(loot.x, loot.y - 8, `AUTO +${autoRes.gold}G`, { color: "#ffe066" });
+        this.ui.onToast(`💰 Auto-Bán [${RARITY_INFO[def.rarity].label}] ${autoRes.itemName} → +${autoRes.gold} G`, "info");
+        this.ui.onHudUpdate();
+        return;
+      }
+
       if (!this.inv.addExistingInstance(loot.item)) {
-        this.ui.onToast("Túi đồ đã đầy (40/40)! Bán bớt trang bị tại [I] hoặc Thương Nhân.", "warn");
+        this.ui.onToast(
+          `Túi đồ đã đầy (${this.inv.bag.length}/${this.inv.bagCapacity})! Bật Auto-Bán [I], mua Balo mới hoặc cất vào Rương Cá Nhân!`,
+          "warn"
+        );
         return;
       }
       this.spawner.groundLoot.splice(idx, 1);
@@ -2317,7 +2372,8 @@ export class PixTelOpenWorldGame {
       const isEquip = l.kind === "item" && l.item && ITEMS[l.item.defId]?.category === "equipment";
       const magnetRadius = (isEquip ? 44 : 58) + magnetBonus;
       if (d < magnetRadius && d > 1) {
-        if (!isEquip || this.inv.bag.length < 40) {
+        const willAutoSell = Boolean(l.item && this.inv.shouldAutoSell(l.item, this.player.classId));
+        if (!isEquip || willAutoSell || this.inv.bag.length < this.inv.bagCapacity) {
           const pull = (isEquip ? 145 + magnetBonus * 0.6 : 190 + magnetBonus * 0.8) * dt;
           l.x += (dx / d) * Math.min(d, pull);
           l.y += (dy / d) * Math.min(d, pull);
@@ -2570,6 +2626,107 @@ export class PixTelOpenWorldGame {
       });
     }
 
+    // Personal Storage Chest right beside Spawn (Rương Cá Nhân)
+    {
+      const cx = STORAGE_CHEST_POS.tx * TILE_SIZE + 8;
+      const cy = STORAGE_CHEST_POS.ty * TILE_SIZE + 10;
+      const sx = Math.round(cx - camX);
+      const sy = Math.round(cy - camY);
+      if (sx > -44 && sy > -48 && sx < VIEW_W + 44 && sy < VIEW_H + 44) {
+        drawList.push({
+          y: cy,
+          draw: () => {
+            // Cozy timber/stone pad right next to Spawn Waypoint
+            ctx.fillStyle = "rgba(8, 10, 20, 0.36)";
+            ctx.fillRect(sx - 13, sy - 2, 26, 6);
+            ctx.fillStyle = "#181d2e";
+            ctx.fillRect(sx - 11, sy - 6, 22, 7);
+            ctx.fillStyle = "#31486b";
+            ctx.fillRect(sx - 10, sy - 5, 20, 5);
+            ctx.fillStyle = "#5ef2ff";
+            ctx.fillRect(sx - 9, sy - 5, 18, 1);
+            // Crisp codixel Personal Stash Chest icon
+            const glow = 0.45 + 0.55 * Math.sin(this.time * 3.0);
+            if (glow > 0.5) {
+              ctx.fillStyle = "rgba(94, 242, 255, 0.16)";
+              ctx.fillRect(sx - 10, sy - 23, 20, 19);
+            }
+            if (!drawCodixelIcon(ctx, "ui_stash_chest", sx - 10, sy - 23, 20)) {
+              ctx.fillStyle = "#c8863c";
+              ctx.fillRect(sx - 8, sy - 18, 16, 12);
+            }
+            // Crisp pixel label
+            const label = "STASH CHEST";
+            const tw = textWidth(label, "mini");
+            const lx = Math.round(sx - tw / 2);
+            const ly = Math.round(sy - 31);
+            ctx.fillStyle = "#100c1c";
+            ctx.fillRect(lx - 2, ly - 1, tw + 4, 8);
+            ctx.fillStyle = "#5ef2ff";
+            rasterText(label, "mini", (rx: number, ry: number) => ctx.fillRect(lx + rx, ly + ry, 1, 1));
+          },
+        });
+      }
+    }
+
+    // Seasonal Gacha Altar (Đài Rương Gacha Mùa in Origin Town)
+    {
+      const gx = GACHA_ALTAR_POS.tx * TILE_SIZE + 8;
+      const gy = GACHA_ALTAR_POS.ty * TILE_SIZE + 10;
+      const sx = Math.round(gx - camX);
+      const sy = Math.round(gy - camY);
+      if (sx > -48 && sy > -54 && sx < VIEW_W + 48 && sy < VIEW_H + 48) {
+        drawList.push({
+          y: gy,
+          draw: () => {
+            const pulse = 0.5 + 0.5 * Math.sin(this.time * 4.5);
+            const rainbow = CHROMA_RAINBOW[Math.floor(this.time * 4) % CHROMA_RAINBOW.length];
+            // Ground shadow & golden rune circle
+            ctx.fillStyle = "rgba(8, 10, 20, 0.38)";
+            ctx.fillRect(sx - 16, sy - 3, 32, 7);
+            ctx.fillStyle = "#1c132d";
+            ctx.fillRect(sx - 14, sy - 7, 28, 8);
+            ctx.fillStyle = "#3a275c";
+            ctx.fillRect(sx - 13, sy - 6, 26, 6);
+            ctx.fillStyle = "#ffd95e";
+            ctx.fillRect(sx - 12, sy - 6, 24, 1);
+            ctx.fillRect(sx - 12, sy - 1, 24, 1);
+            // Rainbow rune glow strips
+            ctx.fillStyle = rainbow;
+            ctx.fillRect(sx - 8, sy - 4, 4, 2);
+            ctx.fillRect(sx + 4, sy - 4, 4, 2);
+            // Floating Seasonal Gacha Chest (crisp codixel icon)
+            const bob = Math.round(Math.sin(this.time * 3.6) * 2.2);
+            if (pulse > 0.35) {
+              ctx.fillStyle = "rgba(255, 224, 102, 0.22)";
+              ctx.fillRect(sx - 11, sy - 27 + bob, 22, 22);
+            }
+            if (!drawCodixelIcon(ctx, "ui_gacha_chest", sx - 10, sy - 26 + bob, 20)) {
+              ctx.fillStyle = "#ffe066";
+              ctx.fillRect(sx - 7, sy - 21 + bob, 14, 11);
+            }
+            // Orbiting starlight sparkles
+            for (let i = 0; i < 3; i++) {
+              const a = this.time * 2.6 + (i * Math.PI * 2) / 3;
+              const px = Math.round(sx + Math.cos(a) * 12);
+              const py = Math.round(sy - 16 + bob + Math.sin(a) * 5);
+              ctx.fillStyle = i === 0 ? "#ffffff" : rainbow;
+              ctx.fillRect(px, py, 2, 2);
+            }
+            // Crisp pixel label
+            const label = "GACHA ALTAR";
+            const tw = textWidth(label, "mini");
+            const lx = Math.round(sx - tw / 2);
+            const ly = Math.round(sy - 36);
+            ctx.fillStyle = "#100c1c";
+            ctx.fillRect(lx - 2, ly - 1, tw + 4, 8);
+            ctx.fillStyle = "#ffe066";
+            rasterText(label, "mini", (rx: number, ry: number) => ctx.fillRect(lx + rx, ly + ry, 1, 1));
+          },
+        });
+      }
+    }
+
     // Viewport-culled Props (Codixel multi-variant trees, rocks & ruins pillars)
     const visProps = this.world.getVisibleProps(camX, camY, VIEW_W, VIEW_H);
     for (const pr of visProps) {
@@ -2800,6 +2957,9 @@ export class PixTelOpenWorldGame {
             dashTime: e.dashTime,
             dashVx: e.dashVx,
             dashVy: e.dashVy,
+            spawnAnimTime: e.spawnAnimTime,
+            alertTimer: e.alertTimer,
+            hurtTilt: e.hurtTilt,
             time: this.time,
           });
           if (!drewAtlas) {
@@ -3304,6 +3464,10 @@ export class PixTelOpenWorldGame {
       }
       if (e.code === "KeyM") {
         this.toggleModal("world_map");
+        return;
+      }
+      if (e.code === "KeyG") {
+        this.toggleModal("gacha");
         return;
       }
 
