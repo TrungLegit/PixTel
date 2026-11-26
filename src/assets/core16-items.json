@@ -1,0 +1,139 @@
+{
+  "tileSize": 48,
+  "width": 288,
+  "height": 192,
+  "frames": {
+    "core_wp_vanguard_chipped": {
+      "x": 0,
+      "y": 0,
+      "w": 48,
+      "h": 48
+    },
+    "core_wp_briar_dagger": {
+      "x": 48,
+      "y": 0,
+      "w": 48,
+      "h": 48
+    },
+    "core_wp_spark_staff": {
+      "x": 96,
+      "y": 0,
+      "w": 48,
+      "h": 48
+    },
+    "core_wp_eclipse_reaver": {
+      "x": 144,
+      "y": 0,
+      "w": 48,
+      "h": 48
+    },
+    "core_wp_forge_hammer": {
+      "x": 192,
+      "y": 0,
+      "w": 48,
+      "h": 48
+    },
+    "core_wp_starfall_blade": {
+      "x": 240,
+      "y": 0,
+      "w": 48,
+      "h": 48
+    },
+    "core_ar_briar_cloak": {
+      "x": 0,
+      "y": 48,
+      "w": 48,
+      "h": 48
+    },
+    "core_ar_bloodstone_plate": {
+      "x": 48,
+      "y": 48,
+      "w": 48,
+      "h": 48
+    },
+    "core_hm_moss_hood": {
+      "x": 96,
+      "y": 48,
+      "w": 48,
+      "h": 48
+    },
+    "core_hm_ash_visor": {
+      "x": 144,
+      "y": 48,
+      "w": 48,
+      "h": 48
+    },
+    "core_hm_eclipse_crown": {
+      "x": 192,
+      "y": 48,
+      "w": 48,
+      "h": 48
+    },
+    "core_ar_aegis_mantle": {
+      "x": 240,
+      "y": 48,
+      "w": 48,
+      "h": 48
+    },
+    "core_ac_ember_crest": {
+      "x": 0,
+      "y": 96,
+      "w": 48,
+      "h": 48
+    },
+    "core_ac_cracked_pact": {
+      "x": 48,
+      "y": 96,
+      "w": 48,
+      "h": 48
+    },
+    "core_cs_mirage_vial": {
+      "x": 96,
+      "y": 96,
+      "w": 48,
+      "h": 48
+    },
+    "core_cs_fate_die": {
+      "x": 144,
+      "y": 96,
+      "w": 48,
+      "h": 48
+    },
+    "core_mat_ancient_sap": {
+      "x": 192,
+      "y": 96,
+      "w": 48,
+      "h": 48
+    },
+    "core_mat_elder_core": {
+      "x": 240,
+      "y": 96,
+      "w": 48,
+      "h": 48
+    },
+    "core_mat_blood_shard": {
+      "x": 0,
+      "y": 144,
+      "w": 48,
+      "h": 48
+    },
+    "core_mat_eclipse_coal": {
+      "x": 48,
+      "y": 144,
+      "w": 48,
+      "h": 48
+    },
+    "core_mat_meteor_shard": {
+      "x": 96,
+      "y": 144,
+      "w": 48,
+      "h": 48
+    },
+    "core_mat_eclipse_heart": {
+      "x": 144,
+      "y": 144,
+      "w": 48,
+      "h": 48
+    }
+  }
+}

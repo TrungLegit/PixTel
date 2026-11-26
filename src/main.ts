@@ -203,8 +203,16 @@ function bootstrap() {
   // Expose light debug handle for Playwright/DevTools inspection if needed
   (window as unknown as { __pixtel?: PixTelOpenWorldGame }).__pixtel = game;
 
-  // Boot into the dedicated Home Screen (Player Name -> Class Select -> Start + Intro Cutscene)
-  game.setModal("home");
+  const demoParam = params.get("demo");
+  if (demoParam === "v31") {
+    const openParam = params.get("open");
+    const openModal: "inventory" | "forge" | null =
+      openParam === "forge" ? "forge" : openParam === "none" ? null : "inventory";
+    game.startV31DemoShowcase(openModal);
+  } else {
+    // Boot into the dedicated Home Screen (Player Name -> Class Select -> Start + Intro Cutscene)
+    game.setModal("home");
+  }
   mobileTouch.update();
   game.startLoop();
 }

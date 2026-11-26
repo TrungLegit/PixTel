@@ -1,6 +1,7 @@
 import { PAL } from "./pixelfx/core/index.js";
 import { FxAtlas, type BakedAtlas } from "./fxAtlas";
 import * as rarityAuraMod from "./pixelfx/fx/pixtel/rarity-aura.js";
+import * as cursedAuraMod from "./pixelfx/fx/pixtel/cursed-aura.js";
 import { ITEMS } from "../data/items";
 import type { Rarity } from "../data/types";
 import { onCodixelReady } from "../graphics/codixelAtlas";
@@ -64,10 +65,10 @@ class UiRarityFxController {
   private _getLayerAtlases(aura: UiAuraKind): { back: BakedAtlas; front: BakedAtlas } {
     const palette = RARITY_PAL_BY_AURA[aura];
     const tier = RARITY_TIER_BY_AURA[aura];
-    const radius = aura === "legendary" ? 15 : aura === "epic" ? 14 : 13;
-    const seed = aura === "legendary" ? 73 : aura === "epic" ? 47 : 31;
-    const fps = aura === "legendary" ? 20 : aura === "epic" ? 18 : 16;
-    const mod = rarityAuraMod as PixelfxModule;
+    const radius = aura === "legendary" ? 15 : aura === "cursed" ? 15 : aura === "epic" ? 14 : 13;
+    const seed = aura === "legendary" ? 73 : aura === "cursed" ? 66 : aura === "epic" ? 47 : 31;
+    const fps = aura === "legendary" ? 20 : aura === "cursed" ? 20 : aura === "epic" ? 18 : 16;
+    const mod = (aura === "cursed" ? cursedAuraMod : rarityAuraMod) as PixelfxModule;
 
     const back = this.atlas.get(`ui-aura-${aura}-back`, mod, {
       options: { palette, tier, radius, seed },
@@ -121,7 +122,7 @@ class UiRarityFxController {
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, w, h);
 
-    const iconSize = Math.min(24, w, h);
+    const iconSize = Math.max(24, Math.round(Math.min(w, h) * 0.84));
     const ox = Math.floor((w - iconSize) / 2);
     const oy = Math.floor((h - iconSize) / 2);
 
@@ -131,7 +132,7 @@ class UiRarityFxController {
     }
 
     const { back, front } = this._getLayerAtlases(aura);
-    const fxScale = Math.min(w, h) / 34;
+    const fxScale = Math.min(w, h) / (aura === "cursed" ? 40 : 35);
     const cx = Math.floor(w / 2);
     const cy = Math.floor(h / 2);
 

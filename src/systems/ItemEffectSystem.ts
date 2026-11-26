@@ -253,7 +253,12 @@ export class ItemEffectSystem {
       this.hitCounters.eclipse_cleave = (this.hitCounters.eclipse_cleave ?? 0) + 1;
       if (this.hitCounters.eclipse_cleave % 4 === 0) {
         const ang = player.aimAngle;
-        vfx.spawnPooled("explode-void", { x: player.x + Math.cos(ang) * 20, y: player.y + Math.sin(ang) * 20, scale: 0.9 });
+        vfx.spawnPooled("eclipse-reap", {
+          x: player.x + Math.cos(ang) * 18,
+          y: player.y + Math.sin(ang) * 18,
+          angle: ang,
+          scale: 1.0,
+        });
         const cleaveDmg = Math.max(4, Math.round(player.atk * 0.75));
         for (const en of [...spawner.enemies]) {
           if (en === target || en.hp <= 0) continue;
@@ -304,6 +309,7 @@ export class ItemEffectSystem {
       target.bleedStacks = Math.min(3, (target.bleedStacks ?? 0) + 1);
       target.bleedTime = 3.0;
       target.bleedTick = target.bleedTick && target.bleedTick > 0 ? target.bleedTick : 0.6;
+      vfx.spawnPooled("bleed-slash", { x: target.x, y: target.y - 6, scale: 0.9 });
       vfx.spawnDamageText(target.x, target.y - 18, `BLEED x${target.bleedStacks}`, { color: "#f43f5e" });
     }
 
@@ -313,7 +319,7 @@ export class ItemEffectSystem {
       const sx = target.x;
       const sy = target.y;
       const starDmg = Math.max(8, Math.round(player.atk * 1.4));
-      vfx.spawnPooled("crit-gold", { x: sx, y: sy - 8, scale: 1.25 });
+      vfx.spawnPooled("starfall-aoe", { x: sx, y: sy, scale: 1.05 });
       vfx.spawnDamageText(sx, sy - 22, "★ STARFALL!", { color: "#facc15", crit: true });
       sfx.playExplosion();
       for (const en of [...spawner.enemies]) {
@@ -351,6 +357,7 @@ export class ItemEffectSystem {
         .sort((a, b) => Math.hypot(a.x - player.x, a.y - player.y) - Math.hypot(b.x - player.x, b.y - player.y))[0];
       if (attacker && Math.hypot(attacker.x - player.x, attacker.y - player.y) <= 70 + attacker.radius) {
         const reflectDmg = Math.max(2, Math.round(dmg * 0.2));
+        vfx.spawnPooled("thorns-burst", { x: attacker.x, y: attacker.y, scale: 0.85 });
         vfx.spawnDamageText(attacker.x, attacker.y - 12, `THORNS ${reflectDmg}`, { color: "#4ade80" });
         dealPassiveDamage(attacker, reflectDmg, false, "hit-poison", "nature", 0, 0, 0.2);
       }
@@ -383,7 +390,7 @@ export class ItemEffectSystem {
     // Vương Miện Nhật Thực Vỡ: Khi HP < 35%, làm chậm quái xung quanh 40% trong 4s (CD 25s)
     if (passives.has("eclipse_slow") && hpRatio < 0.35 && this.getCooldown("eclipse_slow") <= 0) {
       this.cooldowns.eclipse_slow = 25.0;
-      vfx.spawnPooled("explode-void", { x: player.x, y: player.y, scale: 1.3 });
+      vfx.spawnPooled("eclipse-slow", { x: player.x, y: player.y, scale: 1.1 });
       vfx.spawnDamageText(player.x, player.y - 18, "★ ECLIPSE SLOW!", { color: "#c084fc", crit: true });
       for (const en of spawner.enemies) {
         if (Math.hypot(en.x - player.x, en.y - player.y) <= 120 + en.radius) {
@@ -399,7 +406,7 @@ export class ItemEffectSystem {
       this.addShield(shieldAmt, 8, Math.max(shieldAmt, Math.round(player.maxHp * 0.25)));
       player.shieldHp = this.shieldHp;
       player.shieldMaxHp = this.shieldMaxHp;
-      vfx.spawnPooled("explode-fire", { x: player.x, y: player.y, scale: 1.25 });
+      vfx.spawnPooled("ember-nova", { x: player.x, y: player.y, scale: 1.15 });
       vfx.spawnDamageText(player.x, player.y - 20, `🔥 EMBER NOVA +${shieldAmt} SHIELD`, {
         color: "#fb923c",
         crit: true,
@@ -433,7 +440,7 @@ export class ItemEffectSystem {
     player.hp = 1;
     player.invuln = Math.max(player.invuln, 2.0);
     sfx.playWaypoint();
-    vfx.spawnPooled("waypoint-pillar", { x: player.x, y: player.y });
+    vfx.spawnPooled("undying-aegis", { x: player.x, y: player.y, scale: 1.1 });
     vfx.spawnDamageText(player.x, player.y - 20, "★ BẤT DIỆT (1 HP · 2s)", {
       color: "#facc15",
       crit: true,
@@ -456,6 +463,7 @@ export class ItemEffectSystem {
       this.shieldTimer = 10.0;
       player.shieldHp = this.shieldHp;
       player.shieldMaxHp = this.shieldMaxHp;
+      vfx.spawnPooled("blood-shield", { x: player.x, y: player.y - 6, scale: 0.95 });
       vfx.spawnDamageText(player.x, player.y - 16, `🛡 HUYẾT KHIÊN (${this.bloodShieldStacks}/3)`, {
         color: "#c084fc",
       });
@@ -490,7 +498,7 @@ export class ItemEffectSystem {
       }
     }
     sfx.playDash();
-    vfx.spawnPooled("death-poof", { x: player.x, y: player.y - 4, scale: 1.1 });
+    vfx.spawnPooled("mirage-smoke", { x: player.x, y: player.y - 4, scale: 1.05 });
     vfx.spawnDamageText(player.x, player.y - 16, `🌫 TÀNG HÌNH ${dur}s!`, {
       color: "#c084fc",
       crit: true,

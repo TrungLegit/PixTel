@@ -9,8 +9,8 @@
 
 ## Trạng Thái Hiện Tại (Current Project Stage Snapshot)
 
-- **Giai đoạn / Phiên bản hiện tại:** `PIXTEL v3.2` — Màn Hình Trang Chủ Đặt Tên Nhân Vật → Chọn Class → Bắt Đầu, 6 Phân Cảnh Phim Cốt Truyện 16-bit (`pixelfx` + `codixel`) có Rạp Chiếu Lại `[J]`, Thiết Kế Lại Hoạt Ảnh Hold Charge Paladin cho `Prism Knight` (*Thánh Kiếm Phá Địa*), và 8 Hoạt Ảnh Đánh Riêng Theo Dòng Vũ Khí!
-- **Commit mới nhất trên `main`:** `6a12963` (`2026-11-26`, working tree có `PIXTEL v3.1` + `PIXTEL v3.2` sẵn sàng commit/push khi người dùng yêu cầu)
+- **Giai đoạn / Phiên bản hiện tại:** `PIXTEL v3.2` (tích hợp trọn vẹn `v3.1.1` HD `48×48` Core-16 Sprites + Fixed `INFO` Panel + 5 Custom `pixelfx` VFX & `v3.2` Màn Hình Trang Chủ Đặt Tên → Chọn Class `SKILL [Q] PREVIEW` → 16 Cảnh Mở Đầu Sử Thi + 6 Phim Cốt Truyện `[J]`, Thánh Kiếm Phá Địa vàng, Phân Thân Ảo Ảnh Bit Rogue & 8 Hoạt Ảnh Vũ Khí Mới)
+- **Commit mới nhất trên `main`:** Hợp nhất `3026772` (`v3.1.1+`) + `12b7590` (`v3.2`) (`2026-11-26`)
 - **Thành viên / AI đóng góp gần đây:** `chu0n6-iot`, `TrungLegit`, `Antigravity`, `Yaros`, `GitHub Copilot`
 - **Các hệ thống chính đã hoàn thiện:**
   - **Web / Mobile PWA & Triển khai GitHub Pages:** Tự động test (`npm test`), build & deploy qua GitHub Actions lên `https://trunglegit.github.io/PixTel/`, kèm `manifest.webmanifest`, `sw.js`, `icon.svg`, chế độ màn hình ngang fullscreen, font Pixelify Sans tiếng Việt tự lưu trữ cục bộ (không phụ thuộc CDN).
@@ -159,6 +159,40 @@
   - Kiểm thử trực quan trên Chrome thật (Playwright `1280×720`): chụp & kiểm duyệt ảnh màn Home Screen, Class Select (vừa khít 1 màn hình không cuộn), Phim Cốt Truyện mở đầu & Boss Gilded Null, Tab Phim Cốt Truyện `[J]`, HUD `Quang Khải` & đòn Hold Slam vàng rực của Prism Knight — **0 console/page errors**.
 - **Lưu ý / Handoff (Breaking changes / Đang dở):** Không có breaking change với Save cũ (Save không có `player.name` hoặc `seenCutscenes` tự động fallback về `"Chroma-Walker"` & `["scene_intro"]`).
 - **Gợi ý bước tiếp theo (Next Steps):** Nếu muốn tạo bản Preview kèm ảnh chụp vào `preview for devs/` và commit/push toàn bộ cụm `v3.1 + v3.2` lên GitHub `origin/main`, chỉ cần yêu cầu AI xuất preview & push.
+
+### [2026-11-26 10:40] — Antigravity — Gộp toàn bộ Popup Info vào cột `INFO` cố định bên phải trong Túi đồ
+- **Commit / Branch:** `main` (tiếp nối `5228950`)
+- **Giai đoạn / Version:** `PIXTEL v3.1.1+` — Fixed Right-Column `INFO` Panel Consolidation
+- **Đã làm (Done):**
+  - Tắt popup nổi `#item-review-tooltip` khi hover/touch các ô bên trong `#modal-inventory` (`src/ui/ItemReviewTooltip.ts`) để không còn che lưới túi đồ `BAG`, trong khi vẫn giữ nguyên tooltip nổi cho Shop, Lò Rèn, Rương Cá Nhân, Nhiệm Vụ và thanh Hotbar HUD (đồng bộ thêm `pixtel/cursed-aura` cho tooltip đồ `cursed`).
+  - Gộp đầy đủ toàn bộ dữ liệu từ `ItemReviewTooltip` sang cột `INFO` cố định bên phải trong `src/ui/InventoryModal.ts` & `style.css`:
+    - Dòng phụ đầy đủ `Tier · Biome · Loại`, khóa bảo vệ Cổ Vật Ẩn chưa mở khóa.
+    - Bảng chỉ số 1 cột căn thẳng hàng giá trị & chênh lệch `(+X ▲)` / `(-X ▼)` (thêm `PHÁ GIÁP`, `GIẢM CD [E]`).
+    - Nhóm tag & pill hiệu lực chi tiết cho Tiêu Thụ (`Phím nhanh`, `Trong túi`, `✦ Hồi HP / Tàng hình / Tốc chạy...`) và Nguyên Liệu / Chìa Gacha `[G]`.
+    - Ghi chú `+5` Khảm Sắc Tố, `+10` Thức Tỉnh Prism, Nguồn Độc Lạ/Gacha/Ẩn, mô tả Paper-Doll và thanh chân `Phân rã +LK / Đang giữ · Mua / Bán Gold`.
+- **File chính đã sửa / thêm:** `src/ui/ItemReviewTooltip.ts`, `src/ui/InventoryModal.ts`, `style.css`, `preview for devs/2026-11-26-v3.1.1-pixelfx-hd-graphics-overhaul.md`, `preview for devs/assets/v311_inventory_ornate.png`, `preview for devs/assets/v311_inventory_info_merged.png`, `DEV_LOG.md`
+- **Kiểm tra (Verified):** `npm.cmd run build` exit `0`, `tests/featureTests.ts` **17/17** PASS, kiểm duyệt hover trực tiếp trong Chrome (`1280×800`, 0 console errors): `#item-review-tooltip` ẩn hoàn toàn khi rê qua `Lọ Sương Mù Ảo Ảnh` và `Thánh Kiếm Sao Rơi +7`, toàn bộ dữ liệu hiển thị gọn trong cột `INFO`.
+- **Lưu ý / Handoff (Breaking changes / Đang dở):** Không có.
+- **Gợi ý bước tiếp theo (Next Steps):** Pull `origin/main` và mở Túi đồ `[I]` để trải nghiệm bảng `INFO` hợp nhất.
+
+### [2026-11-26 10:33] — Antigravity — Trùng tu đồ họa HD 48×48, 5 hiệu ứng `pixelfx` dual-buffer mới & UI Túi đồ 16-bit chuẩn Mockup
+- **Commit / Branch:** `main` (tiếp nối `50f6d4f`)
+- **Giai đoạn / Version:** `PIXTEL v3.1.1` — Graphics Overhaul (`core16-items` HD + `pixelfx` VFX + Ornate 16-Bit UI + `?demo=v31` Showcase)
+- **Đã làm (Done):**
+  - **Trích xuất Sprite HD `48×48` (`scripts/extract_core16_sprites.py`, `src/assets/core16-items.png` & `.json`, `src/graphics/codixelAtlas.ts`):**
+    - Trích xuất trực tiếp 16 Vật phẩm Cốt lõi từ Spritesheet 4×4 gốc bằng BFS flood-fill tách nền indigo có chọn lọc (bảo toàn 100% viền `#1a1625`, cán búa và hốc tối `hm_moss_hood`) kèm 6 icon nguyên liệu `48×48` đồng bộ (tổng 22 frames `288×192`), ưu tiên render HD trong `drawCodixelIcon`.
+    - Sửa script xuất poster `preview for devs/assets/v31_core16_items_sheet.png` dùng font hệ thống `Tahoma` để hiển thị trọn vẹn tiếng Việt có dấu.
+  - **5 Hiệu ứng `pixelfx` Dual-Buffer Mới (từ skill `patch-gg/pixelfx` tại `.agents/skills/pixelfx/`):**
+    - Sáng tác, render contact sheet & kiểm duyệt: `pixtel/set-aura.js` (3 chủ đề `forest` / `forge` / `eclipse`), `pixtel/cursed-aura.js`, `pixtel/eclipse-reap.js`, `pixtel/ember-nova.js`, `pixtel/bleed-slash.js` (`check.mjs` **5/5 PASS, 0 lỗi, 0 cảnh báo**).
+    - Nối vào `src/vfx/vfxManager.ts`, `src/vfx/uiRarityFx.ts` (bỏ giới hạn 24px để render nét `44px`/`64px` kèm `cursed-aura`), `src/systems/ItemEffectSystem.ts`, `src/graphics/itemIcons.ts` & `src/graphics/pixelfxHeroModels.ts` (thay hình vuông phẳng bằng Set Aura dual-buffer thật + map model 3D riêng cho từng món Core-16).
+  - **Đại tu UI Túi đồ 3 Cột 16-Bit (`index.html`, `src/ui/InventoryModal.ts`, `style.css`):**
+    - Nâng cấp ruy-băng đuôi én `EQUIP / BAG / INFO`, khung viền đôi bo góc chạm khắc `❖`, sân khấu Paper-Doll `144×168` có spotlight & bệ đá, ô túi đồ `60×60` với icon HD `44×44` + hào quang `pixelfx`, khung `INFO` `72×72` cùng **biển hiệu vàng `✦ PASSIVE`** và **biển hiệu huyết dụ `☠ CURSE`**.
+  - **Chế độ Showcase không ghi đè Save (`src/game.ts`, `src/main.ts`):**
+    - Thêm `?demo=v31&open=inventory|forge` (`startV31DemoShowcase`, `demoMode = true`) giúp thành viên & QA kiểm tra nhanh đủ 16 vật phẩm, 3/3 Set Aura và Lò rèn Ẩn chỉ bằng 1 đường link.
+- **File chính đã sửa / thêm:** `scripts/extract_core16_sprites.py`, `src/assets/core16-items.png`, `src/assets/core16-items.json`, `src/graphics/codixelAtlas.ts`, `src/vfx/pixelfx/fx/pixtel/set-aura.js`, `src/vfx/pixelfx/fx/pixtel/cursed-aura.js`, `src/vfx/pixelfx/fx/pixtel/eclipse-reap.js`, `src/vfx/pixelfx/fx/pixtel/ember-nova.js`, `src/vfx/pixelfx/fx/pixtel/bleed-slash.js`, `src/vfx/vfxManager.ts`, `src/vfx/uiRarityFx.ts`, `src/systems/ItemEffectSystem.ts`, `src/data/items.ts`, `src/graphics/pixelfxHeroModels.ts`, `src/graphics/itemIcons.ts`, `src/ui/InventoryModal.ts`, `index.html`, `style.css`, `src/game.ts`, `src/main.ts`, `preview for devs/2026-11-26-v3.1.1-pixelfx-hd-graphics-overhaul.md`, `preview for devs/assets/*`, `preview for devs/README.md`, `DEV_LOG.md`
+- **Kiểm tra (Verified):** `check.mjs` (`5/5` PASS, `0` warnings), `npm.cmd run build` exit `0`, `tests/featureTests.ts` (**17/17** suites PASS), kiểm duyệt trực quan 6 ảnh PNG (`v31_core16_items_sheet`, `v31_pixelfx_showcase`, `v311_inventory_ornate`, `v311_inventory_cursed`, `v311_forge_fate_die`, `v311_forge_hidden`) qua Chrome & `read_file` (`0` console errors).
+- **Lưu ý / Handoff (Breaking changes / Đang dở):** Không có (tương thích 100% Save cũ).
+- **Gợi ý bước tiếp theo (Next Steps):** Mở [preview for devs/2026-11-26-v3.1.1-pixelfx-hd-graphics-overhaul.md](preview%20for%20devs/2026-11-26-v3.1.1-pixelfx-hd-graphics-overhaul.md) trên GitHub hoặc chạy `npm run dev` và truy cập `/?demo=v31` để trải nghiệm ngay.
 
 ### [2026-11-26 09:32] — Antigravity — Hệ thống 16 Vật phẩm cốt lõi, Nội tại (`ItemEffectSystem`), 3 Set Bonus `(x/3)`, Lò rèn Ẩn & UI Túi đồ 3 cột 16-bit
 - **Commit / Branch:** `main` (tiếp nối `6a12963`)

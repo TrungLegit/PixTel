@@ -115,7 +115,7 @@ export const RARITY_INFO: Record<
   cursed: {
     label: "Nguyền Rủa",
     color: "#f43f5e",
-    beamPreset: "beam-epic",
+    beamPreset: "beam-cursed",
     statMult: 2.1,
     enhanceMult: RARITY_ENHANCE_MULT.cursed,
     tier: 4,

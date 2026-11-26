@@ -149,6 +149,7 @@ export class PixTelOpenWorldGame {
   camY = 0;
   time = 0;
   running = false;
+  demoMode = false;
   activeModal: ModalId = "home";
   currentBiome: BiomeId = "town";
   nearestInteractable: InteractableTarget | null = null;
@@ -380,11 +381,97 @@ export class PixTelOpenWorldGame {
   /** Recomputes maxHp, atk, def, spd, crit, elementBonus from Class + Level + Equipped Items. */
   recalcPlayerStats(preserveHpRatio = true) {
     recalculatePlayerStats(this.player, this.inv, preserveHpRatio);
+    const activeSets = this.inv.getActiveSetBonuses(this.player.classId);
+    const auraSet = activeSets.find((s) => s.threeActive && s.def.threePieceAuraColor);
+    this.player.activeSetAuraColor = auraSet?.def.threePieceAuraColor ?? null;
   }
 
   /** Alias matching RPG stats recalculation API. */
   recalculatePlayerStats(preserveHpRatio = true) {
-    recalculatePlayerStats(this.player, this.inv, preserveHpRatio);
+    this.recalcPlayerStats(preserveHpRatio);
+  }
+
+  /**
+   * Non-destructive v3.1.1 Showcase loader triggered only by `?demo=v31`:
+   * Equips 3/3 Set Tâm Lò (pixelfx Set Aura) + fills Bag with all 16 Core Items & 6 Materials
+   * right beside Blacksmith Kael without overwriting the player's saved game.
+   */
+  startV31DemoShowcase(openModal: "inventory" | "forge" | null = "inventory") {
+    this.projectiles.length = 0;
+    this.turrets.length = 0;
+    this.hazards.length = 0;
+    this.activeBossLock = null;
+    this.lastBarrierWarn = 0;
+    this.vfx.clearAll();
+
+    this.demoMode = true;
+    this.inv.resetStarterKit("prism_knight");
+    this.inv.gold = 5000;
+    this.quests.reset();
+    this.gacha.reset();
+    this.itemEffects.reset();
+    this.colorSys.reset();
+    this.discoveredLore.clear();
+    this.unlockedHiddenItems.add("wp_starfall_blade");
+    this.unlockedHiddenItems.add("ar_aegis_mantle");
+    this.unlockedHiddenRecipes = new Set(["rec_wp_starfall_blade", "rec_ar_aegis_mantle"]);
+    this.defeatedBossIds = new Set(["boss_blight_root"]);
+    this.spawner.reset([]);
+    this.stats = { kills: 42, mined: 18, chestsOpened: 4, bossesDefeated: 2, reactionsTriggered: 14 };
+
+    this._initBlankPlayer("prism_knight");
+    this.player.level = 12;
+    this.player.statPoints = 6;
+    const kael = TOWN_NPCS.find((n) => n.id === "npc_blacksmith");
+    if (kael) {
+      this.player.x = (kael.tx + 1.5) * TILE_SIZE;
+      this.player.y = (kael.ty + 1.5) * TILE_SIZE;
+    }
+
+    // Equip full 3/3 Set Tâm Lò (Helmet + Weapon + Accessory) + Legendary Aegis Mantle
+    this.inv.equipment.helmet = { ...createItemInstance("hm_ash_visor", 1, 3), bonusStats: { def: 4, maxHp: 22 } };
+    this.inv.equipment.armor = { ...createItemInstance("ar_aegis_mantle", 1, 5), infusedElement: "fire", bonusStats: { def: 7, maxHp: 40 } };
+    this.inv.equipment.weapon = { ...createItemInstance("wp_forge_hammer", 1, 5), infusedElement: "fire", bonusStats: { atk: 7, crit: 4 } };
+    this.inv.equipment.accessory = { ...createItemInstance("ac_ember_crest", 1, 3), bonusStats: { crit: 3, atk: 3 } };
+
+    // Populate top rows of Bag cleanly with remaining Core-16 Items & 6 Core Materials
+    this.inv.bag = [
+      { ...createItemInstance("wp_starfall_blade", 1, 7), infusedElement: "chroma", bonusStats: { atk: 10, crit: 5 } },
+      { ...createItemInstance("wp_eclipse_reaver", 1, 4), bonusStats: { atk: 6, aspdPct: 5 } },
+      { ...createItemInstance("hm_eclipse_crown", 1, 3), bonusStats: { mag: 6, def: 4 } },
+      { ...createItemInstance("ac_cracked_pact", 1, 2), bonusStats: { crit: 4, critDmgPct: 12 } },
+
+      createItemInstance("wp_briar_dagger", 1, 2),
+      createItemInstance("wp_spark_staff", 1, 2),
+      createItemInstance("ar_briar_cloak", 1, 2),
+      createItemInstance("ar_bloodstone_plate", 1, 3),
+
+      createItemInstance("hm_moss_hood", 1, 1),
+      createItemInstance("wp_vanguard_chipped", 1, 0),
+      createItemInstance("cs_mirage_vial", 3, 0),
+      createItemInstance("cs_fate_die", 5, 0),
+
+      createItemInstance("mat_ancient_sap", 8, 0),
+      createItemInstance("mat_elder_core", 5, 0),
+      createItemInstance("mat_blood_shard", 8, 0),
+      createItemInstance("mat_eclipse_coal", 8, 0),
+
+      createItemInstance("mat_meteor_shard", 4, 0),
+      createItemInstance("mat_eclipse_heart", 2, 0),
+      createItemInstance("mat_prism_shard", 45, 0),
+    ];
+
+    this.recalcPlayerStats(false);
+    this.currentBiome = this.world.getBiomeAtWorld(this.player.x, this.player.y);
+    this._snapCamera();
+    this.tileRenderer.syncOverviewMap(this.world, this.colorSys);
+    this.tutorialCompleted = true;
+    this.tutorialActive = false;
+
+    this.running = true;
+    this.setModal(openModal);
+    this.ui.onHudUpdate();
+    this.ui.onToast("✦ PIXTEL v3.1.1 HD SHOWCASE — Bộ Tâm Lò (3/3) + 16 Vật phẩm Cốt lõi & Lò Rèn Ẩn!", "epic");
   }
 
   startNewGame(
@@ -394,6 +481,7 @@ export class PixTelOpenWorldGame {
     playIntroCutscene = false
   ) {
     sfx.unlock();
+    this.demoMode = false;
     this.projectiles.length = 0;
     this.turrets.length = 0;
     this.hazards.length = 0;
@@ -470,6 +558,7 @@ export class PixTelOpenWorldGame {
     const data = this.saveSys.load();
     if (!data) return false;
     sfx.unlock();
+    this.demoMode = false;
     this.projectiles.length = 0;
     this.turrets.length = 0;
     this.hazards.length = 0;
@@ -574,7 +663,7 @@ export class PixTelOpenWorldGame {
   }
 
   saveGame(showToast = true): boolean {
-    if (!this.running) return false;
+    if (!this.running || this.demoMode) return false;
     const data: SaveDataV2 = {
       version: 3,
       savedAt: Date.now(),
