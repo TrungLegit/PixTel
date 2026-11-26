@@ -1,5 +1,8 @@
 import { getClassDef } from "../data/classes";
+import { ELEMENT_META } from "../data/elements";
+import { ENEMIES } from "../data/enemies";
 import {
+  CONSUMABLE_GROUP_LABELS,
   ITEMS,
   RARITY_INFO,
   SLOT_LABELS,
@@ -691,8 +694,36 @@ export class InventoryModalUI {
       def.requiredClass &&
       def.requiredClass !== "all" &&
       def.requiredClass !== this.game.player.classId;
+    const slotLabel = def.slot
+      ? SLOT_LABELS[def.slot]
+      : def.category === "consumable"
+        ? "Tiêu Thụ"
+        : "Nguyên Liệu";
+
+    // Handle sealed un-unlocked hidden items safely
+    if (def.isHidden && !this.game.isHiddenItemUnlocked(def.id)) {
+      this.detailEl.style.borderColor = "#9b7ce0";
+      this.detailEl.innerHTML = `
+        <div class="info-hero-card">
+          <div class="info-icon-frame" style="border-color:#9b7ce0;border-style:dashed;color:#ffe066;font-size:26px;font-weight:800">?</div>
+          <div class="info-title" style="color:#ffe066">??? — Cổ Vật Bí Ẩn</div>
+          <div class="info-sub">
+            <span class="tier-pill" style="color:#ffe066;background:#301b3d">✦ ẨN</span>
+            <span style="color:#c266ff">[Chưa Mở Khóa]</span>
+          </div>
+        </div>
+        <div class="info-pixel-divider"><span>◆</span></div>
+        <div class="info-lore">“${def.hiddenHint ?? "Khám phá Lò Rèn Lăng Kính hoặc đánh bại Boss để giải phong ấn cổ vật này."}”</div>
+      `;
+      return;
+    }
 
     let statsHtml = "";
+    let extraNotesHtml = "";
+    let consumableBodyHtml = "";
+    let materialBodyHtml = "";
+    let footerLeft = "";
+
     if (def.category === "equipment") {
       const st = getItemEffectiveStats(item);
       const diff = location === "bag" ? this.game.inv.compareWithEquipped(item) : null;
@@ -710,6 +741,8 @@ export class InventoryModalUI {
         ["MOVE SPD", st.moveSpeedPct, diff?.moveSpeedPct, "%"],
         ["ELEM", st.elementBonus, diff?.elementBonus, "%"],
         ["STAM", st.maxStamina, diff?.maxStamina, ""],
+        ["PHÁ GIÁP", st.poiseBreakPct, diff?.poiseBreakPct, "%"],
+        ["GIẢM CD [E]", st.skillCdPct, diff?.skillCdPct, "%"],
       ];
       statsHtml = `<div class="detail-stats">${rows
         .filter(([, val, d]) => val !== 0 || (d !== undefined && d !== 0))
@@ -723,10 +756,120 @@ export class InventoryModalUI {
                 ? `<span class="diff-up">(+${d}${unit} ▲)</span>`
                 : `<span class="diff-down">(${d}${unit} ▼)</span>`;
           }
-          return `<div class="detail-stat-line"><span>${lbl}: <b class="${valCls}">${valSign}${unit}</b></span> ${diffBadge}</div>`;
+          return `<div class="detail-stat-line"><span class="dsl-val">${lbl}: <b class="${valCls}">${valSign}${unit}</b></span>${diffBadge}</div>`;
         })
         .join("")}</div>`;
+
+      const notes: string[] = [];
+      if (item.enhanceLevel >= 5 && item.infusedElement) {
+        const em = ELEMENT_META[item.infusedElement];
+        notes.push(
+          `<div class="info-meta-note" style="border-left-color:${em.color}">★ Khảm Sắc Tố [+5]: <b>Hệ ${em.name}</b> (${em.infuseBonusDesc ?? "+8% ELEM"})</div>`
+        );
+      }
+      if (item.enhanceLevel >= 10 && def.slot === "weapon") {
+        notes.push(
+          `<div class="info-meta-note" style="border-left-color:#ff88f2">★ Thức Tỉnh [+10]: <b>Khúc Xạ Lăng Kính (Prism)</b></div>`
+        );
+      }
+      if (def.dropOnly) {
+        notes.push(
+          `<div class="info-meta-note" style="border-left-color:#e03c68;color:#fda4af">★ ĐỘC LẠ · Chỉ rơi từ Quái &amp; Boss (Không bán / không rèn)</div>`
+        );
+      } else if (def.seasonalBannerId) {
+        notes.push(
+          `<div class="info-meta-note" style="border-left-color:#c084fc;color:#e9d5ff">✦ ĐỘC QUYỀN RƯƠNG GACHA MÙA [G]</div>`
+        );
+      }
+      if (def.isHidden) {
+        const srcTxt =
+          def.hiddenSource === "craft_only"
+            ? "Nguồn: Chỉ Chế Tạo tại Lò Rèn Lăng Kính"
+            : `Nguồn: Độc quyền Boss ${def.sourceBossId ? ENEMIES[def.sourceBossId]?.name ?? def.sourceBossId : ""}`;
+        notes.push(`<div class="info-meta-note" style="border-left-color:#facc15;color:#fef08a">✦ CỔ VẬT ẨN · ${srcTxt}</div>`);
+      }
+
+      const dollHint =
+        def.slot === "weapon"
+          ? item.enhanceLevel >= 5
+            ? "Vũ khí cầm tay (+5 phát sáng)"
+            : "Hiển thị vũ khí cầm tay"
+          : def.slot === "helmet"
+            ? "Thay đổi Mũ nhân vật"
+            : def.slot === "armor"
+              ? "Thay đổi Giáp / Áo choàng"
+              : def.slot === "boots"
+                ? "Giày bước chạy 2-frame"
+                : def.slot === "accessory"
+                  ? "Vật thể quỹ đạo bay quanh"
+                  : "";
+      if (dollHint) {
+        notes.push(`<div class="info-meta-note" style="border-left-color:#64748b;color:#cbd5e1">✦ Paper-Doll: ${dollHint}</div>`);
+      }
+      extraNotesHtml = notes.join("");
+
+      const shards = getDismantleShardYield(item);
+      footerLeft = `Phân rã: <b>+${shards} Mảnh LK</b>`;
+    } else if (def.category === "consumable") {
+      const spec = def.consumableSpec;
+      const owned = this.game.inv.countItem(def.id);
+      const grp = spec?.group ? CONSUMABLE_GROUP_LABELS[spec.group] : null;
+      const effects: string[] = [];
+      if (spec?.hpPct) effects.push(`Hồi +${Math.round(spec.hpPct * 100)}% HP`);
+      if (spec?.staminaPct) effects.push(`Hồi +${Math.round(spec.staminaPct * 100)}% Thể lực`);
+      if (spec?.stealthSec) effects.push(`Tàng hình ${spec.stealthSec}s (cắt aggro)`);
+      if (spec?.speedPct) effects.push(`+${Math.round(spec.speedPct * 100)}% Tốc chạy`);
+      if (spec?.atkPct) effects.push(`+${Math.round(spec.atkPct * 100)}% ATK`);
+      if (spec?.critBonus) effects.push(`+${spec.critBonus}% CRIT`);
+      if (spec?.defPct) effects.push(`Giảm ${Math.round(spec.defPct * 100)}% ST nhận (+12 DEF)`);
+      if (spec?.overdriveGain) effects.push(`+${spec.overdriveGain}% Nộ [Q]`);
+      if (spec?.invulnSec) effects.push(`${spec.invulnSec}s Bất tử`);
+      if (spec?.cleanseSlow) effects.push("Giải làm chậm");
+      if (def.consumableKind === "fate_die") effects.push("Reroll chỉ số phụ ở Lò Rèn");
+      if (def.consumableKind === "undying_charm") effects.push("Tự chặn chết khi giữ trong Túi");
+      const dur = spec?.shieldSec ?? spec?.durationSec;
+      if (dur) effects.push(`Hiệu lực ${dur}s`);
+
+      const hotkeyBadge =
+        def.consumableKind === "fate_die"
+          ? "Dùng tại Lò Rèn [F]"
+          : def.consumableKind === "undying_charm"
+            ? "Nội tại mang theo Túi"
+            : `Phím nhanh [${spec?.group === "hp" ? 1 : spec?.group === "stamina" ? 2 : spec?.group === "power" ? 3 : 4}]${grp ? ` · ${grp.label}` : ""}`;
+
+      consumableBodyHtml = `
+        <div class="info-tags-row">
+          <span class="info-tag-chip">${hotkeyBadge}</span>
+          <span class="info-tag-chip">Trong túi: <b>x${owned}</b></span>
+        </div>
+        ${
+          effects.length
+            ? `<div class="info-effects-box">${effects.map((e) => `<span class="info-effect-pill">✦ ${e}</span>`).join("")}</div>`
+            : ""
+        }
+      `;
+      footerLeft = `Đang giữ: <b>x${owned}</b>`;
+    } else {
+      const owned = this.game.inv.countItem(def.id);
+      const isGachaKey = Boolean(def.gachaKeyBiome);
+      materialBodyHtml = `
+        <div class="info-tags-row">
+          <span class="info-tag-chip">${isGachaKey ? "🗝 Chìa Rương Gacha Mùa [G]" : "Khoáng sản &amp; Chế tác"}</span>
+          <span class="info-tag-chip">Trong túi: <b>x${owned}</b></span>
+        </div>
+        ${
+          isGachaKey
+            ? `<div class="info-meta-note" style="border-left-color:#c084fc;color:#e9d5ff">★ Nhấn phím [G] hoặc lại Đài Gacha Thị Trấn để mở Rương Mùa!</div>`
+            : ""
+        }
+      `;
+      footerLeft = `Trong túi: <b>x${owned}</b>`;
     }
+
+    const buyText = def.buyPrice ? `Mua <b>${def.buyPrice}G</b> · ` : "";
+    const sellVal =
+      def.category === "equipment" ? def.sellPrice + item.enhanceLevel * 12 : def.sellPrice;
+    const footerRight = `${buyText}Bán <b>${sellVal}G</b>`;
 
     let btns = "";
     if (def.category === "equipment") {
@@ -803,17 +946,28 @@ export class InventoryModalUI {
         <div class="info-sub">
           <span class="tier-pill" style="color:${tInfo.color};background:${tInfo.bg}">${tInfo.badge}</span>
           <span style="color:${rInfo.color}">[${rInfo.label}]</span>
-          ${def.slot ? `· ${SLOT_LABELS[def.slot]}` : ""}
-          ${location !== "bag" ? "· ĐANG MẶC" : ""}
+          <span>· ${tInfo.label} · ${slotLabel}</span>
+          ${location !== "bag" ? `<span style="color:#facc15">· ★ ĐANG MẶC</span>` : ""}
         </div>
-        <div class="info-class-req" style="color:${classMismatch ? "#f43f5e" : "#94a3b8"}">${classReqText}</div>
+        ${
+          def.category === "equipment"
+            ? `<div class="info-class-req" style="color:${classMismatch ? "#f43f5e" : "#94a3b8"}">${classReqText}</div>`
+            : ""
+        }
       </div>
       ${statsHtml}
+      ${consumableBodyHtml}
+      ${materialBodyHtml}
       ${passiveBox}
       ${wpnSkillLine}
+      ${extraNotesHtml}
       ${setHtml}
       <div class="info-pixel-divider"><span>◆</span></div>
       <div class="info-lore">“${loreText}”</div>
+      <div class="info-foot-bar">
+        <span>${footerLeft}</span>
+        <span>${footerRight}</span>
+      </div>
       <div class="detail-actions">${btns}</div>
     `;
     this._paintAllIcons(this.detailEl);

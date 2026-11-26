@@ -16,6 +16,7 @@ import { getWeaponSkillForItem } from "../data/weaponSkills";
 import { drawItemIcon } from "../graphics/itemIcons";
 import { clearFrame, createFrame, createFx } from "../vfx/pixelfx/core/index.js";
 import * as rarityAuraMod from "../vfx/pixelfx/fx/pixtel/rarity-aura.js";
+import * as cursedAuraMod from "../vfx/pixelfx/fx/pixtel/cursed-aura.js";
 import type { PixelfxFrame, PixelfxInstance, PixelfxModule } from "../vfx/pixelfxTypes";
 import {
   RARITY_PAL_BY_AURA,
@@ -115,6 +116,10 @@ export class ItemReviewTooltip {
       ) as HTMLElement | null;
 
       if (!target) return;
+      if (target.closest("#modal-inventory")) {
+        if (this.activeTargetEl) this.hide();
+        return;
+      }
       this.lastMouseX = ev.clientX;
       this.lastMouseY = ev.clientY;
       if (target !== this.activeTargetEl) {
@@ -153,7 +158,7 @@ export class ItemReviewTooltip {
         const raw = ev.target as HTMLElement | null;
         if (raw && this.root.contains(raw)) return;
         const target = raw?.closest("[data-review-uid], [data-review-def]") as HTMLElement | null;
-        if (!target || target.dataset.reviewSource === "hud") {
+        if (!target || target.dataset.reviewSource === "hud" || target.closest("#modal-inventory")) {
           if (this.activeTargetEl) this.hide();
           return;
         }
@@ -495,13 +500,14 @@ export class ItemReviewTooltip {
     this.currentAura = aura;
 
     if (aura) {
-      this.liveFx = createFx(rarityAuraMod as PixelfxModule, {
+      const mod = (aura === "cursed" ? cursedAuraMod : rarityAuraMod) as PixelfxModule;
+      this.liveFx = createFx(mod, {
         x: this.fxSize / 2,
         y: this.fxSize / 2,
         palette: RARITY_PAL_BY_AURA[aura],
         tier: RARITY_TIER_BY_AURA[aura],
         radius: 23,
-        seed: aura === "legendary" ? 73 : aura === "epic" ? 47 : 31,
+        seed: aura === "legendary" ? 73 : aura === "cursed" ? 66 : aura === "epic" ? 47 : 31,
       });
     } else {
       this.liveFx = null;

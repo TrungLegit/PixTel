@@ -45,6 +45,21 @@
 
 ## Nhật Ký Cập Nhật (Newest First)
 
+### [2026-11-26 10:40] — Antigravity — Gộp toàn bộ Popup Info vào cột `INFO` cố định bên phải trong Túi đồ
+- **Commit / Branch:** `main` (tiếp nối `5228950`)
+- **Giai đoạn / Version:** `PIXTEL v3.1.1+` — Fixed Right-Column `INFO` Panel Consolidation
+- **Đã làm (Done):**
+  - Tắt popup nổi `#item-review-tooltip` khi hover/touch các ô bên trong `#modal-inventory` (`src/ui/ItemReviewTooltip.ts`) để không còn che lưới túi đồ `BAG`, trong khi vẫn giữ nguyên tooltip nổi cho Shop, Lò Rèn, Rương Cá Nhân, Nhiệm Vụ và thanh Hotbar HUD (đồng bộ thêm `pixtel/cursed-aura` cho tooltip đồ `cursed`).
+  - Gộp đầy đủ toàn bộ dữ liệu từ `ItemReviewTooltip` sang cột `INFO` cố định bên phải trong `src/ui/InventoryModal.ts` & `style.css`:
+    - Dòng phụ đầy đủ `Tier · Biome · Loại`, khóa bảo vệ Cổ Vật Ẩn chưa mở khóa.
+    - Bảng chỉ số 1 cột căn thẳng hàng giá trị & chênh lệch `(+X ▲)` / `(-X ▼)` (thêm `PHÁ GIÁP`, `GIẢM CD [E]`).
+    - Nhóm tag & pill hiệu lực chi tiết cho Tiêu Thụ (`Phím nhanh`, `Trong túi`, `✦ Hồi HP / Tàng hình / Tốc chạy...`) và Nguyên Liệu / Chìa Gacha `[G]`.
+    - Ghi chú `+5` Khảm Sắc Tố, `+10` Thức Tỉnh Prism, Nguồn Độc Lạ/Gacha/Ẩn, mô tả Paper-Doll và thanh chân `Phân rã +LK / Đang giữ · Mua / Bán Gold`.
+- **File chính đã sửa / thêm:** `src/ui/ItemReviewTooltip.ts`, `src/ui/InventoryModal.ts`, `style.css`, `preview for devs/2026-11-26-v3.1.1-pixelfx-hd-graphics-overhaul.md`, `preview for devs/assets/v311_inventory_ornate.png`, `preview for devs/assets/v311_inventory_info_merged.png`, `DEV_LOG.md`
+- **Kiểm tra (Verified):** `npm.cmd run build` exit `0`, `tests/featureTests.ts` **17/17** PASS, kiểm duyệt hover trực tiếp trong Chrome (`1280×800`, 0 console errors): `#item-review-tooltip` ẩn hoàn toàn khi rê qua `Lọ Sương Mù Ảo Ảnh` và `Thánh Kiếm Sao Rơi +7`, toàn bộ dữ liệu hiển thị gọn trong cột `INFO`.
+- **Lưu ý / Handoff (Breaking changes / Đang dở):** Không có.
+- **Gợi ý bước tiếp theo (Next Steps):** Pull `origin/main` và mở Túi đồ `[I]` để trải nghiệm bảng `INFO` hợp nhất.
+
 ### [2026-11-26 10:33] — Antigravity — Trùng tu đồ họa HD 48×48, 5 hiệu ứng `pixelfx` dual-buffer mới & UI Túi đồ 16-bit chuẩn Mockup
 - **Commit / Branch:** `main` (tiếp nối `50f6d4f`)
 - **Giai đoạn / Version:** `PIXTEL v3.1.1` — Graphics Overhaul (`core16-items` HD + `pixelfx` VFX + Ornate 16-Bit UI + `?demo=v31` Showcase)

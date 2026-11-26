@@ -1,5 +1,5 @@
 # Project Brain Index
-*Generated: 2026-11-26T03:34:09.178276+00:00*
+*Generated: 2026-11-26T03:40:32.040721+00:00*
 
 ## Description
 > **Thế giới mở 16-Bit Action RPG trên trình duyệt (PC · Mobile PWA · Co-op 2–4 Người)** — Khởi đầu tay không tại **Thị Trấn Khởi Nguyên**, săn trang bị **khóa chặt theo Class**, luyện **Ma Trận Luyện
@@ -15,33 +15,33 @@
 - `file:src/vfx/vfxManager.ts` (file, 83 links): Registers 5 bespoke pixtel pixelfx effects & Core-16 passive presets.
 - `file:src/game.ts` (file, 78 links): Adds non-destructive ?demo=v31 showcase loader & real-time set aura recalc sync.
 - `file:src/data/worldConfig.ts` (file, 29 links): Added STORAGE_CHEST_POS ({tx:77, ty:82}) right beside Origin Town Spawn Waypoint.
+- `file:src/ui/ItemReviewTooltip.ts` (file, 28 links): Suppresses floating popup inside #modal-inventory so hover updates fixed INFO panel instead; adds cursedAuraMod support outside Inventory.
 - `file:src/ui/HUD.ts` (file, 28 links): Updated HUD bag slot to show dynamic bagCapacity, upgraded tiered Backpack codixel icon, and Auto-Sell + Stash info in hover tooltip.
 - `file:src/vfx/uiRarityFx.ts` (file, 24 links): Uses pixtel/cursed-aura for cursed rarity slots and removes 24px icon cap.
-- `file:src/ui/InventoryModal.ts` (file, 21 links): Ornate 16-bit EQUIP/BAG/INFO UI with 44/64px icons and golden PASSIVE / crimson CURSE plaques.
+- `file:src/ui/InventoryModal.ts` (file, 22 links): Consolidated fixed right-column INFO panel: single-line stat diffs, consumable/material effect pills, +5/+10/exotic/hidden/Paper-Doll notes & buy/sell/dismantle footer.
+- `file:style.css` (file, 21 links): Added dark 16-bit styling for merged INFO chips, effect pills, meta notes, footer bar & single-column stat diffs.
 - `file:src/graphics/pixelfxHeroModels.ts` (file, 21 links): Maps Core-16 3D gear themes and renders dual-buffer pixtel/set-aura on hero.
 - `file:src/world/spawner.ts` (file, 17 links): Boss chests guarantee matching Biome Gacha Key drops; respawned mobs animate in with spawnAnimTime.
-- `file:src/graphics/codixelAtlas.ts` (file, 15 links): Prioritizes HD 48x48 core16-items.png frames before 24x24 codixel-icons fallback.
-- `file:src/world/interactables.ts` (file, 14 links): Added Town Spawn Personal Stash Chest (stash_chest) [F] interactable at STORAGE_CHEST_POS.
 
 ## Recent Decisions
+- **Merge Hover Popup into Fixed Inventory INFO Panel** (`decision:20261126034031-merge-hover-popup-into`): Disabled floating #item-review-tooltip inside #modal-inventory and consolidated all its rich metadata (hotkey/effect pills, +5/+10 infusions, Paper-Doll notes, buy/sell/shard footer) into the fixed right-side INFO column.
 - **PIXTEL v3.1.1 HD Sprite & Pixelfx Overhaul** (`decision:20261126033344-pixtel-v311-hd-sprite`): Replaced 22x22 procedural icons with 48x48 sprites extracted from Reference Image 1, authored 5 check.mjs-verified dual-buffer pixelfx effects, upgraded Paper-Doll set auras & ornate 16-bit Inventory UI, and added ?demo=v31 showcase mode.
 - **16 Core Items, Event-Driven ItemEffectSystem & 3-Column 16-Bit Inventory UI** (`decision:20261126023154-16-core-items-eventdriven`): Separated 16 core items, 6 materials, and 3-piece sets into src/types/item.ts, src/data/sets.ts, and src/data/items.ts; implemented event-driven combat passives and hidden forge unlock rules in ItemEffectSystem; upgraded InventoryModal to 3-column EQUIP/BAG/INFO 16-bit layout wit
 - **Team Rule: Always save, commit & push previews to preview for devs/** (`decision:20261125191722-team-rule-always-save`): Whenever the user requests a visual preview, save GitHub-native Markdown + verified PNGs in preview for devs/ (with ./assets/ relative links and newest-first preview for devs/README.md), update DEV_LOG.md & Project Brain, and automatically commit and push to origin/main so teamma
 - **Inventory QoL: Auto-Sell Low-Rarity Guards, 4-Tier Backpack Upgrades & Spawn Stash Chest** (`decision:20261125185843-inventory-qol-autosell-lowrarity`): Auto-Sell converts eligible unenhanced normal equipment straight to Gold on pickup while strictly protecting Hidden, Exotic dropOnly, Seasonal Gacha and +N enhanced gear; 4 purchasable Backpacks expand bagCapacity from 40 to 80; Personal Stash Chest at Origin Town Spawn ({tx:77,t
-- **PIXTEL v3.0 Weapon-Driven Skills, Exotic Drop-Only Gear & Seasonal Gacha Architecture** (`decision:20261125183922-pixtel-v30-weapondriven-skills`): Separated character combat into 1 Basic/Charge Attack (LMB), 1 Fixed Class Skill ([Q], always unlocked at 100% Overdrive) and 41 dynamic Weapon-Specific [E] skills; gated 16 skill-altering Exotics strictly to mob/boss drops; removed all 25 farm/waypoint chests leaving only 4 Boss
 
 ## Stale Files (Need Re-reading)
+- `file:.brain/INDEX.md` (.brain/INDEX.md)
+- `file:.brain/edges.jsonl` (.brain/edges.jsonl)
 - `file:.brain/nodes.jsonl` (.brain/nodes.jsonl)
 - `file:DEV_LOG.md` (DEV_LOG.md)
+- `file:preview for devs/2026-11-26-v3.1.1-pixelfx-hd-graphics-overhaul.md` (preview for devs/2026-11-26-v3.1.1-pixelfx-hd-graphics-overhaul.md)
 - `file:index.html` (index.html)
 - `file:preview for devs/README.md` (preview for devs/README.md)
 - `file:src/data/items.ts` (src/data/items.ts)
 - `file:src/graphics/itemIcons.ts` (src/graphics/itemIcons.ts)
 - `file:src/main.ts` (src/main.ts)
 - `file:src/systems/ItemEffectSystem.ts` (src/systems/ItemEffectSystem.ts)
-- `file:style.css` (style.css)
-- `file:.brain/INDEX.md` (.brain/INDEX.md)
-- `file:.brain/edges.jsonl` (.brain/edges.jsonl)
 - `file:.agents/skills/codixel/package.json` (.agents/skills/codixel/package.json)
 - `file:.agents/skills/pixelfx/SKILL.md` (.agents/skills/pixelfx/SKILL.md)
 - `file:.github/workflows/deploy-pages.yml` (.github/workflows/deploy-pages.yml)
@@ -75,7 +75,6 @@
 - `file:src/systems/inventorySystem.ts` (src/systems/inventorySystem.ts)
 - `file:src/ui/ForgeModal.ts` (src/ui/ForgeModal.ts)
 - `file:src/ui/GachaModal.ts` (src/ui/GachaModal.ts)
-- `file:src/ui/ItemReviewTooltip.ts` (src/ui/ItemReviewTooltip.ts)
 - `file:src/ui/StorageChestModal.ts` (src/ui/StorageChestModal.ts)
 - `file:src/vfx/pixelfx/fx/pixtel/hex-shield.js` (src/vfx/pixelfx/fx/pixtel/hex-shield.js)
 - `file:src/vfx/pixelfx/fx/pixtel/leaf-storm.js` (src/vfx/pixelfx/fx/pixtel/leaf-storm.js)
