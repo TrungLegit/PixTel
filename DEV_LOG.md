@@ -9,8 +9,8 @@
 
 ## Trạng Thái Hiện Tại (Current Project Stage Snapshot)
 
-- **Giai đoạn / Phiên bản hiện tại:** `PIXTEL v3.0` — Weapon-Driven Skill Architecture (`41` Weapon Skills `[E]` + `1` Fixed Class Skill `[Q]`), `16` Exotic Drop-Only Skill-Altering Gear, Hardcore Grind-to-Boss Rebalance, HD 19-Monster Atlas (`306` frames w/ `:atk` strike frames), 4 Boss-Only Map Chests & Addictive Seasonal Gacha Chest System (`[G]`) with 4 Biome Keys
-- **Commit mới nhất trên `main`:** `946eddb` (`2026-11-25`, tác giả: `chu0n6-iot` / `TrungLegit`)
+- **Giai đoạn / Phiên bản hiện tại:** `PIXTEL v3.1` — Core 16 Items (4×4 Reference Sheet + `cursed` Rarity + 6 Materials), Event-Driven `ItemEffectSystem`, 3 Set Bonuses `(2/3)` & `(3/3)` with Layer-0 Set Auras, 2 Strict Hidden Forge Recipes & Fate Die Reroll, and 3-Column 16-Bit `EQUIP / BAG / INFO` Inventory UI
+- **Commit mới nhất trên `main`:** `6a12963` (`2026-11-26`, đang chuẩn bị push `PIXTEL v3.1`)
 - **Thành viên / AI đóng góp gần đây:** `chu0n6-iot`, `TrungLegit`, `Antigravity`, `Yaros`, `GitHub Copilot`
 - **Các hệ thống chính đã hoàn thiện:**
   - **Web / Mobile PWA & Triển khai GitHub Pages:** Tự động test (`npm test`), build & deploy qua GitHub Actions lên `https://trunglegit.github.io/PixTel/`, kèm `manifest.webmanifest`, `sw.js`, `icon.svg`, chế độ màn hình ngang fullscreen, font Pixelify Sans tiếng Việt tự lưu trữ cục bộ (không phụ thuộc CDN).
@@ -44,6 +44,27 @@
 ---
 
 ## Nhật Ký Cập Nhật (Newest First)
+
+### [2026-11-26 09:32] — Antigravity — Hệ thống 16 Vật phẩm cốt lõi, Nội tại (`ItemEffectSystem`), 3 Set Bonus `(x/3)`, Lò rèn Ẩn & UI Túi đồ 3 cột 16-bit
+- **Commit / Branch:** `main` (tiếp nối `6a12963`)
+- **Giai đoạn / Version:** `PIXTEL v3.1` — Core 16 Items, Event-Driven Passives, 3-Piece Set Auras, Hidden Forge, 3-Column 16-Bit Inventory UI & `preview for devs` Report
+- **Đã làm (Done):**
+  - **Tách biệt Data & Type (`src/types/item.ts`, `src/data/types.ts`, `src/data/sets.ts`, `src/data/items.ts`):**
+    - Tạo `src/types/item.ts` định nghĩa `ItemSlot`, `ItemRarity` (thêm phẩm chất `cursed: #f43f5e`), `ItemStats` (`mag`, `aspdPct`, `moveSpeedPct`, `critDmgPct`, `lifestealPct`, `fireResPct`), `ItemPassive` (`onHit`, `onCrit`, `onTakeDamage`, `onKill`, `onLowHp`, `onDash`, `onUse`, `passive`), `ForgeRecipe`, `SetBonusDefinition`.
+    - Bổ sung đủ **16 vật phẩm cốt lõi** (`CORE_16_ITEMS`: 6 Vũ khí, 6 Mũ/Giáp, 2 Trang sức, 2 Tiêu hao kèm lore tiếng Việt) + **6 nguyên liệu Boss/Zone** (`CORE_MATERIALS`: `mat_ancient_sap`, `mat_elder_core`, `mat_blood_shard`, `mat_eclipse_coal`, `mat_meteor_shard`, `mat_eclipse_heart`).
+    - Vẽ bổ sung **22 icon pixel 24×24** viền tối `#1a1625` theo đúng lưới 4×4 Ảnh 1 vào `scripts/generate_codixel_assets.mjs` -> `src/assets/codixel-icons.png` & `.json` (`165` icon).
+    - Tạo `src/data/sets.ts` với **3 Bộ Trang Bị 3 món** (`set_forest`, `set_forge`, `set_eclipse`) có mốc kích hoạt `(2/3)` & `(3/3)` kèm hào quang Layer 0 (`Aura -> Cloak -> Body -> Armor -> Helmet -> Weapon`).
+  - **Lò Rèn Ẩn, Đổi Mệnh & Tỉ lệ Boss (`src/data/recipes.ts`, `src/data/hiddenItems.ts`, `src/data/lootTables.ts`, `src/systems/forgeSystem.ts`):**
+    - Thêm 2 công thức ẩn (`isHidden: true`) hoàn toàn không lộ trước khi mở khóa: `rec_wp_starfall_blade` (*Thánh Kiếm Sao Rơi*, mở khi mang `wp_vanguard_chipped` hạ Boss Vùng 2 `boss_blight_root`) và `rec_ar_aegis_mantle` (*Chiến Giáp Vệ Binh Bất Diệt*, mở khi sở hữu đồng thời `ar_bloodstone_plate` và `ar_briar_cloak`).
+    - Thêm cơ chế `rerollSubstatsWithFateDie()` cho `cs_fate_die` tại Lò Rèn và drop `hm_eclipse_crown` tỉ lệ 5% từ World Boss `boss_the_eraser`.
+  - **Hệ thống Nội tại Event-Driven (`src/systems/ItemEffectSystem.ts`, `src/systems/combat.ts`, `src/systems/inventorySystem.ts`, `src/game.ts`):**
+    - Quản lý cooldown, stack chảy máu `bleed_crit`, sét nảy `chain_lightning`, chém bán nguyệt + hút máu `eclipse_lifesteal`, đập choáng `quake_stun`, sao rơi `starfall_crit` (CD 6s), phản sát thương & đứng yên hồi máu `thorns_regen`, khiên cộng dồn `blood_shield`, giảm tầm aggro `stealth_range`, miễn nhiễm thiêu đốt `burn_immune`, làm chậm HP thấp `eclipse_slow` (CD 25s), nổ khiên `ember_nova` (CD 30s), chặn đòn tử vong `undying_wall` (CD 45s), lời nguyền `pact_drain`, tàng hình cắt aggro `cs_mirage_vial` và bảo vệ đồ `cursed` khỏi Auto-Sell.
+  - **UI Túi đồ 3 Cột 16-bit (`index.html`, `src/ui/InventoryModal.ts`, `src/ui/ItemReviewTooltip.ts`, `src/ui/ForgeModal.ts`, `style.css`):**
+    - Cột trái `EQUIP` (Paper-doll Z-order đủ lớp + 5 ô trang bị + 2 ô tiêu hao nhanh), Cột giữa `BAG` (lưới 4×4 viền màu theo 6 độ hiếm kèm `cursed` nhấp nháy `#f43f5e`), Cột phải `INFO` (Icon + tên theo màu độ hiếm, so sánh chỉ số xanh/đỏ, khối Passive vàng cam kèm CD, Set Bonus `(x/3)`, vạch pixel và Lore chữ nghiêng `#cbd5e1`).
+- **File chính đã sửa / thêm:** `src/types/item.ts`, `src/data/sets.ts`, `src/systems/ItemEffectSystem.ts`, `src/data/types.ts`, `src/data/items.ts`, `src/data/equipments.ts`, `src/data/recipes.ts`, `src/data/hiddenItems.ts`, `src/data/lootTables.ts`, `src/world/entities.ts`, `src/systems/inventorySystem.ts`, `src/systems/forgeSystem.ts`, `src/systems/combat.ts`, `src/game.ts`, `src/graphics/pixelfxHeroModels.ts`, `src/graphics/paperDoll.ts`, `src/graphics/itemIcons.ts`, `src/vfx/uiRarityFx.ts`, `src/audio/chiptuneSynth.ts`, `src/ui/InventoryModal.ts`, `src/ui/ItemReviewTooltip.ts`, `src/ui/ForgeModal.ts`, `src/ui/GachaModal.ts`, `scripts/generate_codixel_assets.mjs`, `src/assets/codixel-icons.png`, `src/assets/codixel-icons.json`, `index.html`, `style.css`, `tests/featureTests.ts`, `preview for devs/2026-11-26-v3.1-core16-items-inventory-ui-preview.md`, `preview for devs/assets/v31_*.png`, `preview for devs/README.md`, `DEV_LOG.md`
+- **Kiểm tra (Verified):** `node scripts/generate_codixel_assets.mjs` (`165` icons), `npm.cmd run build` (`tsc --noEmit && vite build`) exit `0`, toàn bộ **17/17** feature test suites (`tests/featureTests.ts`) PASS; kiểm duyệt trực quan 3 ảnh PNG (`v31_core16_items_sheet.png`, `v31_inventory_3col_ui.png`, `v31_forge_fate_hidden.png`) & xuất bản vào `preview for devs/`.
+- **Lưu ý / Handoff (Breaking changes / Đang dở):** Tương thích ngược hoàn toàn với Save cũ (`unlockedHiddenRecipes` tùy chọn).
+- **Gợi ý bước tiếp theo (Next Steps):** Các thành viên xem báo cáo trực quan trong [preview for devs/](preview%20for%20devs/README.md) trên GitHub và pull `origin/main` để tiếp tục phát triển.
 
 ### [2026-11-26 02:19] — Antigravity — Bổ sung đủ bản Preview 97 vật phẩm cơ bản & Cổ Vật Ẩn (5 ảnh) vào `preview for devs/`
 - **Commit / Branch:** `main` (tiếp nối `c463689`)

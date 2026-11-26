@@ -7,22 +7,25 @@ import { onCodixelReady } from "../graphics/codixelAtlas";
 import { drawItemIcon } from "../graphics/itemIcons";
 import type { PixelfxModule } from "./pixelfxTypes";
 
-export type UiAuraKind = "rare" | "epic" | "legendary";
+export type UiAuraKind = "rare" | "epic" | "cursed" | "legendary";
 
 export const RARITY_PAL_BY_AURA: Record<UiAuraKind, string[]> = {
   rare: PAL.water,
   epic: PAL.arcane,
+  cursed: PAL.blood,
   legendary: PAL.volt,
 };
 
 export const RARITY_TIER_BY_AURA: Record<UiAuraKind, number> = {
   rare: 3,
   epic: 4,
+  cursed: 4,
   legendary: 5,
 };
 
 export function resolveUiAuraKind(rarity: Rarity, enhanceLevel = 0): UiAuraKind | null {
   if (rarity === "legendary" || enhanceLevel >= 8) return "legendary";
+  if (rarity === "cursed") return "cursed";
   if (rarity === "epic") return "epic";
   if (rarity === "rare" || enhanceLevel >= 5) return "rare";
   return null;

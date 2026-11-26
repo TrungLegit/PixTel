@@ -37,6 +37,7 @@ import type { VfxManager } from "../vfx/vfxManager";
 import { PAL } from "../vfx/pixelfx/core/index.js";
 import { sfx } from "../audio/chiptuneSynth";
 import type { InventorySystem } from "./inventorySystem";
+import { ItemEffectSystem } from "./ItemEffectSystem";
 import type { QuestSystem } from "./questSystem";
 
 export interface CombatContext {
@@ -47,6 +48,7 @@ export interface CombatContext {
   colorSys: ColorRestorationSystem;
   inv: InventorySystem;
   quests: QuestSystem;
+  itemEffects?: ItemEffectSystem;
   projectiles: ProjectileEntity[];
   turrets: TurretEntity[];
   hazards: HazardEntity[];
@@ -128,6 +130,11 @@ const ELEMENT_HIT_PRESET: Record<ElementType, string> = {
  */
 export class CombatSystem {
   private lastLevelWarnTime = 0;
+  private fallbackItemEffects = new ItemEffectSystem();
+
+  private _fx(ctx: CombatContext): ItemEffectSystem {
+    return ctx.itemEffects ?? this.fallbackItemEffects;
+  }
 
   private _consumeExoticMod(player: PlayerEntity, modId: ExoticSkillModId, icdSec: number): boolean {
     if (!player.exoticMods || !player.exoticMods.has(modId)) return false;
@@ -219,8 +226,11 @@ export class CombatSystem {
       (player.cloneTime > 0 ? 25 : 0) +
       (player.atkBuffTime > 0 ? (player.atkBuffCrit || 15) : 0);
     const crit = Math.random() * 100 < critChance;
+    const basePower =
+      player.atk +
+      (player.mag ? (player.classId === "chroma_mage" ? player.mag : isElemental ? Math.round(player.mag * 0.65) : 0) : 0);
     const base =
-      player.atk *
+      basePower *
       mult *
       buffMult *
       counterMult *
@@ -323,7 +333,7 @@ export class CombatSystem {
     if (player.atkCd > 0) return;
 
     const cdef = getClassDef(player.classId);
-    const speedFactor = player.cloneTime > 0 ? 0.5 : 1.0;
+    const speedFactor = (player.cloneTime > 0 ? 0.5 : 1.0) / Math.max(0.5, 1 + (player.aspdPct ?? 0) / 100);
     player.atkCd = cdef.baseStats.atkCooldown * speedFactor;
 
     const step = player.comboStep % 3;
@@ -1730,6 +1740,7 @@ export class CombatSystem {
     }
 
     const ang = moveX !== 0 || moveY !== 0 ? Math.atan2(moveY, moveX) : player.aimAngle;
+    this._fx(ctx).onDash(ctx);
     player.dashing = 0.16;
     player.invuln = Math.max(player.invuln, 0.28);
     player.perfectDashWindow = 0.14; // First ~8.5 frames = Chroma Dodge window!
@@ -2192,7 +2203,8 @@ export class CombatSystem {
     element?: ElementType,
     kbX = 0,
     kbY = 0,
-    poiseMult = 1.0
+    poiseMult = 1.0,
+    fromPassive = false
   ) {
     const idx = ctx.spawner.enemies.indexOf(e);
     if (idx < 0) return;
@@ -2336,6 +2348,15 @@ export class CombatSystem {
 
     if (element) {
       this._applyElement(ctx, e, element);
+    }
+
+    if (!fromPassive) {
+      this._fx(ctx).onHit(ctx, e, mitigated, crit, {
+        fromPassive,
+        dealPassiveDamage: (tgt, dmg, c, preset, el, kx = 0, ky = 0, pm = 0.5) => {
+          this.damageEnemy(ctx, tgt, dmg, c, preset, el, kx, ky, pm, true);
+        },
+      });
     }
 
     if (e.hp <= 0) {
@@ -2915,6 +2936,8 @@ export class CombatSystem {
       ctx.player.overdrive = Math.min(100, ctx.player.overdrive + 6);
     }
 
+    this._fx(ctx).onKill(ctx, e);
+
     const edef = ENEMIES[e.defId];
     ctx.stats.kills += 1;
 
@@ -3069,7 +3092,11 @@ export class CombatSystem {
     const defMult = 100 / (100 + Math.max(0, player.def) * 2.0);
     const mitigated = Math.max(2, Math.round(rawAmount * threatMult * defMult));
     const shieldScale = player.defBuffTime > 0 || player.aegisTime > 0 ? 1 - Math.min(0.6, player.defBuffPct || 0.35) : 1;
-    const dmg = Math.max(1, Math.round(mitigated * shieldScale));
+    const baseDmg = Math.max(1, Math.round(mitigated * shieldScale));
+    const isFire = appliesBleach === false && rawAmount > 0 && false; // normal hit; fire hazards pass through burn/fire check
+    const dmg = this._fx(ctx).onTakeDamage(ctx, baseDmg, srcX, srcY, isFire, (tgt, pdmg, c, preset, el, kx = 0, ky = 0, pm = 0.2) => {
+      this.damageEnemy(ctx, tgt, pdmg, c, preset, el, kx, ky, pm, true);
+    });
     player.hp = Math.max(0, player.hp - dmg);
     player.hitFlash = 0.22;
     player.invuln = 0.38;
@@ -3095,6 +3122,9 @@ export class CombatSystem {
     vfx.spawnDamageText(player.x, player.y - 12, `-${dmg}`, { color: player.aegisTime > 0 ? "#5ef2ff" : "#ff4466" });
 
     if (player.hp <= 0) {
+      if (this._fx(ctx).onFatalDamage(ctx)) {
+        return;
+      }
       // Check Undying Totem Charm in bag before defeat!
       if (ctx.inv.consumeItem("charm_undying", 1)) {
         player.hp = Math.max(15, Math.round(player.maxHp * 0.4));
@@ -3112,12 +3142,21 @@ export class CombatSystem {
         return;
       }
       ctx.onPlayerDefeated();
+      return;
     }
+
+    this._fx(ctx).onPostTakeDamage(ctx, (tgt, pdmg, c, preset, el, kx = 0, ky = 0, pm = 0.5) => {
+      this.damageEnemy(ctx, tgt, pdmg, c, preset, el, kx, ky, pm, true);
+    });
   }
 
   /** Updates projectiles, turrets, hazards, passives, status DOTs, active Ultimates, and enemy/boss AI. */
   update(ctx: CombatContext, dt: number) {
     const { player, spawner, vfx, world } = ctx;
+
+    this._fx(ctx).update(ctx, dt, (tgt, pdmg, c, preset, el, kx = 0, ky = 0, pm = 0.2) => {
+      this.damageEnemy(ctx, tgt, pdmg, c, preset, el, kx, ky, pm, true);
+    });
 
     // 1. Active Combat Rhythm & Buff Timers
     if (player.perfectDashWindow > 0) player.perfectDashWindow = Math.max(0, player.perfectDashWindow - dt);
@@ -3792,15 +3831,18 @@ export class CombatSystem {
         );
       }
 
+      const effAggroRadius = edef.aggroRadius * this._fx(ctx).getAggroMultiplier(ctx.inv, player.classId);
       if (e.state === "patrol") {
-        if (!tgtInTown && distToPlayer <= edef.aggroRadius) {
+        if (!tgtInTown && (player.stealthTime ?? 0) <= 0 && distToPlayer <= effAggroRadius) {
           e.state = "aggro";
           e.alertTimer = 0.72;
           this._alertCampPack(ctx, e);
           if (e.isBoss) sfx.playBossRoar();
         }
       } else if (e.state === "aggro") {
-        if (tgtInTown || distToHome > edef.leashRadius || distToPlayer > edef.leashRadius + 60) {
+        if ((player.stealthTime ?? 0) > 0 && !(ctx.coopTargets && ctx.coopTargets.length > 0)) {
+          e.state = "patrol";
+        } else if (tgtInTown || distToHome > edef.leashRadius || distToPlayer > edef.leashRadius + 60) {
           e.state = "leash";
           if (e.defId === "boss_the_eraser") spawner.arenaTotems.length = 0;
         }

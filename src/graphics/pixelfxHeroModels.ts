@@ -63,6 +63,7 @@ export interface PixelfxHeroDrawOptions {
   chargePct?: number;
   aegisActive?: boolean;
   buffActive?: boolean;
+  setAuraColor?: string | null;
 }
 
 export interface BakedPixelfxHero {
@@ -1067,6 +1068,7 @@ export function drawPixelfxHero(ctx: CanvasRenderingContext2D, opts: PixelfxHero
     time = 0,
     aegisActive = false,
     buffActive = false,
+    setAuraColor = null,
   } = opts;
 
   ctx.imageSmoothingEnabled = false;
@@ -1084,6 +1086,25 @@ export function drawPixelfxHero(ctx: CanvasRenderingContext2D, opts: PixelfxHero
   const dy = Math.round(y - baked.anchorY * drawScale + bobY);
   const dw = Math.round(baked.w * drawScale);
   const dh = Math.round(baked.h * drawScale);
+
+  // Z-Order Layer 0: 3-Piece Set Bonus Aura (drawn strictly behind cloak/body/armor/helm/weapon)
+  if (setAuraColor && !hitFlash && !bleached) {
+    const u = Math.max(1, Math.round(drawScale));
+    const rx = Math.round(11 * rigScale * drawScale);
+    const ry = Math.round(4 * rigScale * drawScale);
+    ctx.save();
+    ctx.fillStyle = setAuraColor;
+    ctx.globalAlpha = 0.24 + 0.1 * Math.sin(time * 5);
+    ctx.fillRect(Math.round(x - rx), Math.round(y - ry), rx * 2, ry + u);
+    ctx.globalAlpha = 0.78;
+    for (let i = 0; i < 6; i++) {
+      const ang = time * 2.6 + (i * Math.PI * 2) / 6;
+      const ax = Math.round(x + Math.cos(ang) * (rx + u));
+      const ay = Math.round(y - 11 * rigScale * drawScale + Math.sin(ang) * (7 * rigScale * drawScale));
+      ctx.fillRect(ax, ay, u * 2, u * 2);
+    }
+    ctx.restore();
+  }
 
   const baseImg = hitFlash
     ? baked.whiteCanvas

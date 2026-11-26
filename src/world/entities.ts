@@ -32,11 +32,21 @@ export interface PlayerEntity {
   hp: number;
   maxHp: number;
   atk: number;
+  mag?: number;
   def: number;
   spd: number;
+  aspdPct?: number;
+  moveSpeedPct?: number;
   crit: number; // percentage 0..100
   critMult: number;
+  critDmgPct?: number;
+  lifestealPct?: number;
+  fireResPct?: number;
   elementBonus: number; // % bonus elemental & skill damage
+  stealthTime?: number;
+  shieldHp?: number;
+  shieldMaxHp?: number;
+  activeSetAuraColor?: string | null;
 
   // Stamina (Zelda / Genshin wheel)
   stamina: number;
@@ -228,6 +238,9 @@ export interface EnemyEntity {
   bleachShield: number;
   maxBleachShield: number;
   totemChannelTimer: number;
+  bleedStacks?: number;
+  bleedTime?: number;
+  bleedTick?: number;
 }
 
 export interface ArenaTotemEntity {

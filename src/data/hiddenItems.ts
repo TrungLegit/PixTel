@@ -465,5 +465,9 @@ export function rollBossHiddenDrops(bossId: string, alreadyDefeated: boolean): B
       });
     }
   }
+  // Vương Miện Nhật Thực Vỡ: boss_only 5% drop từ Boss cuối The Eraser
+  if (bossId === "boss_the_eraser" && Math.random() <= 0.05) {
+    out.push({ itemId: "hm_eclipse_crown", qty: 1, enhanceLevel: 0 });
+  }
   return out;
 }

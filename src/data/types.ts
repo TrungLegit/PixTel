@@ -2,7 +2,7 @@ export type ClassId = "prism_knight" | "chroma_mage" | "bit_rogue" | "pixel_tink
 
 export type BiomeId = "town" | "meadow" | "quartz" | "amber" | "ruins";
 
-export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
+export type Rarity = "common" | "uncommon" | "rare" | "epic" | "cursed" | "legendary";
 
 export type ItemTier = 1 | 2 | 3 | 4 | 5;
 
@@ -48,6 +48,7 @@ export interface ConsumableSpec {
   defPct?: number;
   shieldSec?: number;
   invulnSec?: number;
+  stealthSec?: number;
   overdriveGain?: number;
   durationSec?: number;
   cleanseSlow?: boolean;
@@ -235,12 +236,18 @@ export interface HiddenCraftRecipeSpec {
 
 export interface StatBonus {
   atk?: number;
+  mag?: number;
   def?: number;
   maxHp?: number;
   spd?: number;
+  aspdPct?: number;
   crit?: number; // percentage points, e.g. 5 = +5%
   critRate?: number; // alias for crit
+  critDmgPct?: number; // bonus crit damage % (e.g. 35 = +35% crit multiplier)
   moveSpeed?: number; // alias for spd
+  moveSpeedPct?: number; // % speed modifier (e.g. -8 = -8% move speed)
+  lifestealPct?: number; // % damage healed as HP
+  fireResPct?: number; // % fire/burn damage reduction
   elementBonus?: number; // % bonus elemental & skill damage
   maxStamina?: number; // bonus max stamina capacity
   staminaCostPct?: number; // negative = reduced stamina cost (e.g. -15)
@@ -258,6 +265,7 @@ export interface ItemDef {
   iconColor: string;
   iconKind?: ItemIconKind;
   spriteKey?: string;
+  spritesheetCell?: [number, number];
   paperDollKey?: string;
   capeKey?: string;
   visualColor?: string;
@@ -275,6 +283,7 @@ export interface ItemDef {
   craftRecipe?: HiddenCraftRecipeSpec;
   desc: string;
   lore?: string;
+  passive?: import("../types/item").ItemPassive;
   passiveId?: EquipPassiveId;
   passiveDesc?: string;
   weaponSkillId?: WeaponSkillId;
@@ -291,7 +300,9 @@ export interface ItemDef {
     | "stamina_elixir"
     | "chroma_tonic"
     | "chroma_coating"
-    | "undying_charm";
+    | "undying_charm"
+    | "mirage_vial"
+    | "fate_die";
   consumableSpec?: ConsumableSpec;
 }
 
@@ -312,7 +323,9 @@ export interface RecipeDef {
   materials: { defId: string; qty: number }[];
   desc: string;
   requiredLevel?: number;
+  isHidden?: boolean;
   isHiddenRecipe?: boolean;
+  hiddenUnlockRule?: "vanguard_boss2_kill" | "dual_armor_owned";
   revealMaterialId?: string;
   unlockHint?: string;
 }
@@ -494,6 +507,7 @@ export interface SaveDataV2 {
   openedChests: string[];
   discoveredLore?: string[];
   unlockedHiddenItems?: string[];
+  unlockedHiddenRecipes?: string[];
   defeatedBossIds?: string[];
   tutorialCompleted?: boolean;
   gachaState?: GachaSaveState;

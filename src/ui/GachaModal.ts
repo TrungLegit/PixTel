@@ -14,15 +14,17 @@ const RARITY_RANK: Record<Rarity, number> = {
   uncommon: 2,
   rare: 3,
   epic: 4,
+  cursed: 4,
   legendary: 5,
 };
 
 const RARITY_BEAM_COLORS: Record<Rarity, [string, string, string]> = {
-  common: ["#c8d0dc", "#909eb2", "#ffffff"],
-  uncommon: ["#44ee88", "#1ea85c", "#d9ffe8"],
-  rare: ["#38e8ff", "#1c8ee8", "#dffaff"],
-  epic: ["#d266ff", "#8822dd", "#f7dcff"],
-  legendary: ["#ffe066", "#ff66cc", "#ffffff"],
+  common: ["#cbd5e1", "#909eb2", "#ffffff"],
+  uncommon: ["#4ade80", "#1ea85c", "#d9ffe8"],
+  rare: ["#60a5fa", "#1c8ee8", "#dffaff"],
+  epic: ["#c084fc", "#8822dd", "#f7dcff"],
+  cursed: ["#f43f5e", "#9f1239", "#ffe4e6"],
+  legendary: ["#facc15", "#ff66cc", "#ffffff"],
 };
 
 const KEY_SPRITE_BY_BANNER: Record<string, string> = {

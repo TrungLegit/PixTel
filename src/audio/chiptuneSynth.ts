@@ -311,7 +311,7 @@ class ChiptuneSynth {
   }
 
   /** Distinct celebratory reveal fanfares scaling with rarity. */
-  playGachaReveal(rarity: "common" | "uncommon" | "rare" | "epic" | "legendary") {
+  playGachaReveal(rarity: "common" | "uncommon" | "rare" | "epic" | "cursed" | "legendary") {
     if (rarity === "legendary") {
       // Grand rainbow-gold jackpot symphony!
       this.noise(0.22, 0.2, 5200, 0);
@@ -323,7 +323,7 @@ class ChiptuneSynth {
       });
       return;
     }
-    if (rarity === "epic") {
+    if (rarity === "epic" || rarity === "cursed") {
       // Radiant violet crystal fanfare
       this.noise(0.14, 0.14, 4000, 0);
       const notes = [440, 554, 659, 880, 1109, 1318];

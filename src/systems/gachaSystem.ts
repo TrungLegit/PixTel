@@ -23,6 +23,7 @@ const RARITY_RANK: Record<Rarity, number> = {
   uncommon: 2,
   rare: 3,
   epic: 4,
+  cursed: 4,
   legendary: 5,
 };
 

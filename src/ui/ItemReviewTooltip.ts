@@ -1,7 +1,7 @@
 import { getClassDef } from "../data/classes";
 import { ELEMENT_META } from "../data/elements";
 import { ENEMIES } from "../data/enemies";
-import { SET_BONUSES } from "../data/equipments";
+import { ALL_SET_BONUSES } from "../data/sets";
 import {
   CONSUMABLE_GROUP_LABELS,
   ITEMS,
@@ -36,10 +36,11 @@ const CAPE_LABELS: Record<string, string> = {
 /** High-contrast ink colors for item names inside the dark walnut plaque */
 const PLAQUE_NAME_COLORS: Record<string, string> = {
   common: "#f0ede4",
-  uncommon: "#6effa8",
-  rare: "#66d2ff",
-  epic: "#dfa3ff",
-  legendary: "#ffb84d",
+  uncommon: "#4ade80",
+  rare: "#60a5fa",
+  epic: "#c084fc",
+  cursed: "#fb7185",
+  legendary: "#facc15",
 };
 
 interface ResolvedReviewItem {
@@ -298,10 +299,16 @@ export class ItemReviewTooltip {
       const diff = !isEquipped ? this.game.inv.compareWithEquipped(inst) : null;
       const rows: [string, number, number | undefined, string][] = [
         ["CÔNG (ATK)", st.atk, diff?.atk, ""],
+        ["PHÉP (MAG)", st.mag, diff?.mag, ""],
         ["THỦ (DEF)", st.def, diff?.def, ""],
         ["MÁU (HP)", st.maxHp, diff?.maxHp, ""],
+        ["TỐC ĐÁNH", st.aspdPct, diff?.aspdPct, "%"],
         ["CHÍ MẠNG", st.crit, diff?.crit, "%"],
+        ["ST CHÍ MẠNG", st.critDmgPct, diff?.critDmgPct, "%"],
+        ["HÚT MÁU", st.lifestealPct, diff?.lifestealPct, "%"],
+        ["KHÁNG LỬA", st.fireResPct, diff?.fireResPct, "%"],
         ["TỐC CHẠY", st.spd, diff?.spd, ""],
+        ["TỐC CHẠY %", st.moveSpeedPct, diff?.moveSpeedPct, "%"],
         ["NGUYÊN TỐ", st.elementBonus, diff?.elementBonus, "%"],
         ["THỂ LỰC", st.maxStamina, diff?.maxStamina, ""],
         ["PHÁ GIÁP", st.poiseBreakPct, diff?.poiseBreakPct, "%"],
@@ -311,6 +318,7 @@ export class ItemReviewTooltip {
       const statLines = rows
         .filter(([, val, d]) => val !== 0 || (d !== undefined && d !== 0))
         .map(([lbl, val, d, unit]) => {
+          const valSign = val >= 0 ? `+${val}` : `${val}`;
           let diffHtml = "";
           if (d !== undefined && d !== 0) {
             diffHtml =
@@ -318,7 +326,7 @@ export class ItemReviewTooltip {
                 ? `<span class="review-diff-up">▲ +${d}${unit}</span>`
                 : `<span class="review-diff-down">▼ ${d}${unit}</span>`;
           }
-          return `<div class="review-stat-row"><span>${lbl}</span><b>+${val}${unit}</b>${diffHtml}</div>`;
+          return `<div class="review-stat-row"><span>${lbl}</span><b>${valSign}${unit}</b>${diffHtml}</div>`;
         })
         .join("");
 
@@ -355,9 +363,11 @@ export class ItemReviewTooltip {
         : def.seasonalBannerId
           ? `<div class="review-doll-note" style="border-left-color:#9b3fe0;color:#41126b">✦ ĐỘC QUYỀN RƯƠNG GACHA MÙA [G]</div>`
           : "";
-      const passiveHtml = def.passiveDesc
-        ? `<div class="review-doll-note" style="border-left-color:#b85a14;color:#4a2308">✦ ${def.passiveDesc}</div>`
-        : "";
+      const passiveHtml = def.passive
+        ? `<div class="review-doll-note" style="border-left-color:${def.passive.isCurse ? "#f43f5e" : "#f59e0b"};color:${def.passive.isCurse ? "#881337" : "#4a2308"}">✦ <b>${def.passive.name}</b>${def.passive.cooldownSec ? ` (CD ${def.passive.cooldownSec}s)` : ""}: ${def.passive.description}</div>`
+        : def.passiveDesc
+          ? `<div class="review-doll-note" style="border-left-color:#b85a14;color:#4a2308">✦ ${def.passiveDesc}</div>`
+          : "";
       const hiddenSourceNote = def.isHidden
         ? `<div class="review-doll-note" style="border-left-color:#ff9922;color:#5c2106">✦ CỔ VẬT ẨN · ${
             def.hiddenSource === "craft_only"
@@ -368,18 +378,20 @@ export class ItemReviewTooltip {
 
       // Set bonus block
       let setHtml = "";
-      if (def.setId && SET_BONUSES[def.setId]) {
-        const setDef = SET_BONUSES[def.setId];
+      if (def.setId && ALL_SET_BONUSES[def.setId]) {
+        const setDef = ALL_SET_BONUSES[def.setId];
         let equippedPieces = 0;
         for (const s of EQUIP_SLOTS) {
           const eq = this.game.inv.equipment[s];
           if (eq && ITEMS[eq.defId]?.setId === def.setId) equippedPieces++;
         }
+        const topLine = setDef.maxPieces === 3 ? setDef.threePieceLabel : setDef.fourPieceLabel;
+        const topActive = setDef.maxPieces === 3 ? equippedPieces >= 3 : equippedPieces >= 4;
         setHtml = `
           <div class="review-set-box">
-            <div class="review-set-title">✦ BỘ: ${setDef.name} (${equippedPieces}/4)</div>
+            <div class="review-set-title">✦ BỘ: ${setDef.name} (${equippedPieces}/${setDef.maxPieces})</div>
             <div class="review-set-line ${equippedPieces >= 2 ? "on" : ""}">${setDef.twoPieceLabel}</div>
-            <div class="review-set-line ${equippedPieces >= 4 ? "on" : ""}">${setDef.fourPieceLabel}</div>
+            ${topLine ? `<div class="review-set-line ${topActive ? "on" : ""}">${topLine}</div>` : ""}
           </div>
         `;
       }
@@ -469,7 +481,7 @@ export class ItemReviewTooltip {
       </div>
       <div class="rope-divider"></div>
       ${bodyHtml}
-      <div class="review-lore">“${def.desc}”</div>
+      <div class="review-lore">“${def.lore ?? def.desc}”</div>
       <div class="rope-divider"></div>
       <div class="review-foot">
         <span>${footerLeft}</span>

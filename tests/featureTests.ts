@@ -20,6 +20,8 @@ import { posedStyled } from "../src/vfx/pixelfx/core/index.js";
 import { GACHA_ALTAR_POS, STORAGE_CHEST_POS, TOWN_BOUNDS } from "../src/data/worldConfig";
 import { STARTER_WEAPON_BY_CLASS } from "../src/data/equipments";
 import {
+  CORE_16_ITEMS,
+  CORE_MATERIALS,
   ITEMS,
   MERCHANT_STOCK,
   canClassEquip,
@@ -28,6 +30,8 @@ import {
   pickRandomEquipByRarity,
   resolveClassReward,
 } from "../src/data/items";
+import { CORE_SET_BONUSES } from "../src/data/sets";
+import { ItemEffectSystem } from "../src/systems/ItemEffectSystem";
 import { BOSS_CODEX, LORE_TABLETS, WORLD_PROLOGUE } from "../src/data/lore";
 import { QUESTS } from "../src/data/quests";
 import { FORGE_RECIPES } from "../src/data/recipes";
@@ -2219,8 +2223,222 @@ runTest("Auto-Sell Low-Rarity Gear, 4-Tier Backpack Upgrades (40->80 Slots) & Pe
   assert.equal(MAX_STASH_SLOTS, 80);
 });
 
+// =========================================================================
+// 17. 16 CORE ITEMS, PASSIVES, 3-PIECE SET BONUSES, CURSED & HIDDEN FORGE
+// =========================================================================
+runTest("16 Core Items, Passives, 3-Piece Set Bonuses, Hidden Forge Recipes & Cursed Guards", () => {
+  const iconFrames = codixelIconsMeta.frames as Record<string, unknown>;
+  const core16List = Object.values(CORE_16_ITEMS);
+  const coreMatsList = Object.values(CORE_MATERIALS);
+  assert.equal(core16List.length, 16, "Exactly 16 core items registered");
+  assert.equal(coreMatsList.length, 6, "Exactly 6 core Boss/Zone materials registered");
+
+  // 1. Validate sprites, Vietnamese lore, class locks & weapon skills for all 16 items + 6 materials
+  for (const def of [...core16List, ...coreMatsList]) {
+    assert.ok(ITEMS[def.id], `${def.id} merged into ITEMS`);
+    assert.ok(def.spriteKey && iconFrames[def.spriteKey], `${def.id} has valid codixel icon (${def.spriteKey})`);
+  }
+  for (const def of core16List) {
+    assert.ok(def.lore && def.lore.trim().length > 10, `${def.id} has rich Vietnamese lore`);
+    if (def.slot === "weapon") {
+      assert.ok(def.requiredClass && def.requiredClass !== "all", `Weapon ${def.id} is class-locked`);
+      assert.ok(getWeaponSkillForItem(def.id), `Weapon ${def.id} maps to a valid [E] skill`);
+    }
+  }
+
+  // 2. Cursed item guard: ac_cracked_pact is never auto-sold
+  const guardInv = new InventorySystem();
+  guardInv.resetStarterKit("prism_knight");
+  guardInv.setAutoSell("rare", true);
+  const pactInst = createItemInstance("ac_cracked_pact", 1, 0);
+  assert.equal(guardInv.shouldAutoSell(pactInst, "prism_knight"), false, "Cursed item is never auto-sold");
+
+  // 3. Equip/unequip updates player stats & activates 2/3 and 3/3 Set Bonuses + Set Aura
+  const h = makeTestHarness("bit_rogue");
+  const fx = new ItemEffectSystem();
+  h.ctx.itemEffects = fx;
+  const baseAtk = h.player.atk;
+  const baseHp = h.player.maxHp;
+
+  h.inv.addItem("hm_moss_hood", 1, 0);
+  h.inv.addItem("ar_briar_cloak", 1, 0);
+  h.inv.addItem("wp_briar_dagger", 1, 0);
+  const hoodUid = h.inv.bag.find((b) => b.defId === "hm_moss_hood")!.uid;
+  const cloakUid = h.inv.bag.find((b) => b.defId === "ar_briar_cloak")!.uid;
+  const dagUid = h.inv.bag.find((b) => b.defId === "wp_briar_dagger")!.uid;
+
+  assert.equal(h.inv.equipFromBag(hoodUid, "bit_rogue").ok, true);
+  assert.equal(h.inv.equipFromBag(cloakUid, "bit_rogue").ok, true);
+  recalculatePlayerStats(h.player, h.inv, false);
+  const twoPc = h.inv.getActiveSetBonuses("bit_rogue").find((s) => s.def.id === "set_forest");
+  assert.ok(twoPc && twoPc.twoActive && !twoPc.threeActive, "Forest set activates (2/3) with 2 pieces");
+  assert.equal(h.player.activeSetAuraColor, null, "No 3-piece aura at (2/3)");
+
+  assert.equal(h.inv.equipFromBag(dagUid, "bit_rogue").ok, true);
+  recalculatePlayerStats(h.player, h.inv, false);
+  const threePc = h.inv.getActiveSetBonuses("bit_rogue").find((s) => s.def.id === "set_forest");
+  assert.ok(threePc && threePc.threeActive, "Forest set activates (3/3) with 3 pieces");
+  assert.equal(h.player.activeSetAuraColor, CORE_SET_BONUSES.set_forest.threePieceAuraColor, "3-piece aura color active");
+  assert.ok(h.player.atk > baseAtk && h.player.maxHp > baseHp, "Equipping gear + set increases player stats");
+  assert.equal(h.player.aspdPct, 27, "Dao Găm (+12% ASPD) + Set Rừng 3/3 (+15% ASPD) = +27% ASPD");
+
+  assert.equal(h.inv.unequipSlot("weapon"), true);
+  recalculatePlayerStats(h.player, h.inv, false);
+  assert.equal(h.player.activeSetAuraColor, null, "Unequipping piece disables 3-piece aura");
+
+  // 4. Combat passives & consumables verification
+  // 4a. Bleed on Crit (wp_briar_dagger)
+  h.inv.equipFromBag(dagUid, "bit_rogue");
+  recalculatePlayerStats(h.player, h.inv, false);
+  const targetA = spawnDummyEnemy(h.spawner, h.player.x + 24, h.player.y, "null_slime");
+  targetA.maxHp = 9999;
+  targetA.hp = 9999;
+  fx.onHit(h.ctx, targetA, 40, true);
+  fx.onHit(h.ctx, targetA, 40, true);
+  assert.equal(targetA.bleedStacks, 2, "Crit with wp_briar_dagger stacks bleed");
+  fx.update(h.ctx, 0.7, (t, d) => {
+    t.hp -= d;
+  });
+  assert.ok(targetA.hp < 9999, "Bleed DOT ticks enemy HP down");
+
+  // 4b. Chain Lightning every 3rd hit (wp_spark_staff)
+  const mh = makeTestHarness("chroma_mage");
+  const mfx = new ItemEffectSystem();
+  mh.ctx.itemEffects = mfx;
+  mh.inv.addItem("wp_spark_staff", 1, 0);
+  mh.inv.equipFromBag(mh.inv.bag.find((b) => b.defId === "wp_spark_staff")!.uid, "chroma_mage");
+  recalculatePlayerStats(mh.player, mh.inv, false);
+  assert.equal(mh.player.mag, 16, "wp_spark_staff grants +16 MAG");
+  const m1 = spawnDummyEnemy(mh.spawner, mh.player.x + 25, mh.player.y, "null_slime");
+  const m2 = spawnDummyEnemy(mh.spawner, mh.player.x + 55, mh.player.y, "null_slime");
+  const m3 = spawnDummyEnemy(mh.spawner, mh.player.x + 75, mh.player.y, "null_slime");
+  m1.hp = m1.maxHp = 500;
+  m2.hp = m2.maxHp = 500;
+  m3.hp = m3.maxHp = 500;
+  const chainFn = (tgt: typeof m1, d: number) => {
+    tgt.hp -= d;
+  };
+  mfx.onHit(mh.ctx, m1, 40, false, { dealPassiveDamage: chainFn });
+  mfx.onHit(mh.ctx, m1, 40, false, { dealPassiveDamage: chainFn });
+  assert.equal(m2.hp, 500, "No chain lightning before 3rd hit");
+  mfx.onHit(mh.ctx, m1, 40, false, { dealPassiveDamage: chainFn });
+  assert.equal(m2.hp, 480, "3rd hit arcs 50% DMG to 1st nearby target");
+  assert.equal(m3.hp, 480, "3rd hit arcs 50% DMG to 2nd nearby target");
+
+  // 4c. Blood Shield + Cracked Pact + Undying Wall + Starfall Crit
+  const kh = makeTestHarness("prism_knight");
+  const kfx = new ItemEffectSystem();
+  kh.ctx.itemEffects = kfx;
+  kh.inv.addItem("ar_bloodstone_plate", 1, 0);
+  kh.inv.addItem("ac_cracked_pact", 1, 0);
+  kh.inv.addItem("wp_starfall_blade", 1, 0);
+  kh.inv.equipFromBag(kh.inv.bag.find((b) => b.defId === "ar_bloodstone_plate")!.uid, "prism_knight");
+  kh.inv.equipFromBag(kh.inv.bag.find((b) => b.defId === "ac_cracked_pact")!.uid, "prism_knight");
+  kh.inv.equipFromBag(kh.inv.bag.find((b) => b.defId === "wp_starfall_blade")!.uid, "prism_knight");
+  recalculatePlayerStats(kh.player, kh.inv, false);
+  assert.ok(kh.player.critDmgPct === 35, "Nhẫn Giao Ước Rạn Nứt grants +35% CritDMG");
+
+  const victim = spawnDummyEnemy(kh.spawner, kh.player.x + 24, kh.player.y, "null_slime");
+  victim.hp = victim.maxHp = 1000;
+  kfx.onHit(kh.ctx, victim, 50, true, {
+    dealPassiveDamage: (t, d) => {
+      t.hp -= d;
+    },
+  });
+  assert.ok(victim.hp < 1000, "Thánh Kiếm Sao Rơi crit triggers Starfall AoE");
+  assert.ok(kfx.getCooldown("starfall_crit") > 5.5, "Starfall crit enters 6s cooldown");
+
+  kh.player.hp = 2; // Test pact_drain never kills
+  kfx.onKill(kh.ctx, victim);
+  assert.ok(kfx.shieldHp > 0 && kfx.bloodShieldStacks === 1, "Giáp Huyết Thạch grants shield on kill");
+  assert.ok(kh.player.hp >= 1, "Nhẫn Giao Ước Rạn Nứt never kills player on kill drain");
+  const rem = kfx.onTakeDamage(kh.ctx, 5, kh.player.x + 10, kh.player.y);
+  assert.equal(rem, 0, "Blood Shield absorbs incoming damage");
+
+  // Swap to Chiến Giáp Vệ Binh Bất Diệt and verify fatal interception
+  kh.inv.addItem("ar_aegis_mantle", 1, 0);
+  kh.inv.equipFromBag(kh.inv.bag.find((b) => b.defId === "ar_aegis_mantle")!.uid, "prism_knight");
+  recalculatePlayerStats(kh.player, kh.inv, false);
+  kh.player.hp = 0;
+  assert.equal(kfx.onFatalDamage(kh.ctx), true, "Chiến Giáp Vệ Binh Bất Diệt blocks lethal hit");
+  assert.equal(kh.player.hp, 1, "Player survives at 1 HP");
+  assert.ok(kh.player.invuln >= 2.0, "Player gains 2s invulnerability");
+  assert.equal(kfx.onFatalDamage(kh.ctx), false, "Undying wall respects 45s cooldown");
+
+  // 4d. Mirage Vial stealth & aggro drop
+  const aggroMob = spawnDummyEnemy(kh.spawner, kh.player.x + 30, kh.player.y, "null_slime");
+  aggroMob.state = "aggro";
+  assert.equal(kfx.onUseConsumable(kh.ctx, ITEMS.cs_mirage_vial), true);
+  assert.ok((kh.player.stealthTime ?? 0) >= 2.4, "Mirage vial grants 2.5s stealth");
+  assert.equal(aggroMob.state, "patrol", "Mirage vial drops enemy aggro");
+
+  // 4e. Fate Die reroll at Forge
+  const forge = new ForgeSystem();
+  kh.inv.addItem("cs_fate_die", 1, 0);
+  const bladeUid = kh.inv.equipment.weapon!.uid;
+  const rerollRes = forge.rerollSubstatsWithFateDie(bladeUid, kh.inv);
+  assert.equal(rerollRes.ok, true, "Fate Die rerolls equipment substats at Forge");
+  assert.equal(kh.inv.countItem("cs_fate_die"), 0, "Fate Die is consumed on reroll");
+  assert.ok(Object.keys(kh.inv.equipment.weapon!.bonusStats ?? {}).length >= 2, "Reroll populates fresh bonusStats");
+
+  // 5. Hidden Forge Recipes secrecy & unlock conditions
+  const starRec = FORGE_RECIPES.find((r) => r.id === "rec_wp_starfall_blade")!;
+  const aegisRec = FORGE_RECIPES.find((r) => r.id === "rec_ar_aegis_mantle")!;
+  assert.ok(starRec?.isHidden && aegisRec?.isHidden, "Both Starfall Blade and Aegis Mantle recipes are isHidden");
+
+  const secretInv = new InventorySystem();
+  secretInv.resetStarterKit("prism_knight");
+  secretInv.gold = 9999;
+  const unlockedItems = new Set<string>();
+  const unlockedRecipes = new Set<string>();
+  const sfxCheck = new ItemEffectSystem();
+
+  assert.equal(
+    sfxCheck.isHiddenRecipeUnlocked(starRec, secretInv, unlockedItems, unlockedRecipes),
+    false,
+    "Starfall recipe stays hidden before Boss 2 kill with Vanguard sword"
+  );
+  assert.equal(
+    forge.canCraft(starRec, secretInv, 20, false).ok,
+    false,
+    "Forge blocks crafting hidden Starfall recipe when locked"
+  );
+  assert.deepEqual(
+    sfxCheck.checkBossKillHiddenUnlocks("boss_blight_root", secretInv),
+    [],
+    "Killing Boss 2 WITHOUT Kiếm Sứt Mẻ Vệ Binh does NOT unlock Starfall recipe"
+  );
+  secretInv.addItem("wp_vanguard_chipped", 1, 0);
+  const unlockedByBoss2 = sfxCheck.checkBossKillHiddenUnlocks("boss_blight_root", secretInv);
+  assert.deepEqual(
+    unlockedByBoss2,
+    ["rec_wp_starfall_blade"],
+    "Killing Boss 2 WITH Kiếm Sứt Mẻ Vệ Binh unlocks Starfall recipe"
+  );
+  unlockedByBoss2.forEach((id) => unlockedRecipes.add(id));
+  assert.equal(
+    sfxCheck.isHiddenRecipeUnlocked(starRec, secretInv, unlockedItems, unlockedRecipes),
+    true,
+    "Starfall recipe is revealed after unlock"
+  );
+
+  // Aegis Mantle recipe stays hidden until owning BOTH ar_bloodstone_plate and ar_briar_cloak
+  secretInv.addItem("ar_bloodstone_plate", 1, 0);
+  assert.equal(
+    sfxCheck.isHiddenRecipeUnlocked(aegisRec, secretInv, unlockedItems, unlockedRecipes),
+    false,
+    "Aegis Mantle recipe stays hidden with only 1 of 2 required armors"
+  );
+  secretInv.addItem("ar_briar_cloak", 1, 0);
+  assert.equal(
+    sfxCheck.isHiddenRecipeUnlocked(aegisRec, secretInv, unlockedItems, unlockedRecipes),
+    true,
+    "Aegis Mantle recipe unlocks once owning both Giáp Huyết Thạch & Áo Choàng Gai"
+  );
+});
+
 // ============================================================================
-// 13. PHASE 2: DEDICATED CO-OP SERVER, 6-CHAR ROOMS, CROSS-PLAYER REACTIONS & LOOT
+// 18. PHASE 2: DEDICATED CO-OP SERVER, 6-CHAR ROOMS, CROSS-PLAYER REACTIONS & LOOT
 // ============================================================================
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function waitUntil(cond: () => boolean, timeoutMs = 1500) {

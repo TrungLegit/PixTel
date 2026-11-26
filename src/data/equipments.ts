@@ -8,6 +8,7 @@ export const RARITY_ENHANCE_MULT: Record<Rarity, number> = {
   uncommon: 1.15,
   rare: 1.3,
   epic: 1.55,
+  cursed: 1.65,
   legendary: 1.85,
 };
 

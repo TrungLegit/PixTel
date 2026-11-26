@@ -375,6 +375,157 @@ export const FORGE_RECIPES: RecipeDef[] = [
     ],
     desc: "Kết tinh Trái Tim Thất Sắc Iris (Mọi Phản Ứng hồi +4% HP, +10 Stamina & N3 gắn Ấn Sắc Độ)!",
   },
+  // === CHẾ TẠO 16 VẬT PHẨM CỐT LÕI & CÔNG THỨC LÒ RÈN ẨN ===
+  {
+    id: "rec_hm_moss_hood",
+    resultDefId: "hm_moss_hood",
+    goldCost: 65,
+    materials: [
+      { defId: "mat_ancient_sap", qty: 2 },
+      { defId: "mat_iron_ore", qty: 2 },
+    ],
+    desc: "Khâu Mũ Trùm Rêu Phong (Set Rừng Sương Mù) giảm 25% tầm phát hiện của quái.",
+  },
+  {
+    id: "rec_ar_briar_cloak",
+    resultDefId: "ar_briar_cloak",
+    goldCost: 135,
+    materials: [
+      { defId: "mat_ancient_sap", qty: 3 },
+      { defId: "mat_prism_shard", qty: 2 },
+    ],
+    desc: "Dệt Áo Choàng Gai Cổ Thụ (Set Rừng Sương Mù) phản 20% sát thương & hồi máu khi đứng yên.",
+  },
+  {
+    id: "rec_wp_briar_dagger",
+    resultDefId: "wp_briar_dagger",
+    goldCost: 145,
+    materials: [
+      { defId: "mat_ancient_sap", qty: 3 },
+      { defId: "mat_iron_ore", qty: 4 },
+      { defId: "mat_prism_shard", qty: 2 },
+    ],
+    desc: "Vót Dao Găm Gai Rừng (Set Rừng Sương Mù) gây Chảy Máu cộng dồn khi chí mạng.",
+  },
+  {
+    id: "rec_wp_spark_staff",
+    resultDefId: "wp_spark_staff",
+    goldCost: 155,
+    materials: [
+      { defId: "mat_quartz_shard", qty: 4 },
+      { defId: "mat_elder_core", qty: 1 },
+      { defId: "mat_prism_shard", qty: 2 },
+    ],
+    desc: "Chạm khắc Trượng Lôi Đình Tí Hon phóng Sét Dây Chuyền mỗi đòn thứ 3.",
+  },
+  {
+    id: "rec_hm_ash_visor",
+    resultDefId: "hm_ash_visor",
+    goldCost: 135,
+    materials: [
+      { defId: "mat_eclipse_coal", qty: 2 },
+      { defId: "mat_iron_ore", qty: 4 },
+    ],
+    desc: "Rèn Mũ Sắt Lò Tro (Set Tâm Lò) miễn nhiễm Thiêu Đốt.",
+  },
+  {
+    id: "rec_ac_ember_crest",
+    resultDefId: "ac_ember_crest",
+    goldCost: 145,
+    materials: [
+      { defId: "mat_eclipse_coal", qty: 2 },
+      { defId: "mat_amber_gem", qty: 2 },
+      { defId: "mat_prism_shard", qty: 2 },
+    ],
+    desc: "Đúc Huy Hiệu Tro Tàn (Set Tâm Lò) bùng nổ lửa tạo khiên khi HP < 30%.",
+  },
+  {
+    id: "rec_wp_forge_hammer",
+    resultDefId: "wp_forge_hammer",
+    goldCost: 270,
+    materials: [
+      { defId: "mat_eclipse_coal", qty: 3 },
+      { defId: "mat_amber_gem", qty: 4 },
+      { defId: "mat_iron_ore", qty: 6 },
+    ],
+    desc: "Rèn Búa Tạ Lò Nung (Set Tâm Lò) — đòn thứ 4 đập đất làm choáng 1s.",
+  },
+  {
+    id: "rec_ar_bloodstone_plate",
+    resultDefId: "ar_bloodstone_plate",
+    goldCost: 280,
+    materials: [
+      { defId: "mat_blood_shard", qty: 3 },
+      { defId: "mat_amber_gem", qty: 4 },
+      { defId: "mat_prism_shard", qty: 4 },
+    ],
+    desc: "Đúc Giáp Huyết Thạch (Set Nhật Thực) tạo khiên 5% MaxHP mỗi mạng hạ gục.",
+  },
+  {
+    id: "rec_wp_eclipse_reaver",
+    resultDefId: "wp_eclipse_reaver",
+    goldCost: 310,
+    materials: [
+      { defId: "mat_blood_shard", qty: 3 },
+      { defId: "mat_void_prism", qty: 2 },
+      { defId: "mat_prism_shard", qty: 4 },
+    ],
+    desc: "Rèn Lưỡi Hái Nhật Thực (Set Nhật Thực) hút 8% máu & chém lan đòn thứ 4.",
+  },
+  {
+    id: "rec_cs_mirage_vial",
+    resultDefId: "cs_mirage_vial",
+    goldCost: 35,
+    materials: [
+      { defId: "mat_ancient_sap", qty: 1 },
+      { defId: "mat_glitch_core", qty: 2 },
+    ],
+    desc: "Chưng cất Lọ Sương Mù Ảo Ảnh — Tàng hình 2.5s cắt aggro & +40% tốc chạy.",
+  },
+  {
+    id: "rec_cs_fate_die",
+    resultDefId: "cs_fate_die",
+    goldCost: 140,
+    materials: [
+      { defId: "mat_prism_shard", qty: 3 },
+      { defId: "mat_blood_shard", qty: 1 },
+    ],
+    desc: "Chế tác Xúc Xắc Đổi Mệnh — Dùng tại Lò Rèn để reroll chỉ số phụ trang bị.",
+  },
+  // === 2 CÔNG THỨC LÒ RÈN ẨN (isHidden: true — ẨN HOÀN TOÀN ĐẾN KHI ĐỦ ĐIỀU KIỆN) ===
+  {
+    id: "rec_wp_starfall_blade",
+    resultDefId: "wp_starfall_blade",
+    goldCost: 520,
+    materials: [
+      { defId: "wp_vanguard_chipped", qty: 1 },
+      { defId: "mat_meteor_shard", qty: 2 },
+      { defId: "mat_elder_core", qty: 1 },
+      { defId: "mat_prism_shard", qty: 6 },
+    ],
+    isHidden: true,
+    isHiddenRecipe: true,
+    hiddenUnlockRule: "vanguard_boss2_kill",
+    unlockHint: "Mang Kiếm Sứt Mẻ Vệ Binh trong túi khi hạ Boss Vùng 2 (Blight Root).",
+    desc: "Đúc lại Thánh Kiếm Sao Rơi từ Kiếm Sứt Mẻ Vệ Binh và Mảnh Đá Sao Rơi.",
+  },
+  {
+    id: "rec_ar_aegis_mantle",
+    resultDefId: "ar_aegis_mantle",
+    goldCost: 560,
+    materials: [
+      { defId: "ar_bloodstone_plate", qty: 1 },
+      { defId: "ar_briar_cloak", qty: 1 },
+      { defId: "mat_eclipse_heart", qty: 1 },
+      { defId: "mat_blood_shard", qty: 3 },
+    ],
+    isHidden: true,
+    isHiddenRecipe: true,
+    hiddenUnlockRule: "dual_armor_owned",
+    unlockHint: "Sở hữu đồng thời Giáp Huyết Thạch và Áo Choàng Gai Cổ Thụ.",
+    desc: "Hợp nhất Giáp Huyết Thạch & Áo Choàng Gai thành Chiến Giáp Vệ Binh Bất Diệt.",
+  },
+
   // === CHẾ TẠO 4 CHÌA KHÓA RƯƠNG GACHA THEO MÙA (BIOME KEYS) ===
   ...GACHA_KEY_RECIPES,
   // === BẢN VẼ CỔ VẬT ẨN (CRAFT-ONLY) ===

@@ -8,6 +8,7 @@ import {
   getItemEffectiveStats,
   getTierBadge,
 } from "../data/items";
+import { ALL_SET_BONUSES } from "../data/sets";
 import { EQUIP_SLOTS, type AutoSellMode, type EquipSlot, type StatAllocKey } from "../data/types";
 import { getWeaponSkillForItem } from "../data/weaponSkills";
 import { MAX_EXPANDED_BAG_SLOTS } from "../systems/inventorySystem";
@@ -37,6 +38,9 @@ export class InventoryModalUI {
   private heroCtx: CanvasRenderingContext2D;
   private heroClassEl: HTMLElement;
   private equipEl: HTMLElement;
+  private equipLeftEl: HTMLElement | null;
+  private equipRightEl: HTMLElement | null;
+  private quickConsEl: HTMLElement | null;
   private statsEl: HTMLElement;
   private allocEl: HTMLElement | null;
   private bagEl: HTMLElement;
@@ -64,6 +68,9 @@ export class InventoryModalUI {
     this.heroCtx.imageSmoothingEnabled = false;
     this.heroClassEl = document.getElementById("inv-hero-class")!;
     this.equipEl = document.getElementById("inv-equip-slots")!;
+    this.equipLeftEl = document.getElementById("inv-equip-left");
+    this.equipRightEl = document.getElementById("inv-equip-right");
+    this.quickConsEl = document.getElementById("inv-quick-consumables");
     this.statsEl = document.getElementById("inv-hero-stats")!;
     this.allocEl = document.getElementById("inv-stat-alloc");
     this.bagEl = document.getElementById("inv-bag-grid")!;
@@ -191,7 +198,11 @@ export class InventoryModalUI {
       walkFrame,
       facing,
       this.animTime,
-      { aegisActive: p.aegisTime > 0 || p.shieldTime > 0, buffActive: p.atkBuffTime > 0 }
+      {
+        aegisActive: p.aegisTime > 0 || p.shieldTime > 0 || (p.shieldHp ?? 0) > 0,
+        buffActive: p.atkBuffTime > 0,
+        setAuraColor: p.activeSetAuraColor,
+      }
     );
   }
 
@@ -229,14 +240,14 @@ export class InventoryModalUI {
 
     // 1. Derived Hero Stats (compact 4-col grid)
     this.statsEl.innerHTML = `
-      <div class="stat-pill"><span>HP</span><b style="color:#44ee88">${Math.ceil(p.hp)}/${p.maxHp}</b></div>
-      <div class="stat-pill"><span>ATK</span><b style="color:#ff8844">${p.atk}</b></div>
+      <div class="stat-pill"><span>HP</span><b style="color:#4ade80">${Math.ceil(p.hp)}/${p.maxHp}</b></div>
+      <div class="stat-pill"><span>ATK</span><b style="color:#fb923c">${p.atk}</b></div>
+      <div class="stat-pill"><span>MAG</span><b style="color:#60a5fa">${p.mag ?? 0}</b></div>
       <div class="stat-pill"><span>DEF</span><b style="color:#5ef2ff">${p.def}</b></div>
-      <div class="stat-pill"><span>CRIT</span><b style="color:#ff66d8">${p.crit}%</b></div>
-      <div class="stat-pill"><span>SPD</span><b style="color:#ffee55">${p.spd}</b></div>
-      <div class="stat-pill"><span>ELEM</span><b style="color:#c266ff">+${p.elementBonus}%</b></div>
-      <div class="stat-pill"><span>VÀNG</span><b style="color:#ffe066">${inv.gold}G</b></div>
-      <div class="stat-pill"><span>MẢNH LK</span><b style="color:#5ef2ff">${shardsCount}</b></div>
+      <div class="stat-pill"><span>CRIT</span><b style="color:#f472b6">${p.crit}%</b></div>
+      <div class="stat-pill"><span>ASPD</span><b style="color:#facc15">+${p.aspdPct ?? 0}%</b></div>
+      <div class="stat-pill"><span>SPD</span><b style="color:#fde047">${p.spd}</b></div>
+      <div class="stat-pill"><span>VÀNG</span><b style="color:#facc15">${inv.gold}G</b></div>
     `;
 
     // 1a. Stat Allocation Panel (STR / VIT / AGI / CRT)
@@ -284,55 +295,78 @@ export class InventoryModalUI {
     // 1b. Active Set Bonuses
     const setsEl = document.getElementById("inv-set-bonuses");
     if (setsEl) {
-      const sets = inv.getActiveSetBonuses();
+      const sets = inv.getActiveSetBonuses(p.classId);
       if (sets.length === 0) {
         setsEl.innerHTML = "";
       } else {
         setsEl.innerHTML = sets
-          .map(
-            (s) => `
+          .map((s) => {
+            const topActive = s.def.maxPieces === 3 ? s.threeActive : s.fourActive;
+            const topLabel = s.def.maxPieces === 3 ? s.def.threePieceLabel ?? "" : s.def.fourPieceLabel ?? "";
+            return `
             <div class="set-pill" style="border-color:${s.def.color}">
-              <b style="color:${s.def.color}">★ ${s.def.name} (${s.count}/4)</b>
-              <div style="color:${s.twoActive ? "#44ee88" : "#6c738e"}">${s.def.twoPieceLabel}</div>
-              <div style="color:${s.fourActive ? "#ffe066" : "#6c738e"}">${s.def.fourPieceLabel}</div>
+              <b style="color:${s.def.color}">★ ${s.def.name} (${s.count}/${s.def.maxPieces})</b>
+              <div style="color:${s.twoActive ? "#4ade80" : "#6c738e"}">${s.def.twoPieceLabel}</div>
+              ${topLabel ? `<div style="color:${topActive ? "#facc15" : "#6c738e"}">${topLabel}</div>` : ""}
             </div>
-          `
-          )
+          `;
+          })
           .join("");
       }
     }
 
-    // 2. 5 Equipment Slots (Helmet, Armor, Weapon, Boots, Accessory)
-    this.equipEl.innerHTML = EQUIP_SLOTS.map((slot) => {
+    // 2. Equipment Slots around Paper-Doll (Left: Helmet, Armor, Weapon | Right: Boots, Accessory) + 2 Quick Consumables
+    const renderEquipTile = (slot: EquipSlot) => {
       const it = inv.equipment[slot];
       if (!it) {
         return `
-          <div class="equip-slot empty">
-            <div class="equip-slot-info">
-              <div class="slot-top"><span class="slot-lbl">${SLOT_LABELS[slot]}</span></div>
-              <div class="slot-none">Trống</div>
-            </div>
+          <div class="pd-slot empty" title="${SLOT_LABELS[slot]}">
+            <span class="pd-slot-tag">${SLOT_LABELS[slot]}</span>
+            <span class="pd-slot-empty">—</span>
           </div>
         `;
       }
       const def = ITEMS[it.defId];
       const col = RARITY_INFO[def.rarity].color;
-      const tInfo = getTierBadge(def);
       const sel = this.selectedUid === it.uid ? "selected" : "";
       return `
-        <div class="equip-slot rarity-${def.rarity} ${sel}" data-uid="${it.uid}" data-review-uid="${it.uid}" style="border-color:${col}">
+        <div class="pd-slot rarity-${def.rarity} ${sel}" data-uid="${it.uid}" data-review-uid="${it.uid}" style="border-color:${col}" title="${def.name}">
           <canvas class="px-item-icon" width="32" height="32" data-icon-def="${def.id}" data-icon-enh="${it.enhanceLevel}"></canvas>
-          <div class="equip-slot-info">
-            <div class="slot-top">
-              <span class="slot-lbl">${SLOT_LABELS[slot]}</span>
-              <span class="tier-pill" style="color:${tInfo.color};background:${tInfo.bg}">${tInfo.badge}</span>
-              ${it.enhanceLevel > 0 ? `<span class="enh-tag">+${it.enhanceLevel}</span>` : ""}
-            </div>
-            <div class="slot-name" style="color:${col}">${def.name}</div>
-          </div>
+          <span class="pd-slot-tag">${SLOT_LABELS[slot]}</span>
+          ${it.enhanceLevel > 0 ? `<span class="bag-enh">+${it.enhanceLevel}</span>` : ""}
         </div>
       `;
-    }).join("");
+    };
+
+    if (this.equipLeftEl && this.equipRightEl) {
+      this.equipLeftEl.innerHTML = (["helmet", "armor", "weapon"] as EquipSlot[]).map(renderEquipTile).join("");
+      this.equipRightEl.innerHTML = (["boots", "accessory"] as EquipSlot[]).map(renderEquipTile).join("");
+    } else {
+      this.equipEl.innerHTML = EQUIP_SLOTS.map(renderEquipTile).join("");
+    }
+
+    if (this.quickConsEl) {
+      const quickItems = inv.bag.filter((b) => ITEMS[b.defId]?.category === "consumable").slice(0, 2);
+      let qHtml = "";
+      for (let i = 0; i < 2; i++) {
+        const qIt = quickItems[i];
+        if (!qIt) {
+          qHtml += `<div class="pd-slot quick-cons empty" title="Tiêu hao nhanh [${i + 1}]"><span class="pd-slot-tag">Dùng [${i + 1}]</span><span class="pd-slot-empty">—</span></div>`;
+        } else {
+          const qDef = ITEMS[qIt.defId];
+          const col = RARITY_INFO[qDef.rarity].color;
+          const sel = this.selectedUid === qIt.uid ? "selected" : "";
+          qHtml += `
+            <div class="pd-slot quick-cons rarity-${qDef.rarity} ${sel}" data-uid="${qIt.uid}" data-bag="1" data-quick-use="${qDef.id}" data-review-uid="${qIt.uid}" style="border-color:${col}" title="${qDef.name}">
+              <canvas class="px-item-icon" width="32" height="32" data-icon-def="${qDef.id}" data-icon-enh="0"></canvas>
+              <span class="bag-qty">x${qIt.qty}</span>
+              <span class="pd-slot-tag">${qDef.name}</span>
+            </div>
+          `;
+        }
+      }
+      this.quickConsEl.innerHTML = qHtml;
+    }
 
     // 3. Dynamic Bag Grid (40..80 slots) + Backpack Upgrade + Auto-Sell Low-Rarity Bar + Selective Quick Sell
     if (this.bagTitleEl) {
@@ -418,7 +452,7 @@ export class InventoryModalUI {
         this.render();
       });
       el.addEventListener("mouseenter", () => {
-        if (!this.selectedUid && this.hoveredUid !== uid) {
+        if (this.hoveredUid !== uid) {
           this.hoveredUid = uid;
           this._renderDetail();
         }
@@ -426,9 +460,18 @@ export class InventoryModalUI {
       el.addEventListener("mouseleave", () => {
         if (this.hoveredUid === uid) {
           this.hoveredUid = null;
-          if (!this.selectedUid) this._renderDetail();
+          this._renderDetail();
         }
       });
+      const quickUseId = (el as HTMLElement).dataset.quickUse;
+      if (quickUseId) {
+        el.addEventListener("dblclick", () => {
+          if (this.game.useConsumableById(quickUseId)) {
+            this.game.refreshHud();
+            this.render();
+          }
+        });
+      }
     });
 
     this._renderDetail();
@@ -609,9 +652,10 @@ export class InventoryModalUI {
   }
 
   private _renderDetail() {
-    const activeUid = this.selectedUid ?? this.hoveredUid;
+    const activeUid = this.hoveredUid ?? this.selectedUid;
     if (!activeUid) {
-      this.detailEl.innerHTML = `<div class="detail-empty">Di chuột hoặc chọn một vật phẩm trong Túi / Ô Trang Bị để xem chỉ số so sánh, Trang bị hoặc Phân rã thành Mảnh Lăng Kính.</div>`;
+      this.detailEl.style.borderColor = "#444b70";
+      this.detailEl.innerHTML = `<div class="detail-empty">Rê chuột hoặc chọn bất kỳ vật phẩm nào trong <b>EQUIP</b> hoặc <b>BAG</b> để xem chỉ số, so sánh xanh/đỏ, nội tại, Set Bonus &amp; Lore 16-bit.</div>`;
       return;
     }
 
@@ -619,6 +663,7 @@ export class InventoryModalUI {
     if (!found) {
       if (this.selectedUid === activeUid) this.selectedUid = null;
       if (this.hoveredUid === activeUid) this.hoveredUid = null;
+      this.detailEl.style.borderColor = "#444b70";
       this.detailEl.innerHTML = `<div class="detail-empty">Chọn một vật phẩm để xem chi tiết.</div>`;
       return;
     }
@@ -627,11 +672,12 @@ export class InventoryModalUI {
     const def = ITEMS[item.defId];
     const rInfo = RARITY_INFO[def.rarity];
     const tInfo = getTierBadge(def);
+    this.detailEl.style.borderColor = rInfo.color;
 
     const classReqText =
       def.requiredClass && def.requiredClass !== "all"
-        ? ` · Yêu cầu: ${getClassDef(def.requiredClass).vnName}`
-        : "";
+        ? `Yêu cầu: ${getClassDef(def.requiredClass).vnName}`
+        : "Mọi Class";
     const classMismatch =
       def.requiredClass &&
       def.requiredClass !== "all" &&
@@ -643,16 +689,24 @@ export class InventoryModalUI {
       const diff = location === "bag" ? this.game.inv.compareWithEquipped(item) : null;
       const rows: [string, number, number | undefined, string][] = [
         ["ATK", st.atk, diff?.atk, ""],
+        ["MAG", st.mag, diff?.mag, ""],
         ["DEF", st.def, diff?.def, ""],
         ["MAX HP", st.maxHp, diff?.maxHp, ""],
+        ["ASPD", st.aspdPct, diff?.aspdPct, "%"],
         ["CRIT", st.crit, diff?.crit, "%"],
+        ["CRIT DMG", st.critDmgPct, diff?.critDmgPct, "%"],
+        ["HÚT MÁU", st.lifestealPct, diff?.lifestealPct, "%"],
+        ["KHÁNG LỬA", st.fireResPct, diff?.fireResPct, "%"],
         ["SPD", st.spd, diff?.spd, ""],
+        ["MOVE SPD", st.moveSpeedPct, diff?.moveSpeedPct, "%"],
         ["ELEM", st.elementBonus, diff?.elementBonus, "%"],
         ["STAM", st.maxStamina, diff?.maxStamina, ""],
       ];
       statsHtml = `<div class="detail-stats">${rows
         .filter(([, val, d]) => val !== 0 || (d !== undefined && d !== 0))
         .map(([lbl, val, d, unit]) => {
+          const valSign = val >= 0 ? `+${val}` : `${val}`;
+          const valCls = val < 0 ? "stat-neg" : "stat-pos";
           let diffBadge = "";
           if (d !== undefined && d !== 0) {
             diffBadge =
@@ -660,7 +714,7 @@ export class InventoryModalUI {
                 ? `<span class="diff-up">(+${d}${unit} ▲)</span>`
                 : `<span class="diff-down">(${d}${unit} ▼)</span>`;
           }
-          return `<div class="detail-stat-line"><span>${lbl}: <b>+${val}${unit}</b></span> ${diffBadge}</div>`;
+          return `<div class="detail-stat-line"><span>${lbl}: <b class="${valCls}">${valSign}${unit}</b></span> ${diffBadge}</div>`;
         })
         .join("")}</div>`;
     }
@@ -670,7 +724,7 @@ export class InventoryModalUI {
       if (location === "bag") {
         const shards = getDismantleShardYield(item);
         btns += `<button class="px-btn ${classMismatch ? "disabled" : "primary"}" id="inv-act-equip">TRANG BỊ</button>`;
-        btns += `<button class="px-btn good" id="inv-act-dismantle">PHÂN RÃ (+${shards} Mảnh LK)</button>`;
+        btns += `<button class="px-btn good" id="inv-act-dismantle">PHÂN RÃ (+${shards} LK)</button>`;
         btns += `<button class="px-btn warn" id="inv-act-sell">BÁN (+${def.sellPrice + item.enhanceLevel * 12}G)</button>`;
       } else {
         btns += `<button class="px-btn" id="inv-act-unequip">THÁO XUỐNG TÚI</button>`;
@@ -684,53 +738,67 @@ export class InventoryModalUI {
 
     const wpnSkill = def.slot === "weapon" ? getWeaponSkillForItem(def.id) : null;
     const wpnSkillLine = wpnSkill
-      ? `<div style="font-size:11px;color:${wpnSkill.accent};margin-top:3px;padding:3px 6px;background:rgba(16,12,32,0.75);border-left:2px solid ${wpnSkill.accent}">⚔ <b>Kỹ Năng Vũ Khí [E]: ${wpnSkill.name}</b> (${wpnSkill.cooldown}s) — ${wpnSkill.detailDesc}</div>`
+      ? `<div class="info-skill-box" style="border-left-color:${wpnSkill.accent};color:${wpnSkill.accent}">⚔ <b>[E] ${wpnSkill.name}</b> (${wpnSkill.cooldown}s)<div class="info-skill-desc">${wpnSkill.detailDesc}</div></div>`
       : "";
-    const exoticTagLine = def.dropOnly
-      ? `<div style="font-size:11px;color:#ff6699;margin-top:2px">★ ĐỘC LẠ (Chỉ rơi từ Quái & Boss)</div>`
-      : def.seasonalBannerId
-        ? `<div style="font-size:11px;color:#d266ff;margin-top:2px">✦ ĐỘC QUYỀN RƯƠNG GACHA MÙA [G]</div>`
+
+    const passiveObj = def.passive;
+    const passiveTitle = passiveObj
+      ? passiveObj.isCurse
+        ? `☠ CURSE · ${passiveObj.name}`
+        : `★ PASSIVE · ${passiveObj.name}`
+      : def.passiveDesc
+        ? "★ PASSIVE"
         : "";
-    const infuseLine =
-      item.enhanceLevel >= 5 && item.infusedElement
-        ? `<div style="font-size:11px;color:#5ef2ff;margin-top:2px">★ Khảm Sắc Tố: <b>${item.infusedElement.toUpperCase()}</b> (+8% ELEM & gắn Ấn)</div>`
-        : "";
-    const passiveLine = def.passiveDesc
-      ? `<div style="font-size:11px;color:#ff9922;margin-top:2px">${def.passiveDesc}</div>`
+    const passiveCd = passiveObj?.cooldownSec ? `<span class="info-cd-pill">CD ${passiveObj.cooldownSec}s</span>` : "";
+    const passiveBody = passiveObj?.description ?? def.passiveDesc ?? "";
+    const passiveBox = passiveBody
+      ? `<div class="info-passive-box ${passiveObj?.isCurse ? "is-curse" : ""}">
+           <div class="info-passive-hdr"><span>${passiveTitle}</span>${passiveCd}</div>
+           <div class="info-passive-txt">${passiveBody}</div>
+         </div>`
       : "";
-    let bonusSubLine = "";
-    if (item.bonusStats) {
-      const bits: string[] = [];
-      if (item.bonusStats.atk) bits.push(`+${item.bonusStats.atk} ATK`);
-      if (item.bonusStats.def) bits.push(`+${item.bonusStats.def} DEF`);
-      if (item.bonusStats.maxHp) bits.push(`+${item.bonusStats.maxHp} HP`);
-      const bs = item.bonusStats.spd ?? item.bonusStats.moveSpeed ?? 0;
-      if (bs) bits.push(`+${bs} SPD`);
-      const bc = item.bonusStats.crit ?? item.bonusStats.critRate ?? 0;
-      if (bc) bits.push(`+${bc}% CRIT`);
-      if (bits.length > 0) {
-        bonusSubLine = `<div class="bonus-sub-box">✡ Dòng Phụ Ma Trận: <b>${bits.join(" · ")}</b></div>`;
+
+    let setHtml = "";
+    if (def.setId && ALL_SET_BONUSES[def.setId]) {
+      const sDef = ALL_SET_BONUSES[def.setId];
+      let eqCount = 0;
+      for (const s of EQUIP_SLOTS) {
+        const eq = this.game.inv.equipment[s];
+        if (eq && ITEMS[eq.defId]?.setId === def.setId) eqCount++;
       }
+      const topLine = sDef.maxPieces === 3 ? sDef.threePieceLabel : sDef.fourPieceLabel;
+      const topOn = sDef.maxPieces === 3 ? eqCount >= 3 : eqCount >= 4;
+      setHtml = `
+        <div class="info-set-box" style="border-color:${sDef.color}">
+          <div class="info-set-hdr" style="color:${sDef.color}">SET BONUS: ${sDef.name} (${eqCount}/${sDef.maxPieces})</div>
+          <div class="info-set-row ${eqCount >= 2 ? "on" : ""}">${sDef.twoPieceLabel}</div>
+          ${topLine ? `<div class="info-set-row ${topOn ? "on" : ""}">${topLine}</div>` : ""}
+        </div>
+      `;
     }
 
+    const loreText = def.lore ?? def.desc;
+
     this.detailEl.innerHTML = `
-      <div class="detail-head" style="color:${rInfo.color}">
-        <canvas class="px-item-icon" width="32" height="32" data-icon-def="${def.id}" data-icon-enh="${item.enhanceLevel}"></canvas>
-        <span class="tier-pill" style="color:${tInfo.color};background:${tInfo.bg}">${tInfo.badge}</span>
-        <span>${def.name} ${item.enhanceLevel > 0 ? `+${item.enhanceLevel}` : ""}</span>
+      <div class="info-hero-card">
+        <div class="info-icon-frame rarity-${def.rarity}" style="border-color:${rInfo.color}">
+          <canvas class="px-item-icon" width="40" height="40" data-icon-def="${def.id}" data-icon-enh="${item.enhanceLevel}"></canvas>
+        </div>
+        <div class="info-title" style="color:${rInfo.color}">${def.name}${item.enhanceLevel > 0 ? ` +${item.enhanceLevel}` : ""}</div>
+        <div class="info-sub">
+          <span class="tier-pill" style="color:${tInfo.color};background:${tInfo.bg}">${tInfo.badge}</span>
+          <span style="color:${rInfo.color}">[${rInfo.label}]</span>
+          ${def.slot ? `· ${SLOT_LABELS[def.slot]}` : ""}
+          ${location !== "bag" ? "· ĐANG MẶC" : ""}
+        </div>
+        <div class="info-class-req" style="color:${classMismatch ? "#f43f5e" : "#94a3b8"}">${classReqText}</div>
       </div>
-      <div class="detail-sub">
-        ${tInfo.label} · [${rInfo.label}] ${def.slot ? `· ${SLOT_LABELS[def.slot]}` : ""}
-        ${location !== "bag" ? "· ĐANG MẶC" : ""}
-        <span style="color:${classMismatch ? "#ff4466" : "#99a3c4"}">${classReqText}</span>
-      </div>
-      <div class="detail-desc">${def.desc}</div>
-      ${wpnSkillLine}
-      ${exoticTagLine}
-      ${passiveLine}
-      ${infuseLine}
-      ${bonusSubLine}
       ${statsHtml}
+      ${passiveBox}
+      ${wpnSkillLine}
+      ${setHtml}
+      <div class="info-pixel-divider"><span>◆</span></div>
+      <div class="info-lore">“${loreText}”</div>
       <div class="detail-actions">${btns}</div>
     `;
     this._paintAllIcons(this.detailEl);

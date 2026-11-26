@@ -394,7 +394,7 @@ export function drawEquippedHeroPreview(
   walkFrame: number,
   facing: 1 | -1,
   time: number,
-  extra?: { aegisActive?: boolean; buffActive?: boolean }
+  extra?: { aegisActive?: boolean; buffActive?: boolean; setAuraColor?: string | null }
 ) {
   const w = ctx.canvas.width;
   const h = ctx.canvas.height;
@@ -443,5 +443,6 @@ export function drawEquippedHeroPreview(
     time,
     aegisActive: extra?.aegisActive,
     buffActive: extra?.buffActive,
+    setAuraColor: extra?.setAuraColor,
   });
 }

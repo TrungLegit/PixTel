@@ -57,6 +57,7 @@ import type {
   TurretEntity,
 } from "./world/entities";
 import { InventorySystem, recalculatePlayerStats } from "./systems/inventorySystem";
+import { ItemEffectSystem } from "./systems/ItemEffectSystem";
 import { QuestSystem } from "./systems/questSystem";
 import { ForgeSystem } from "./systems/forgeSystem";
 import { GachaSystem } from "./systems/gachaSystem";
@@ -126,6 +127,7 @@ export class PixTelOpenWorldGame {
   readonly gacha = new GachaSystem();
   readonly saveSys = new SaveSystem();
   readonly combat = new CombatSystem();
+  readonly itemEffects = new ItemEffectSystem();
   readonly coop: CoopClient;
   readonly remotePlayers = new Map<string, RemotePlayerRuntime>();
 
@@ -135,6 +137,7 @@ export class PixTelOpenWorldGame {
   readonly hazards: HazardEntity[] = [];
   discoveredLore = new Set<string>();
   unlockedHiddenItems = new Set<string>();
+  unlockedHiddenRecipes = new Set<string>();
   defeatedBossIds = new Set<string>();
 
   camX = 0;
@@ -389,8 +392,10 @@ export class PixTelOpenWorldGame {
     this.inv.resetStarterKit(classId);
     this.quests.reset();
     this.gacha.reset();
+    this.itemEffects.reset();
     this.colorSys.reset();
     this.discoveredLore.clear();
+    this.unlockedHiddenRecipes.clear();
     this.defeatedBossIds.clear();
     this.spawner.reset([]);
     this.stats = { kills: 0, mined: 0, chestsOpened: 0, bossesDefeated: 0, reactionsTriggered: 0 };
@@ -443,7 +448,9 @@ export class PixTelOpenWorldGame {
     this.gacha.importState(data.gachaState);
     this.colorSys.loadUnlocked(data.unlockedWaypoints);
     this.discoveredLore = new Set(data.discoveredLore ?? []);
+    this.unlockedHiddenRecipes = new Set(data.unlockedHiddenRecipes ?? []);
     this.defeatedBossIds = new Set(data.defeatedBossIds ?? []);
+    this.itemEffects.reset();
     for (const hid of this.saveSys.loadHiddenUnlocks()) this.unlockedHiddenItems.add(hid);
     for (const hid of data.unlockedHiddenItems ?? []) this.unlockedHiddenItems.add(hid);
     for (const slot of EQUIP_SLOTS) {
@@ -551,6 +558,7 @@ export class PixTelOpenWorldGame {
       openedChests: this.spawner.getOpenedChestIds(),
       discoveredLore: Array.from(this.discoveredLore),
       unlockedHiddenItems: Array.from(this.unlockedHiddenItems),
+      unlockedHiddenRecipes: Array.from(this.unlockedHiddenRecipes),
       defeatedBossIds: Array.from(this.defeatedBossIds),
       tutorialCompleted: this.tutorialCompleted,
       quests: this.quests.exportState(),
@@ -1505,6 +1513,23 @@ export class PixTelOpenWorldGame {
   useConsumableById(defId: string): boolean {
     const def = ITEMS[defId];
     if (!def || def.category !== "consumable") return false;
+    if (def.consumableKind === "fate_die") {
+      this.ui.onToast(
+        "🎲 Hãy mang Xúc Xắc Đổi Mệnh tới Lò Rèn (Thợ Rèn Kael) để reroll chỉ số phụ trang bị!",
+        "info"
+      );
+      return false;
+    }
+    if (def.consumableKind === "mirage_vial") {
+      if (!this.inv.consumeItem(defId, 1)) {
+        this.ui.onToast(`Đã hết ${def.name}!`, "warn");
+        return false;
+      }
+      this.itemEffects.onUseConsumable(this._makeCombatContext(), def);
+      this.ui.onToast(`🌫 Đã uống ${def.name}: Tàng hình 2.5s (mất aggro) & +40% tốc chạy!`, "good");
+      this.ui.onHudUpdate();
+      return true;
+    }
     if (def.consumableKind === "undying_charm") {
       this.ui.onToast(
         "Bùa Hộ Mệnh Bất Diệt tự động kích hoạt khi HP về 0! (Hãy giữ sẵn trong Túi đồ)",
@@ -1772,10 +1797,12 @@ export class PixTelOpenWorldGame {
   }
 
   canRevealHiddenRecipe(recipe: RecipeDef): boolean {
-    if (!recipe.isHiddenRecipe) return true;
-    if (this.isHiddenItemUnlocked(recipe.resultDefId)) return true;
-    if (recipe.revealMaterialId && this.inv.countItem(recipe.revealMaterialId) > 0) return true;
-    return false;
+    return this.itemEffects.isHiddenRecipeUnlocked(
+      recipe,
+      this.inv,
+      this.unlockedHiddenItems,
+      this.unlockedHiddenRecipes
+    );
   }
 
   unlockHiddenItem(defId: string): boolean {
@@ -1853,6 +1880,17 @@ export class PixTelOpenWorldGame {
       if (def.isHidden) {
         this.unlockHiddenItem(def.id);
         this.vfx.spawnLive("pixtel/rainbow-burst", { x: loot.x, y: loot.y - 6, priority: 6, maxLife: 1.1 });
+        this.saveGame(false);
+      }
+      if (
+        (def.id === "ar_bloodstone_plate" || def.id === "ar_briar_cloak") &&
+        this.inv.hasItemAnywhere("ar_bloodstone_plate") &&
+        this.inv.hasItemAnywhere("ar_briar_cloak") &&
+        !this.unlockedHiddenRecipes.has("rec_ar_aegis_mantle")
+      ) {
+        this.unlockedHiddenRecipes.add("rec_ar_aegis_mantle");
+        sfx.playHiddenUnlock();
+        this.ui.onToast("✦ LÒ RÈN ẨN: Đã mở khóa công thức [Chiến Giáp Vệ Binh Bất Diệt]!", "epic");
         this.saveGame(false);
       }
       if (def.category === "equipment") {
@@ -1992,6 +2030,7 @@ export class PixTelOpenWorldGame {
       colorSys: this.colorSys,
       inv: this.inv,
       quests: this.quests,
+      itemEffects: this.itemEffects,
       projectiles: this.projectiles,
       turrets: this.turrets,
       hazards: this.hazards,
@@ -2056,6 +2095,14 @@ export class PixTelOpenWorldGame {
           this.ui.onBossVictory(true, name);
         } else {
           this.ui.onBossVictory(false, name);
+        }
+        const newlyUnlocked = this.itemEffects.checkBossKillHiddenUnlocks(enemy.defId, this.inv);
+        for (const recId of newlyUnlocked) {
+          if (!this.unlockedHiddenRecipes.has(recId)) {
+            this.unlockedHiddenRecipes.add(recId);
+            sfx.playHiddenUnlock();
+            this.ui.onToast("✦ BÍ MẬT LÒ RÈN: Kiếm Sứt Mẻ cộng hưởng Lõi Vùng 2 — Mở khóa [Thánh Kiếm Sao Rơi]!", "epic");
+          }
         }
         this.saveGame(false);
         this.ui.onHudUpdate();
@@ -3222,6 +3269,10 @@ export class PixTelOpenWorldGame {
 
           const blink = p.invuln > 0 && ((Math.floor(this.time * 24) & 1) === 1);
           if (!blink) {
+            ctx.save();
+            if ((p.stealthTime ?? 0) > 0) {
+              ctx.globalAlpha = 0.45;
+            }
             drawPaperDollHero(ctx, {
               classId: p.classId,
               equipment: this.inv.equipment,
@@ -3240,9 +3291,11 @@ export class PixTelOpenWorldGame {
               bleached: heroBleached,
               time: this.time,
               chargePct,
-              aegisActive: p.aegisTime > 0 || p.shieldTime > 0,
+              aegisActive: p.aegisTime > 0 || p.shieldTime > 0 || (p.shieldHp ?? 0) > 0,
               buffActive: p.atkBuffTime > 0,
+              setAuraColor: p.activeSetAuraColor,
             });
+            ctx.restore();
           }
 
           // Exhausted grey smoke puffs around chest (image_3 row 1 col 3)

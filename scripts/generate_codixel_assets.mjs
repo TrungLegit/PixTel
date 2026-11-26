@@ -7,7 +7,7 @@ const ROOT = process.cwd();
 const P = require(path.join(ROOT, ".agents", "skills", "codixel", "core", "pixel.js"));
 
 const ASSETS_DIR = path.join(ROOT, "src", "assets");
-const SCRATCH_DIR = "C:/Users/ADMIN/.gemini/antigravity/brain/df2ae07d-0719-4c2d-ba07-655ccbdc3295/scratch";
+const SCRATCH_DIR = path.join(ROOT, "node_modules", ".cache", "codixel");
 fs.mkdirSync(ASSETS_DIR, { recursive: true });
 fs.mkdirSync(SCRATCH_DIR, { recursive: true });
 
@@ -2126,6 +2126,366 @@ function buildWsRocketSalvoIcon() {
   return finishIcon(b, RAMPS.amber, { smooth: false });
 }
 
+const INK_16BIT = P.rgb(26, 22, 37); // #1a1625
+
+// =========================================================================
+// 2B. 16 CORE ITEMS + 6 BOSS/ZONE MATERIALS (IMAGE 1 4x4 SPRITESHEET)
+// =========================================================================
+
+function buildCoreVanguardChippedIcon() {
+  const b = new P.Buf(22, 22);
+  // Steel broadsword angled diagonally with 3 notches & brown hilt
+  for (let i = 0; i < 12; i++) {
+    const x = 7 + i;
+    const y = 14 - i;
+    b.pset(x, y, RAMPS.steel[3]);
+    b.pset(x - 1, y, RAMPS.steel[4]);
+    b.pset(x, y - 1, RAMPS.steel[5]);
+    b.pset(x + 1, y, RAMPS.steel[1]);
+  }
+  // 3 notches along the blade edge matching [1,1]
+  clearRect(b, 10, 10, 1, 1);
+  clearRect(b, 13, 7, 1, 1);
+  clearRect(b, 16, 4, 1, 1);
+  b.pset(18, 3, WHITE);
+  // Crossguard & brown leather grip + iron pommel
+  for (let k = -2; k <= 2; k++) {
+    b.pset(7 + k, 14 + k, RAMPS.steel[2]);
+    b.pset(6 + k, 14 + k, RAMPS.steel[4]);
+  }
+  b.line(6, 15, 3, 18, RAMPS.wood[2]);
+  b.disc(3, 18, 1, RAMPS.steel[3]);
+  return finishIcon(b, RAMPS.steel, { smooth: false, shadeOutline: INK_16BIT });
+}
+
+function buildCoreBriarDaggerIcon() {
+  const b = new P.Buf(22, 22);
+  // Moss-green thorny dagger with purple venom tip matching [1,2]
+  for (let i = 0; i < 11; i++) {
+    const x = 8 + i;
+    const y = 13 - i;
+    const venom = i >= 7;
+    const ramp = venom ? RAMPS.royal : RAMPS.emerald;
+    b.pset(x, y, ramp[3]);
+    b.pset(x - 1, y, ramp[4]);
+    b.pset(x, y - 1, ramp[2]);
+  }
+  b.pset(18, 3, RAMPS.magenta[5]);
+  // Thorny green crossguard & hilt
+  b.line(6, 11, 10, 15, RAMPS.emerald[2]);
+  b.pset(5, 11, RAMPS.emerald[4]);
+  b.pset(11, 15, RAMPS.emerald[4]);
+  b.line(7, 14, 4, 17, RAMPS.wood[2]);
+  b.pset(3, 18, RAMPS.emerald[3]);
+  return finishIcon(b, RAMPS.emerald, { smooth: false, shadeOutline: INK_16BIT });
+}
+
+function buildCoreSparkStaffIcon() {
+  const b = new P.Buf(22, 22);
+  // Gnarled oak staff + crackling cyan lightning arcs matching [1,3]
+  for (let i = 0; i < 14; i++) {
+    const x = 3 + i;
+    const y = 18 - i;
+    b.pset(x, y, RAMPS.wood[2]);
+    b.pset(x + 1, y, RAMPS.wood[1]);
+  }
+  // Curved oak crook head
+  b.pset(15, 4, RAMPS.wood[3]);
+  b.pset(16, 3, RAMPS.wood[3]);
+  b.pset(17, 3, RAMPS.wood[2]);
+  b.pset(18, 4, RAMPS.wood[2]);
+  b.pset(17, 5, RAMPS.wood[1]);
+  // Electric cyan arcs around crook
+  b.line(11, 4, 14, 6, RAMPS.prism[5]);
+  b.line(12, 3, 15, 2, RAMPS.prism[4]);
+  b.line(19, 3, 20, 6, RAMPS.prism[5]);
+  b.line(17, 7, 19, 9, RAMPS.prism[4]);
+  b.pset(16, 4, WHITE);
+  return finishIcon(b, RAMPS.prism, { smooth: false, shadeOutline: INK_16BIT });
+}
+
+function buildCoreEclipseReaverIcon() {
+  const b = new P.Buf(22, 22);
+  // Curved violet-crimson eclipse scythe matching [1,4]
+  b.line(5, 18, 13, 7, RAMPS.obsidian[3]);
+  b.line(6, 18, 14, 7, RAMPS.royal[2]);
+  // Crescent crimson/magenta blade
+  for (let x = 6; x <= 18; x++) {
+    const t = (x - 6) / 12;
+    const y = Math.round(4 + Math.pow(t - 0.35, 2) * 14);
+    b.pset(x, y, RAMPS.crimson[4]);
+    b.pset(x, y + 1, RAMPS.crimson[3]);
+    b.pset(x, y - 1, RAMPS.magenta[5]);
+  }
+  b.line(17, 6, 19, 11, RAMPS.crimson[5]);
+  b.pset(19, 12, WHITE);
+  b.pset(4, 19, RAMPS.royal[4]);
+  return finishIcon(b, RAMPS.royal, { smooth: false, shadeOutline: INK_16BIT });
+}
+
+function buildCoreForgeHammerIcon() {
+  const b = new P.Buf(22, 22);
+  // Dark iron maul with glowing magma cracks matching [2,1]
+  b.line(4, 18, 11, 11, RAMPS.obsidian[2]);
+  b.line(5, 18, 12, 11, RAMPS.steel[2]);
+  b.poly([[9, 6], [14, 2], [20, 8], [15, 12]], RAMPS.steel[2]);
+  shadeMask(b, (x, y) => x + y >= 15 && x + y <= 28 && x - y >= 2 && x - y <= 13 && x >= 9 && y >= 2 && x <= 19 && y <= 12, RAMPS.steel, { cx: 12, cy: 5, rx: 6, ry: 6 });
+  // Molten lava cracks on hammer face
+  b.pset(13, 6, RAMPS.amber[5]);
+  b.pset(14, 6, RAMPS.gold[5]);
+  b.pset(14, 7, RAMPS.amber[4]);
+  b.pset(15, 7, RAMPS.crimson[4]);
+  b.pset(13, 8, RAMPS.amber[5]);
+  b.pset(16, 8, RAMPS.gold[5]);
+  return finishIcon(b, RAMPS.amber, { smooth: false, shadeOutline: INK_16BIT });
+}
+
+function buildCoreStarfallBladeIcon() {
+  const b = new P.Buf(22, 22);
+  // Radiant gold/ivory holy greatsword with stars matching [2,2]
+  for (let i = 0; i < 13; i++) {
+    const x = 7 + i;
+    const y = 14 - i;
+    b.pset(x, y, WHITE);
+    b.pset(x - 1, y, RAMPS.gold[5]);
+    b.pset(x, y - 1, RAMPS.gold[5]);
+    b.pset(x + 1, y, RAMPS.gold[3]);
+    b.pset(x, y + 1, RAMPS.gold[3]);
+  }
+  b.pset(19, 2, WHITE);
+  // Winged gold crossguard + ruby gem
+  for (let k = -3; k <= 3; k++) {
+    b.pset(7 + k, 14 + k, RAMPS.gold[4]);
+    b.pset(6 + k, 14 + k, RAMPS.gold[5]);
+  }
+  b.pset(7, 14, RAMPS.crimson[5]);
+  b.line(6, 15, 3, 18, RAMPS.obsidian[3]);
+  b.disc(3, 18, 1, RAMPS.gold[4]);
+  // Sparkle stars around blade
+  b.pset(7, 5, RAMPS.gold[5]);
+  b.pset(16, 13, RAMPS.gold[5]);
+  b.pset(12, 3, WHITE);
+  return finishIcon(b, RAMPS.gold, { smooth: false, shadeOutline: INK_16BIT });
+}
+
+function buildCoreBriarCloakIcon() {
+  const b = new P.Buf(22, 22);
+  // Tattered mossy forest cloak with wooden thorns matching [2,3]
+  shadeMask(b, (x, y) => {
+    const w = 4 + (y - 3) * 0.45;
+    if (y < 4 || y > 18) return false;
+    if (y > 16 && (x % 3 === 0)) return false;
+    return Math.abs(x - 11) <= w;
+  }, RAMPS.emerald, { cx: 9, cy: 6, rx: 7, ry: 8 });
+  // Collar opening & thorns
+  fillRect(b, 9, 4, 4, 3, RAMPS.obsidian[1]);
+  b.pset(6, 8, RAMPS.wood[3]);
+  b.pset(15, 9, RAMPS.wood[3]);
+  b.pset(8, 12, RAMPS.wood[3]);
+  b.pset(13, 14, RAMPS.wood[3]);
+  b.pset(10, 6, RAMPS.gold[4]);
+  return finishIcon(b, RAMPS.emerald, { smooth: false, shadeOutline: INK_16BIT });
+}
+
+function buildCoreBloodstonePlateIcon() {
+  const b = new P.Buf(22, 22);
+  // Spiked dark crimson bloodstone cuirass matching [2,4]
+  shadeMask(b, (x, y) => {
+    const chest = Math.abs(x - 11) <= 5 && y >= 5 && y <= 15;
+    const pauldrons = y >= 4 && y <= 9 && (Math.abs(x - 5) <= 2 || Math.abs(x - 17) <= 2);
+    const tassets = y >= 15 && y <= 18 && (Math.abs(x - 8) <= 2 || Math.abs(x - 14) <= 2);
+    return chest || pauldrons || tassets;
+  }, RAMPS.crimson, { cx: 9, cy: 7, rx: 7, ry: 7 });
+  // Shoulder spikes
+  b.pset(3, 4, RAMPS.crimson[5]);
+  b.pset(19, 4, RAMPS.crimson[5]);
+  b.pset(11, 8, RAMPS.ruby[5]);
+  b.pset(11, 9, RAMPS.crimson[5]);
+  fillRect(b, 9, 4, 4, 2, RAMPS.obsidian[1]);
+  return finishIcon(b, RAMPS.crimson, { smooth: false, shadeOutline: INK_16BIT });
+}
+
+function buildCoreMossHoodIcon() {
+  const b = new P.Buf(22, 22);
+  // Deep shadow hood draped with moss & twigs matching [3,1]
+  shadeMask(b, (x, y) => {
+    const dx = (x - 11) / 6.8;
+    const dy = (y - 10) / 7.5;
+    if (y >= 14 && y <= 18 && Math.abs(x - 11) <= 8) return true;
+    return dx * dx + dy * dy <= 1.0 && y >= 3;
+  }, RAMPS.emerald, { cx: 9, cy: 6, rx: 6, ry: 6 });
+  // Pitch-black hood cavity
+  b.disc(11, 11, 4, INK_16BIT);
+  fillRect(b, 8, 9, 6, 5, INK_16BIT);
+  // Twigs / moss details
+  b.pset(6, 5, RAMPS.wood[3]);
+  b.pset(16, 6, RAMPS.wood[3]);
+  b.pset(7, 16, RAMPS.emerald[4]);
+  b.pset(14, 16, RAMPS.emerald[4]);
+  return finishIcon(b, RAMPS.emerald, { smooth: false, shadeOutline: INK_16BIT });
+}
+
+function buildCoreAshVisorIcon() {
+  const b = new P.Buf(22, 22);
+  // Soot-black knight helm with glowing molten visor slit matching [3,2]
+  shadeMask(b, (x, y) => {
+    const dx = (x - 11) / 5.5;
+    const dy = (y - 10) / 7.0;
+    return (dx * dx + dy * dy <= 1.0 && y >= 3 && y <= 18) || (y >= 11 && y <= 17 && Math.abs(x - 11) <= 5);
+  }, RAMPS.steel, { cx: 9, cy: 6, rx: 6, ry: 7 });
+  // Dark soot tint + glowing molten visor slit
+  fillRect(b, 7, 9, 8, 2, RAMPS.amber[5]);
+  fillRect(b, 8, 9, 6, 1, RAMPS.gold[5]);
+  b.line(11, 11, 11, 17, RAMPS.obsidian[2]);
+  b.line(9, 13, 9, 16, RAMPS.obsidian[1]);
+  b.line(13, 13, 13, 16, RAMPS.obsidian[1]);
+  return finishIcon(b, RAMPS.amber, { smooth: false, shadeOutline: INK_16BIT });
+}
+
+function buildCoreEclipseCrownIcon() {
+  const b = new P.Buf(22, 22);
+  // Shattered purple-gold crown with floating shards matching [3,3]
+  b.poly([[4, 14], [4, 8], [7, 11], [11, 6], [15, 11], [18, 8], [18, 14], [11, 16]], RAMPS.royal[3]);
+  // Shatter gap & gold trim
+  clearRect(b, 8, 9, 2, 4);
+  clearRect(b, 13, 10, 1, 3);
+  b.line(5, 14, 11, 16, RAMPS.gold[4]);
+  b.line(11, 16, 17, 14, RAMPS.gold[4]);
+  b.pset(4, 8, RAMPS.gold[5]);
+  b.pset(18, 8, RAMPS.gold[5]);
+  b.pset(11, 6, RAMPS.magenta[5]);
+  // Floating crystal shards
+  b.pset(6, 4, RAMPS.royal[4]);
+  b.pset(15, 4, RAMPS.magenta[5]);
+  b.pset(16, 17, RAMPS.gold[5]);
+  return finishIcon(b, RAMPS.royal, { smooth: false, shadeOutline: INK_16BIT });
+}
+
+function buildCoreAegisMantleIcon() {
+  const b = new P.Buf(22, 22);
+  // Silver-gold paladin cuirass + crimson cape matching [3,4]
+  fillRect(b, 4, 8, 3, 10, RAMPS.crimson[3]);
+  fillRect(b, 15, 8, 3, 10, RAMPS.crimson[3]);
+  shadeMask(b, (x, y) => (Math.abs(x - 11) <= 4 && y >= 5 && y <= 16) || (y >= 4 && y <= 8 && (Math.abs(x - 5) <= 2 || Math.abs(x - 17) <= 2)), RAMPS.steel, { cx: 9, cy: 7, rx: 7, ry: 7 });
+  // Gold trim & breastplate cross
+  b.pset(5, 6, RAMPS.gold[5]);
+  b.pset(17, 6, RAMPS.gold[5]);
+  b.line(11, 7, 11, 14, RAMPS.gold[4]);
+  b.line(8, 10, 14, 10, RAMPS.gold[4]);
+  b.pset(11, 10, WHITE);
+  return finishIcon(b, RAMPS.gold, { smooth: false, shadeOutline: INK_16BIT });
+}
+
+function buildCoreEmberCrestIcon() {
+  const b = new P.Buf(22, 22);
+  // Chained pendant with glowing ember flame matching [4,1]
+  b.line(6, 2, 10, 7, RAMPS.steel[3]);
+  b.line(16, 2, 12, 7, RAMPS.steel[3]);
+  b.disc(11, 13, 5, RAMPS.obsidian[2]);
+  b.disc(11, 13, 4, RAMPS.amber[3]);
+  b.disc(11, 13, 3, RAMPS.amber[5]);
+  b.pset(11, 11, RAMPS.gold[5]);
+  b.pset(11, 12, WHITE);
+  b.pset(11, 13, RAMPS.gold[5]);
+  return finishIcon(b, RAMPS.amber, { smooth: false, shadeOutline: INK_16BIT });
+}
+
+function buildCoreCrackedPactIcon() {
+  const b = new P.Buf(22, 22);
+  // Cracked crimson-gold cursed ring matching [4,2]
+  for (let a = 0; a < 24; a++) {
+    const rad = (a / 24) * Math.PI * 2;
+    const x = Math.round(11 + Math.cos(rad) * 5.2);
+    const y = Math.round(12 + Math.sin(rad) * 4.5);
+    b.pset(x, y, a % 5 === 0 ? RAMPS.obsidian[1] : RAMPS.crimson[3]);
+    b.pset(x, y - 1, RAMPS.crimson[4]);
+  }
+  // Crack across lower band + glowing blood ruby
+  clearRect(b, 8, 15, 1, 2);
+  b.disc(11, 7, 2, RAMPS.ruby[5]);
+  b.pset(10, 6, WHITE);
+  b.pset(12, 8, RAMPS.crimson[2]);
+  return finishIcon(b, RAMPS.crimson, { smooth: false, shadeOutline: INK_16BIT });
+}
+
+function buildCoreMirageVialIcon() {
+  const b = new P.Buf(22, 22);
+  // Glass flask with swirling lavender mist & cork matching [4,3]
+  fillRect(b, 9, 2, 4, 3, RAMPS.wood[3]);
+  fillRect(b, 9, 5, 4, 3, RAMPS.glass[3]);
+  shadeMask(b, (x, y) => {
+    const dx = (x - 11) / 5.5;
+    const dy = (y - 13) / 5.5;
+    return dx * dx + dy * dy <= 1.0;
+  }, RAMPS.glass, { cx: 9, cy: 10, rx: 5, ry: 5 });
+  // Lavender mist inside
+  b.disc(11, 14, 3, RAMPS.royal[3]);
+  b.pset(10, 13, RAMPS.magenta[4]);
+  b.pset(12, 12, RAMPS.royal[5]);
+  b.pset(9, 10, WHITE);
+  return finishIcon(b, RAMPS.royal, { smooth: false, shadeOutline: INK_16BIT });
+}
+
+function buildCoreFateDieIcon() {
+  const b = new P.Buf(22, 22);
+  // Cosmic purple-gold glowing 3D die with sparkles matching [4,4]
+  fillRect(b, 5, 6, 11, 11, RAMPS.royal[3]);
+  fillRect(b, 6, 4, 10, 3, RAMPS.gold[4]);
+  fillRect(b, 15, 6, 3, 10, RAMPS.royal[1]);
+  // Golden pips + rim
+  b.pset(8, 9, WHITE);
+  b.pset(13, 9, RAMPS.gold[5]);
+  b.pset(10, 11, RAMPS.gold[5]);
+  b.pset(8, 14, RAMPS.gold[5]);
+  b.pset(13, 14, WHITE);
+  b.pset(10, 5, WHITE);
+  // Corner sparkles
+  b.pset(3, 4, RAMPS.gold[5]);
+  b.pset(19, 16, RAMPS.gold[5]);
+  b.pset(18, 3, WHITE);
+  return finishIcon(b, RAMPS.gold, { smooth: false, shadeOutline: INK_16BIT });
+}
+
+function buildCoreMaterialIcon(kind) {
+  const b = new P.Buf(22, 22);
+  if (kind === "ancient_sap") {
+    b.disc(11, 12, 5, RAMPS.emerald[3]);
+    b.disc(10, 11, 3, RAMPS.emerald[5]);
+    b.pset(9, 9, WHITE);
+    return finishIcon(b, RAMPS.emerald, { smooth: false, shadeOutline: INK_16BIT });
+  }
+  if (kind === "elder_core") {
+    b.disc(11, 11, 5, RAMPS.quartz[3]);
+    b.disc(11, 11, 3, RAMPS.emerald[5]);
+    b.pset(10, 10, WHITE);
+    return finishIcon(b, RAMPS.quartz, { smooth: false, shadeOutline: INK_16BIT });
+  }
+  if (kind === "blood_shard") {
+    b.poly([[11, 3], [16, 11], [11, 19], [6, 11]], RAMPS.crimson[4]);
+    b.line(11, 4, 11, 17, RAMPS.ruby[5]);
+    b.pset(9, 9, WHITE);
+    return finishIcon(b, RAMPS.crimson, { smooth: false, shadeOutline: INK_16BIT });
+  }
+  if (kind === "eclipse_coal") {
+    b.disc(11, 12, 5, RAMPS.obsidian[2]);
+    b.pset(10, 12, RAMPS.amber[5]);
+    b.pset(12, 11, RAMPS.gold[5]);
+    b.pset(11, 13, RAMPS.crimson[5]);
+    return finishIcon(b, RAMPS.amber, { smooth: false, shadeOutline: INK_16BIT });
+  }
+  if (kind === "meteor_shard") {
+    b.poly([[11, 2], [17, 9], [14, 18], [7, 17], [5, 8]], RAMPS.gold[4]);
+    b.pset(10, 7, WHITE);
+    b.pset(12, 10, RAMPS.prism[5]);
+    return finishIcon(b, RAMPS.gold, { smooth: false, shadeOutline: INK_16BIT });
+  }
+  // eclipse_heart
+  b.disc(11, 11, 5, RAMPS.royal[3]);
+  b.disc(11, 11, 3, RAMPS.crimson[5]);
+  b.pset(10, 9, WHITE);
+  return finishIcon(b, RAMPS.royal, { smooth: false, shadeOutline: INK_16BIT });
+}
+
 // =========================================================================
 // 3. PACK ATLASES & SAVE VISUAL INSPECTION CONTACT SHEETS
 // =========================================================================
@@ -2293,6 +2653,30 @@ const iconSpecs = [
   ["ui_backpack_t2", () => buildTierBackpackIcon(2)],
   ["ui_backpack_t3", () => buildTierBackpackIcon(3)],
   ["ui_backpack_t4", () => buildTierBackpackIcon(4)],
+
+  // === 16 CORE ITEMS + 6 MATERIALS (4x4 REFERENCE SHEET) ===
+  ["core_wp_vanguard_chipped", () => buildCoreVanguardChippedIcon()],
+  ["core_wp_briar_dagger", () => buildCoreBriarDaggerIcon()],
+  ["core_wp_spark_staff", () => buildCoreSparkStaffIcon()],
+  ["core_wp_eclipse_reaver", () => buildCoreEclipseReaverIcon()],
+  ["core_wp_forge_hammer", () => buildCoreForgeHammerIcon()],
+  ["core_wp_starfall_blade", () => buildCoreStarfallBladeIcon()],
+  ["core_ar_briar_cloak", () => buildCoreBriarCloakIcon()],
+  ["core_ar_bloodstone_plate", () => buildCoreBloodstonePlateIcon()],
+  ["core_hm_moss_hood", () => buildCoreMossHoodIcon()],
+  ["core_hm_ash_visor", () => buildCoreAshVisorIcon()],
+  ["core_hm_eclipse_crown", () => buildCoreEclipseCrownIcon()],
+  ["core_ar_aegis_mantle", () => buildCoreAegisMantleIcon()],
+  ["core_ac_ember_crest", () => buildCoreEmberCrestIcon()],
+  ["core_ac_cracked_pact", () => buildCoreCrackedPactIcon()],
+  ["core_cs_mirage_vial", () => buildCoreMirageVialIcon()],
+  ["core_cs_fate_die", () => buildCoreFateDieIcon()],
+  ["core_mat_ancient_sap", () => buildCoreMaterialIcon("ancient_sap")],
+  ["core_mat_elder_core", () => buildCoreMaterialIcon("elder_core")],
+  ["core_mat_blood_shard", () => buildCoreMaterialIcon("blood_shard")],
+  ["core_mat_eclipse_coal", () => buildCoreMaterialIcon("eclipse_coal")],
+  ["core_mat_meteor_shard", () => buildCoreMaterialIcon("meteor_shard")],
+  ["core_mat_eclipse_heart", () => buildCoreMaterialIcon("eclipse_heart")],
 ];
 
 const iconEntries = iconSpecs.map(([id, fn]) => ({ id, buf: fn() }));

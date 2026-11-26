@@ -250,47 +250,57 @@
       </div>
     </div>
 
-    <!-- MODAL: INVENTORY & EQUIPMENT [I / B] -->
+    <!-- MODAL: INVENTORY & EQUIPMENT [I / B] — 3-COLUMN 16-BIT LAYOUT -->
     <div id="modal-inventory" class="modal-backdrop hidden">
-      <div class="modal-box modal-xl">
+      <div class="modal-box modal-xl inv-modal-box">
         <div class="modal-header">
           <div>TÚI ĐỒ & TRANG BỊ [I / B]</div>
           <button id="btn-close-inventory" class="px-btn sm">✕ ĐÓNG</button>
         </div>
         <div class="inv-layout">
-          <div class="inv-left">
-            <div class="inv-char-stage">
+          <!-- CỘT TRÁI: EQUIP (Paper-doll + 4/5 ô trang bị + 2 ô tiêu hao nhanh) -->
+          <div class="inv-left inv-col-equip">
+            <div class="inv-ribbon"><span>EQUIP</span></div>
+            <div id="inv-equip-slots" class="inv-paperdoll-frame">
+              <div id="inv-equip-left" class="equip-rail"></div>
               <div class="inv-char-preview">
-                <canvas id="inv-hero-canvas" width="128" height="96"></canvas>
+                <canvas id="inv-hero-canvas" width="128" height="120"></canvas>
                 <div id="inv-hero-class" class="inv-hero-tag">CLASS · LV.1</div>
                 <div class="inv-rot-bar">
                   <button id="inv-rot-left" class="px-btn sm" title="Xoay trái">◀</button>
                   <button id="inv-rot-right" class="px-btn sm" title="Xoay phải">▶</button>
                 </div>
               </div>
-              <div class="inv-equip-col">
-                <div class="section-hdr" style="margin-top:0">5 Ô TRANG BỊ ĐANG MẶC</div>
-                <div id="inv-equip-slots" class="equip-grid"></div>
-              </div>
+              <div id="inv-equip-right" class="equip-rail"></div>
             </div>
-            <div class="section-hdr">TỔNG HỢP CHỈ SỐ & ĐIỂM TIỀM NĂNG</div>
+            <div id="inv-quick-consumables" class="inv-quick-consumables"></div>
+            <div class="section-hdr">CHỈ SỐ & ĐIỂM TIỀM NĂNG</div>
             <div id="inv-hero-stats" class="inv-hero-stats"></div>
             <div id="inv-stat-alloc" class="stat-alloc-panel"></div>
             <div id="inv-set-bonuses" class="inv-set-bonuses"></div>
           </div>
-          <div class="inv-right">
+
+          <!-- CỘT GIỮA: BAG (Lưới 4x4+ theo độ hiếm) -->
+          <div class="inv-center inv-col-bag">
+            <div class="inv-ribbon"><span>BAG</span></div>
             <div class="inv-bag-hdr-row">
               <div id="inv-bag-title" class="section-hdr" style="margin:0;border:0;padding:0">TÚI ĐỒ (0/40 Ô)</div>
               <div class="inv-bag-actions">
                 <button id="btn-buy-backpack" class="px-btn sm good" title="Mua thêm Balo mở rộng vĩnh viễn +10 ô kho đồ (Tối đa 80 ô)">🎒 +10 Ô (250G)</button>
-                <button id="btn-equip-best" class="px-btn sm primary" title="Tự động mặc trang bị mạnh nhất đúng Class của bạn">⚡ TRANG BỊ TỐT NHẤT</button>
-                <button id="btn-toggle-quicksell" class="px-btn sm warn" title="Tự chọn trước đồ khác Class và bấm chọn thêm đồ muốn bán rồi mới Xác Nhận">💰 BÁN NHANH</button>
+                <button id="btn-equip-best" class="px-btn sm primary" title="Tự động mặc trang bị mạnh nhất đúng Class của bạn">⚡ TỐT NHẤT</button>
+                <button id="btn-toggle-quicksell" class="px-btn sm warn" title="Tự chọn trước đồ khác Class và bấm chọn thêm đồ muốn bán rồi mới Xác Nhận">💰 BÁN</button>
               </div>
             </div>
             <div id="inv-autosell-bar" class="inv-autosell-bar"></div>
             <div id="inv-quicksell-bar" class="inv-quicksell-bar hidden"></div>
-            <div id="inv-bag-grid" class="bag-grid"></div>
-            <div class="section-hdr">SO SÁNH CHỈ SỐ & THAO TÁC</div>
+            <div class="inv-bag-scroll">
+              <div id="inv-bag-grid" class="bag-grid"></div>
+            </div>
+          </div>
+
+          <!-- CỘT PHẢI: INFO (Tooltip cố định chuẩn 16-bit) -->
+          <div class="inv-right inv-col-info">
+            <div class="inv-ribbon"><span>INFO</span></div>
             <div id="inv-item-detail" class="item-detail-box"></div>
           </div>
         </div>

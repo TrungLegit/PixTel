@@ -4172,3 +4172,356 @@ body.is-mobile-touch .hotbar-sep:not(.bag-sep) {
   color: #9edcf0;
   text-align: center;
 }
+
+/* =========================================================================
+   16-BIT 3-COLUMN INVENTORY, PAPER-DOLL, 4x4 BAG & INFO CARD (IMAGE 2)
+   ========================================================================= */
+@keyframes cursedPulse {
+  0%, 100% {
+    box-shadow: inset 0 0 0 1px #f43f5e, 0 0 0 0 rgba(244, 63, 94, 0.35);
+  }
+  50% {
+    box-shadow: inset 0 0 0 1px #fda4af, 0 0 6px 0 rgba(244, 63, 94, 0.55);
+  }
+}
+
+.rarity-common {
+  background: #131524 !important;
+}
+.rarity-uncommon {
+  background: #0f211a !important;
+  box-shadow: inset 0 0 0 1px #4ade80;
+}
+.rarity-rare {
+  background: #101e33 !important;
+  box-shadow: inset 0 0 0 1px #60a5fa;
+}
+.rarity-epic {
+  background: #211236 !important;
+  box-shadow: inset 0 0 0 1px #c084fc;
+}
+.rarity-cursed {
+  background: #2a0e1b !important;
+  animation: cursedPulse 1.8s steps(4, end) infinite;
+}
+.rarity-legendary {
+  background: #2e1f0b !important;
+  box-shadow: inset 0 0 0 1px #facc15;
+}
+
+.inv-modal-box {
+  width: min(1060px, 97vw);
+}
+
+#modal-inventory .inv-layout {
+  display: grid;
+  grid-template-columns: 292px minmax(256px, 1fr) 310px;
+  gap: 12px;
+  min-height: 0;
+  align-items: start;
+}
+
+.inv-col-equip,
+.inv-col-bag,
+.inv-col-info {
+  background: #12101f;
+  border: 2px solid #353054;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.inv-ribbon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.inv-ribbon span {
+  position: relative;
+  display: inline-block;
+  padding: 2px 22px;
+  background: #2b2645;
+  border: 2px solid #7f78ad;
+  color: #f8fafc;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  box-shadow: 0 2px 0 #0a0814;
+}
+
+.inv-paperdoll-frame {
+  display: grid;
+  grid-template-columns: 54px 1fr 54px;
+  gap: 6px;
+  align-items: center;
+}
+
+.equip-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+
+.pd-slot {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  background: #171528;
+  border: 2px solid #494d70;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 2px;
+  overflow: hidden;
+}
+
+.pd-slot.empty {
+  cursor: default;
+  border-color: #2b2d45;
+}
+
+.pd-slot.selected {
+  box-shadow: inset 0 0 0 2px #ffffff !important;
+}
+
+.pd-slot:not(.empty):hover {
+  filter: brightness(1.15);
+}
+
+.pd-slot-tag {
+  position: absolute;
+  bottom: 1px;
+  left: 2px;
+  right: 2px;
+  font-size: 9px;
+  line-height: 1.05;
+  text-align: center;
+  color: #cbd5e1;
+  background: rgba(12, 10, 22, 0.84);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pd-slot-empty {
+  color: #4f5575;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.inv-quick-consumables {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.pd-slot.quick-cons {
+  width: 68px;
+  height: 52px;
+}
+
+#modal-inventory #inv-hero-canvas {
+  width: 120px;
+  height: 112px;
+}
+
+#modal-inventory .inv-bag-scroll {
+  max-height: 290px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+#modal-inventory .bag-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  max-height: none;
+  overflow: visible;
+}
+
+#modal-inventory .bag-cell {
+  height: 56px;
+}
+
+#modal-inventory .item-detail-box {
+  background: #141122;
+  border: 2px solid #444b70;
+  padding: 10px;
+  gap: 8px;
+  min-height: 360px;
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.info-hero-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+}
+
+.info-icon-frame {
+  width: 56px;
+  height: 56px;
+  border: 2px solid #60a5fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #19162b;
+}
+
+.info-icon-frame .px-item-icon {
+  width: 40px;
+  height: 40px;
+}
+
+.info-title {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.info-sub {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 11.5px;
+  color: #cbd5e1;
+}
+
+.info-class-req {
+  font-size: 11px;
+}
+
+.stat-pos {
+  color: #4ade80;
+}
+
+.stat-neg {
+  color: #f43f5e;
+}
+
+.info-passive-box {
+  border: 2px solid #f59e0b;
+  background: #211722;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.info-passive-box.is-curse {
+  border-color: #f43f5e;
+  background: #29101c;
+}
+
+.info-passive-hdr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #fbbf24;
+}
+
+.info-passive-box.is-curse .info-passive-hdr {
+  color: #fb7185;
+}
+
+.info-cd-pill {
+  font-size: 10.5px;
+  padding: 1px 5px;
+  background: #120d1a;
+  border: 1px solid #fbbf24;
+  color: #fde047;
+  white-space: nowrap;
+}
+
+.info-passive-txt {
+  font-size: 12px;
+  line-height: 1.38;
+  color: #fde68a;
+  overflow-wrap: anywhere;
+}
+
+.info-passive-box.is-curse .info-passive-txt {
+  color: #fecdd3;
+}
+
+.info-skill-box {
+  border-left: 3px solid #60a5fa;
+  background: #17152a;
+  padding: 5px 7px;
+  font-size: 11.5px;
+}
+
+.info-skill-desc {
+  color: #cbd5e1;
+  margin-top: 2px;
+  line-height: 1.35;
+}
+
+.info-set-box {
+  border: 1px solid #475569;
+  background: #171528;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.info-set-hdr {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.info-set-row {
+  font-size: 11.5px;
+  color: #64748b;
+}
+
+.info-set-row.on {
+  color: #4ade80;
+  font-weight: 700;
+}
+
+.info-pixel-divider {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #64748b;
+  font-size: 10px;
+}
+
+.info-pixel-divider::before,
+.info-pixel-divider::after {
+  content: "";
+  flex: 1;
+  height: 2px;
+  background: repeating-linear-gradient(90deg, #475569 0 4px, transparent 4px 7px);
+}
+
+.info-lore {
+  font-style: italic;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #cbd5e1;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 960px) {
+  #modal-inventory .inv-layout {
+    grid-template-columns: 1fr;
+  }
+}

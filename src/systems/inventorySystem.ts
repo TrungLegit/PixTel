@@ -1,5 +1,7 @@
 import { getClassDef } from "../data/classes";
-import { SET_BONUSES, STARTER_WEAPON_BY_CLASS, type SetBonusDef } from "../data/equipments";
+import { STARTER_WEAPON_BY_CLASS } from "../data/equipments";
+import { ALL_SET_BONUSES } from "../data/sets";
+import type { SetBonusDefinition } from "../types/item";
 import {
   CONSUMABLE_HOTKEY_GROUPS,
   ITEMS,
@@ -93,6 +95,7 @@ const AUTO_SELL_RARITY_RANK: Record<Rarity, number> = {
   uncommon: 2,
   rare: 3,
   epic: 4,
+  cursed: 5,
   legendary: 5,
 };
 
@@ -111,14 +114,16 @@ export const HOTKEY_CONSUMABLES: readonly string[] = [
 ];
 
 export interface ActiveSetStatus {
-  def: SetBonusDef;
+  def: SetBonusDefinition;
   count: number;
+  maxPieces: 3 | 4;
   twoActive: boolean;
+  threeActive: boolean;
   fourActive: boolean;
 }
 
 /**
- * Recomputes total player stats (maxHp, atk, def, spd, crit, elementBonus, maxStamina, passives)
+ * Recomputes total player stats (maxHp, atk, mag, def, spd, crit, elementBonus, maxStamina, passives)
  * from base class stats + level progression + equipped gear + enhancement milestones + Set Bonuses.
  */
 export function recalculatePlayerStats(
@@ -136,10 +141,18 @@ export function recalculatePlayerStats(
 
   player.maxHp = cdef.baseStats.hp + lv * 14 + alloc.vit * 18 + eq.maxHp + sets.maxHp;
   player.atk = cdef.baseStats.atk + lv * 2 + alloc.str * 3 + eq.atk + sets.atk;
-  player.def = cdef.baseStats.def + lv * 1 + alloc.vit * 1 + eq.def + sets.def;
-  player.spd = Math.round(cdef.baseStats.spd + alloc.agi * 2.5 + eq.spd + sets.spd);
+  player.mag = eq.mag + sets.mag;
+  player.def = Math.max(0, cdef.baseStats.def + lv * 1 + alloc.vit * 1 + eq.def + sets.def);
+  const moveSpeedPct = eq.moveSpeedPct + sets.moveSpeedPct;
+  const rawSpd = cdef.baseStats.spd + alloc.agi * 2.5 + eq.spd + sets.spd;
+  player.spd = Math.max(45, Math.round(rawSpd * (1 + moveSpeedPct / 100)));
+  player.aspdPct = eq.aspdPct + sets.aspdPct;
+  player.moveSpeedPct = moveSpeedPct;
+  player.critDmgPct = eq.critDmgPct + sets.critDmgPct;
+  player.lifestealPct = eq.lifestealPct + sets.lifestealPct;
+  player.fireResPct = Math.min(90, eq.fireResPct + sets.fireResPct);
   player.crit = Math.min(95, Math.round((cdef.baseStats.crit + alloc.crt * 1.5 + eq.crit + sets.crit) * 10) / 10);
-  player.critMult = Number((cdef.baseStats.critMult + alloc.crt * 0.03).toFixed(2));
+  player.critMult = Number((cdef.baseStats.critMult + alloc.crt * 0.03 + player.critDmgPct / 100).toFixed(2));
   player.elementBonus = eq.elementBonus + sets.elementBonus;
 
   player.maxStamina = Math.max(100, 100 + eq.maxStamina + sets.maxStamina);
@@ -163,8 +176,12 @@ export function recalculatePlayerStats(
   player.exoticMods = inv.getActiveExoticMods(player.classId);
   if (!player.exoticIcds) player.exoticIcds = {};
 
+  const activeSets = inv.getActiveSetBonuses(player.classId);
+  player.activeSetAuraColor =
+    activeSets.find((s) => s.threeActive && s.def.threePieceAuraColor)?.def.threePieceAuraColor ?? null;
+
   if (player.hasSetResonance) {
-    const hasActiveSet = inv.getActiveSetBonuses().length > 0;
+    const hasActiveSet = activeSets.length > 0;
     const pct = hasActiveSet ? 0.08 : 0.04;
     player.atk = Math.round(player.atk * (1 + pct));
     player.def = Math.round(player.def * (1 + pct));
@@ -394,8 +411,8 @@ export class InventorySystem {
 
     const def = ITEMS[inst.defId];
     if (!def || def.category !== "equipment") return false;
-    // Strict safety guard: never auto-sell Hidden Relics, Drop-Only Exotics, Seasonal Gacha Exclusives, or Enhanced items!
-    if (def.isHidden || def.dropOnly || def.seasonalBannerId || inst.enhanceLevel > 0) return false;
+    // Strict safety guard: never auto-sell Hidden Relics, Drop-Only Exotics, Seasonal Gacha Exclusives, Cursed, or Enhanced items!
+    if (def.isHidden || def.dropOnly || def.seasonalBannerId || def.rarity === "cursed" || inst.enhanceLevel > 0) return false;
 
     const rank = AUTO_SELL_RARITY_RANK[def.rarity] ?? 99;
     if (thresh > 0 && rank <= thresh) return true;
@@ -440,6 +457,14 @@ export class InventorySystem {
 
   findInStash(uid: string): ItemInstance | undefined {
     return this.stash.find((s) => s.uid === uid);
+  }
+
+  hasItemAnywhere(defId: string): boolean {
+    for (const slot of EQUIP_SLOTS) {
+      if (this.equipment[slot]?.defId === defId) return true;
+    }
+    if (this.bag.some((b) => b.defId === defId && b.qty > 0)) return true;
+    return this.stash.some((s) => s.defId === defId && s.qty > 0);
   }
 
   depositToStash(uid: string): { ok: boolean; reason?: string; itemName?: string } {
@@ -681,10 +706,16 @@ export class InventorySystem {
   getTotalEquipBonuses(classId?: ClassId): NormalizedEquipStats {
     const sum: NormalizedEquipStats = {
       atk: 0,
+      mag: 0,
       def: 0,
       maxHp: 0,
       spd: 0,
+      aspdPct: 0,
+      moveSpeedPct: 0,
       crit: 0,
+      critDmgPct: 0,
+      lifestealPct: 0,
+      fireResPct: 0,
       elementBonus: 0,
       maxStamina: 0,
       staminaCostPct: 0,
@@ -698,10 +729,16 @@ export class InventorySystem {
       if (!def || (classId && !canClassEquip(def, classId))) continue;
       const st = getItemEffectiveStats(eq);
       sum.atk += st.atk;
+      sum.mag += st.mag;
       sum.def += st.def;
       sum.maxHp += st.maxHp;
       sum.spd += st.spd;
+      sum.aspdPct += st.aspdPct;
+      sum.moveSpeedPct += st.moveSpeedPct;
       sum.crit += st.crit;
+      sum.critDmgPct += st.critDmgPct;
+      sum.lifestealPct += st.lifestealPct;
+      sum.fireResPct += st.fireResPct;
       sum.elementBonus += st.elementBonus;
       sum.maxStamina += st.maxStamina;
       sum.staminaCostPct += st.staminaCostPct;
@@ -721,10 +758,16 @@ export class InventorySystem {
     if (cur.uid === candidate.uid) {
       return {
         atk: 0,
+        mag: 0,
         def: 0,
         maxHp: 0,
         spd: 0,
+        aspdPct: 0,
+        moveSpeedPct: 0,
         crit: 0,
+        critDmgPct: 0,
+        lifestealPct: 0,
+        fireResPct: 0,
         elementBonus: 0,
         maxStamina: 0,
         staminaCostPct: 0,
@@ -735,10 +778,16 @@ export class InventorySystem {
     const curStats = getItemEffectiveStats(cur);
     return {
       atk: candStats.atk - curStats.atk,
+      mag: candStats.mag - curStats.mag,
       def: candStats.def - curStats.def,
       maxHp: candStats.maxHp - curStats.maxHp,
       spd: candStats.spd - curStats.spd,
+      aspdPct: candStats.aspdPct - curStats.aspdPct,
+      moveSpeedPct: candStats.moveSpeedPct - curStats.moveSpeedPct,
       crit: candStats.crit - curStats.crit,
+      critDmgPct: candStats.critDmgPct - curStats.critDmgPct,
+      lifestealPct: candStats.lifestealPct - curStats.lifestealPct,
+      fireResPct: candStats.fireResPct - curStats.fireResPct,
       elementBonus: candStats.elementBonus - curStats.elementBonus,
       maxStamina: candStats.maxStamina - curStats.maxStamina,
       staminaCostPct: candStats.staminaCostPct - curStats.staminaCostPct,
@@ -758,19 +807,21 @@ export class InventorySystem {
       const eq = this.equipment[slot];
       const def = eq ? ITEMS[eq.defId] : undefined;
       if (def && classId && !canClassEquip(def, classId)) continue;
-      if (def?.setId && SET_BONUSES[def.setId]) {
+      if (def?.setId && ALL_SET_BONUSES[def.setId]) {
         counts[def.setId] = (counts[def.setId] ?? 0) + 1;
       }
     }
     const out: ActiveSetStatus[] = [];
     for (const [setId, count] of Object.entries(counts)) {
-      const def = SET_BONUSES[setId];
+      const def = ALL_SET_BONUSES[setId];
       if (!def || count < 2) continue;
       out.push({
         def,
         count,
+        maxPieces: def.maxPieces,
         twoActive: count >= 2,
-        fourActive: count >= 4,
+        threeActive: def.maxPieces === 3 ? count >= 3 : false,
+        fourActive: def.maxPieces === 4 ? count >= 4 : false,
       });
     }
     return out;
@@ -779,10 +830,16 @@ export class InventorySystem {
   getActiveSetBonusStats(classId?: ClassId): NormalizedEquipStats {
     const sum: NormalizedEquipStats = {
       atk: 0,
+      mag: 0,
       def: 0,
       maxHp: 0,
       spd: 0,
+      aspdPct: 0,
+      moveSpeedPct: 0,
       crit: 0,
+      critDmgPct: 0,
+      lifestealPct: 0,
+      fireResPct: 0,
       elementBonus: 0,
       maxStamina: 0,
       staminaCostPct: 0,
@@ -790,16 +847,38 @@ export class InventorySystem {
       skillCdPct: 0,
     };
     for (const st of this.getActiveSetBonuses(classId)) {
-      const apply = (b: { atk?: number; def?: number; maxHp?: number; spd?: number; crit?: number; elementBonus?: number }) => {
+      const apply = (b: {
+        atk?: number;
+        mag?: number;
+        def?: number;
+        maxHp?: number;
+        spd?: number;
+        aspdPct?: number;
+        moveSpeedPct?: number;
+        crit?: number;
+        critDmgPct?: number;
+        lifestealPct?: number;
+        fireResPct?: number;
+        elementBonus?: number;
+        poiseBreakPct?: number;
+      }) => {
         sum.atk += b.atk ?? 0;
+        sum.mag += b.mag ?? 0;
         sum.def += b.def ?? 0;
         sum.maxHp += b.maxHp ?? 0;
         sum.spd += b.spd ?? 0;
+        sum.aspdPct += b.aspdPct ?? 0;
+        sum.moveSpeedPct += b.moveSpeedPct ?? 0;
         sum.crit += b.crit ?? 0;
+        sum.critDmgPct += b.critDmgPct ?? 0;
+        sum.lifestealPct += b.lifestealPct ?? 0;
+        sum.fireResPct += b.fireResPct ?? 0;
         sum.elementBonus += b.elementBonus ?? 0;
+        sum.poiseBreakPct += b.poiseBreakPct ?? 0;
       };
       if (st.twoActive) apply(st.def.twoPiece);
-      if (st.fourActive) apply(st.def.fourPiece);
+      if (st.threeActive && st.def.threePiece) apply(st.def.threePiece);
+      if (st.fourActive && st.def.fourPiece) apply(st.def.fourPiece);
     }
     return sum;
   }
