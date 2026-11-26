@@ -107,6 +107,31 @@
 - **Kiểm tra (Verified):** `npm run build`, `npm run test` (11/11 feature suites after syncing the latest main changes), `git diff --check`.
 - **Lưu ý / Handoff (Breaking changes / Đang dở):** Không có thay đổi schema trang bị hoặc cân bằng. VFX combo/[E]/[Q]/hitstop tiếp tục dùng pipeline hiện có.
 - **Gợi ý bước tiếp theo (Next Steps):** Push nhánh đã đồng bộ và mở draft PR cho phần render/VFX.
+### [2026-11-27 00:20] — Antigravity — Teamwork Wave 1: 4 Trang Bị Exotic + 4 Quái Vật + 8 Module VFX & Preview Tổng Hợp
+- **Commit / Branch:** `main` (Teamwork Production Wave 1 Completed)
+- **Giai đoạn / Version:** `PIXTEL v3.2` — Teamwork Continuous Production Wave 1
+- **Đã làm (Done):**
+  - **Hệ thống Teamwork tự động (2 đội song song) hoàn tất Wave 1:**
+    - **Team 1 — 4 Trang bị Exotic mới** đã tích hợp hoàn chỉnh vào game:
+      - `Thương Lăng Kính Khúc Xạ` (Prism lance, skill [E] phóng thương khúc xạ 3 nhánh)
+      - `Tinh Bàn Bão Tố` (Volt staff, skill [E] xoáy hút quái + nổ sét AoE)
+      - `Pháo Phá Vỡ Thời Không` (Quake cannon, skill [E] rải mìn lượng tử)
+      - `Huyết Giáp Cuồng Huyết` (Cursed armor, passive phản công huyết + tăng ATK khi trúng đòn)
+    - **Team 2 — 4 Quái vật mới** đã tích hợp hoàn chỉnh:
+      - `Bướm Gió Bào Tử` (zephyr_moth) — mob thường Gió, Thảo Nguyên
+      - `Nhện Tinh Thể Tụ Điện` (prism_arachnid) — mob trung bình Lôi, Núi Thạch Anh
+      - `Lư Hỏa Hổ Phách` (amber_crucible) — mob nặng Chấn Động, Hỏa Ngục
+      - `Phán Quan Thời Không` (chrono_arbiter) — Boss Phụ Hư Vô, Vết Nứt
+    - **8 module pixelfx VFX mới** (4 cho items + 4 cho mobs)
+    - **4 bảng loot drops** với tỉ lệ cân bằng + rơi trang bị Exotic hiếm
+    - **3 Weapon Skills mới** tích hợp vào hệ thống [E] vũ khí
+    - **Combat AI** cho cả 4 quái (hành vi, kỹ năng, spawn zones)
+  - **Tạo file preview tổng hợp** `2026-11-27-teamwork-wave1-items-mobs-preview.md` với bảng chi tiết toàn bộ sản phẩm.
+  - **Wave 2 bị gián đoạn** do hết quota API (429 RESOURCE_EXHAUSTED) — cần đợi reset để tiếp tục.
+- **File chính đã sửa / thêm:** `src/data/equipments.ts`, `src/data/weaponSkills.ts`, `src/data/enemies.ts`, `src/data/lootTables.ts`, `src/data/recipes.ts`, `src/data/worldConfig.ts`, `src/data/types.ts`, `src/systems/combat.ts` (+317 lines), `src/systems/ItemEffectSystem.ts`, `src/graphics/pixelfxHeroModels.ts`, `src/vfx/vfxManager.ts`, `src/vfx/pixelfx/core/rig.js`, `src/world/entities.ts`, `src/assets/codixel-enemies.json/png`, `src/assets/codixel-icons.json/png`, 8 module VFX mới tại `src/vfx/pixelfx/fx/pixtel/b1_*`, `tests/batchProductionTests.ts`, `scripts/production/generate_batch1_icons.mjs`, `preview for devs/2026-11-27-teamwork-wave1-items-mobs-preview.md`.
+- **Kiểm tra (Verified):** `npm run build` (**0 lỗi TS**), `tests/featureTests.ts` (**18/18 suites PASS**), tổng cộng **+1,573 dòng code / 22 files thay đổi / 10 files mới**.
+- **Lưu ý / Handoff:** Teamwork bị gián đoạn ở đầu Wave 2. Wave 1 hoàn chỉnh & sẵn sàng chơi.
+- **Gợi ý bước tiếp theo:** Khôi phục Teamwork Wave 2 khi quota reset; playtest 4 quái mới ở 4 vùng; cân bằng loot drop rate.
 
 ### [2026-11-26 11:28] — Antigravity — Xuất Bản Preview Tổng Hợp `PIXTEL v3.2` Vào `preview for devs/` & Push Lên GitHub
 - **Commit / Branch:** `main` (commit toàn bộ cụm `PIXTEL v3.2` + `preview for devs/`)

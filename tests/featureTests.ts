@@ -1398,9 +1398,9 @@ runTest("Attack Animation & Pixelfx VFX Synchronization Across All Classes & Mod
 });
 
 // ============================================================================
-// 10. 10 REFERENCE MONSTER MODELS, 4-DIRECTION ATLAS & SYNCHRONIZED SKILL VFX
+// 10. 23 REFERENCE MONSTER MODELS, 4-DIRECTION ATLAS & SYNCHRONIZED SKILL VFX
 // ============================================================================
-runTest("19 Reference Monster Models, 4-Direction Atlas & Synchronized Enemy Skill VFX", () => {
+runTest("23 Reference Monster Models, 4-Direction Atlas & Synchronized Enemy Skill VFX", () => {
   const refMonsterIds = [
     "null_slime",
     "ash_hopper",
@@ -1421,6 +1421,10 @@ runTest("19 Reference Monster Models, 4-Direction Atlas & Synchronized Enemy Ski
     "null_knight",
     "void_gatekeeper",
     "boss_the_eraser",
+    "zephyr_moth",
+    "prism_arachnid",
+    "amber_crucible",
+    "chrono_arbiter",
   ] as const;
 
   const frames = codixelEnemiesMeta.frames as Record<string, { x: number; y: number; w: number; h: number; anchorY: number }>;
@@ -1428,10 +1432,10 @@ runTest("19 Reference Monster Models, 4-Direction Atlas & Synchronized Enemy Ski
 
   assert.equal(
     Object.keys(frames).length,
-    306,
-    "Enemy sprite atlas contains 306 HD multi-frame sprites (19x4x4 with :atk strike frames + 2 special poses)"
+    370,
+    "Enemy sprite atlas contains 370 HD multi-frame sprites (23x4x4 with :atk strike frames + 2 special poses)"
   );
-  assert.equal(Object.keys(ENEMIES).length, 19, "All 19 enemies & bosses across all 4 biomes are registered");
+  assert.equal(Object.keys(ENEMIES).length, 23, "All 23 enemies & bosses across all 4 biomes are registered");
   for (const id of refMonsterIds) {
     assert.ok(monsters[id] && monsters[id].w >= 28 && monsters[id].h >= 26, `${id} registered in sharpened HD codixel-enemies metadata`);
     for (const dir of ["front", "right", "left", "back"] as const) {

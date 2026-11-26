@@ -77,7 +77,8 @@ export interface PixelfxPosedTheme {
     | "volt_pack"
     | "prism_wings"
     | "warden_roots"
-    | "amber_thrusters";
+    | "amber_thrusters"
+    | "b1_crimson_ward";
   armorShape?: "tunic" | "mail" | "plate" | "aegis" | "mantle" | "leather";
   bootsShape?: "greaves" | "treads" | "void_step" | "strider";
   shielded?: boolean;

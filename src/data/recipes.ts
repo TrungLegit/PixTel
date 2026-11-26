@@ -526,6 +526,31 @@ export const FORGE_RECIPES: RecipeDef[] = [
     desc: "Hợp nhất Giáp Huyết Thạch & Áo Choàng Gai thành Chiến Giáp Vệ Binh Bất Diệt.",
   },
 
+  // === BATCH 1 PRODUCTION RECIPES (M1) ===
+  {
+    id: "rec_b1_refract_lance",
+    resultDefId: "b1_wpn_refract_lance",
+    goldCost: 135,
+    materials: [
+      { defId: "mat_quartz_shard", qty: 4 },
+      { defId: "mat_prism_shard", qty: 4 },
+      { defId: "mat_pigment_cyan", qty: 1 },
+    ],
+    desc: "Rèn Thương Lăng Kính Khúc Xạ (Lam T3) từ Thạch Anh và Bột Lam Băng Tinh.",
+  },
+  {
+    id: "rec_b1_tempest_astrolabe",
+    resultDefId: "b1_wpn_tempest_astrolabe",
+    goldCost: 260,
+    materials: [
+      { defId: "mat_amber_gem", qty: 4 },
+      { defId: "mat_quartz_shard", qty: 4 },
+      { defId: "mat_pigment_wind", qty: 1 },
+      { defId: "mat_pigment_gold", qty: 1 },
+    ],
+    desc: "Đúc Tinh Bàn Bão Tố (Sử Thi T4) cho Pháp Sư Sắc Độ từ Hổ Phách, Thạch Anh & Bột Phong–Lôi.",
+  },
+
   // === CHẾ TẠO 4 CHÌA KHÓA RƯƠNG GACHA THEO MÙA (BIOME KEYS) ===
   ...GACHA_KEY_RECIPES,
   // === BẢN VẼ CỔ VẬT ẨN (CRAFT-ONLY) ===

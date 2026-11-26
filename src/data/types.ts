@@ -164,6 +164,7 @@ export type WeaponSkillId =
   | "ws_crimson_reap"
   | "ws_thunder_smite"
   | "ws_sakura_iaido"
+  | "ws_refract_lance"
   // Mage weapon skills
   | "ws_arcane_nova"
   | "ws_thorn_bloom"
@@ -174,6 +175,7 @@ export type WeaponSkillId =
   | "ws_blackhole_singularity"
   | "ws_phoenix_sweep"
   | "ws_blizzard_spire"
+  | "ws_tri_prism_cascade"
   // Rogue weapon skills
   | "ws_shadow_step"
   | "ws_gale_daggers"
@@ -194,7 +196,8 @@ export type WeaponSkillId =
   | "ws_orbital_strike"
   | "ws_tesla_pylon"
   | "ws_homing_rockets"
-  | "ws_eclipse_beam";
+  | "ws_eclipse_beam"
+  | "ws_chrono_minefield";
 
 export type ExoticSkillModId =
   | "mod_chain_lightning"
@@ -471,6 +474,7 @@ export interface EnemyDef {
     | "mini_quartz_knight"
     | "mini_amber_warrior"
     | "mini_void_gatekeeper"
+    | "mini_chrono_arbiter"
     | "boss_warden"
     | "boss_root"
     | "boss_amber"

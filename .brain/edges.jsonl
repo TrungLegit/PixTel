@@ -1034,3 +1034,12 @@
 {"created": "2026-11-26T07:31:37.247399+00:00", "dst": "file:src/world/worldMap.ts", "note": "", "schema_version": 1, "src": "file:tests/featureTests.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T04:21:44.600576+00:00", "dst": "file:package.json", "note": "", "schema_version": 1, "src": "file:tsconfig.json", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T04:21:44.893559+00:00", "dst": "file:package.json", "note": "", "schema_version": 1, "src": "file:vite.config.ts", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-26T17:15:38.834767+00:00", "dst": "file:src/data/equipments.ts", "note": "", "schema_version": 1, "src": "file:src/vfx/vfxManager.ts", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-26T17:16:40.679568+00:00", "dst": "file:src/data/equipments.ts", "note": "", "schema_version": 1, "src": "file:src/vfx/vfxManager.ts", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-26T17:16:41.099196+00:00", "dst": "file:tests/featureTests.ts", "note": "", "schema_version": 1, "src": "file:src/data/enemies.ts", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-26T17:16:41.483748+00:00", "dst": "file:src/data/enemies.ts", "note": "", "schema_version": 1, "src": "file:tests/featureTests.ts", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-26T17:16:41.990023+00:00", "dst": "file:src/data/enemies.ts", "note": "", "schema_version": 1, "src": "file:src/assets/codixel-enemies.json", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-26T17:16:42.631176+00:00", "dst": "file:src/assets/codixel-enemies.json", "note": "", "schema_version": 1, "src": "file:src/assets/codixel-enemies.png", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-26T17:16:43.442661+00:00", "dst": "file:preview for devs/README.md", "note": "", "schema_version": 1, "src": "file:preview for devs/2026-11-27-batch1-production-items-preview.md", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-26T17:16:44.496214+00:00", "dst": "file:preview for devs/2026-11-27-batch1-production-items-preview.md", "note": "", "schema_version": 1, "src": "file:preview for devs/README.md", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-26T17:21:07.681115+00:00", "dst": "proj_pixtel", "note": "", "schema_version": 1, "src": "file:preview for devs/2026-11-27-teamwork-wave1-items-mobs-preview.md", "type": "relates_to", "weight": 1.0}

@@ -2141,6 +2141,454 @@
       "w": 60,
       "h": 58,
       "anchorY": 58
+    },
+    "zephyr_moth:front": {
+      "x": 2,
+      "y": 790,
+      "w": 34,
+      "h": 32,
+      "anchorY": 32
+    },
+    "zephyr_moth:front:1": {
+      "x": 38,
+      "y": 790,
+      "w": 34,
+      "h": 32,
+      "anchorY": 32
+    },
+    "zephyr_moth:front:2": {
+      "x": 74,
+      "y": 790,
+      "w": 34,
+      "h": 32,
+      "anchorY": 32
+    },
+    "zephyr_moth:front:atk": {
+      "x": 110,
+      "y": 790,
+      "w": 34,
+      "h": 32,
+      "anchorY": 32
+    },
+    "zephyr_moth:right": {
+      "x": 146,
+      "y": 790,
+      "w": 34,
+      "h": 32,
+      "anchorY": 32
+    },
+    "zephyr_moth:right:1": {
+      "x": 182,
+      "y": 790,
+      "w": 34,
+      "h": 32,
+      "anchorY": 32
+    },
+    "zephyr_moth:right:2": {
+      "x": 218,
+      "y": 790,
+      "w": 34,
+      "h": 32,
+      "anchorY": 32
+    },
+    "zephyr_moth:right:atk": {
+      "x": 254,
+      "y": 790,
+      "w": 34,
+      "h": 32,
+      "anchorY": 32
+    },
+    "zephyr_moth:left": {
+      "x": 290,
+      "y": 790,
+      "w": 34,
+      "h": 32,
+      "anchorY": 32
+    },
+    "zephyr_moth:left:1": {
+      "x": 326,
+      "y": 790,
+      "w": 34,
+      "h": 32,
+      "anchorY": 32
+    },
+    "zephyr_moth:left:2": {
+      "x": 362,
+      "y": 790,
+      "w": 34,
+      "h": 32,
+      "anchorY": 32
+    },
+    "zephyr_moth:left:atk": {
+      "x": 398,
+      "y": 790,
+      "w": 34,
+      "h": 32,
+      "anchorY": 32
+    },
+    "zephyr_moth:back": {
+      "x": 434,
+      "y": 790,
+      "w": 34,
+      "h": 32,
+      "anchorY": 32
+    },
+    "zephyr_moth:back:1": {
+      "x": 470,
+      "y": 790,
+      "w": 34,
+      "h": 32,
+      "anchorY": 32
+    },
+    "zephyr_moth:back:2": {
+      "x": 506,
+      "y": 790,
+      "w": 34,
+      "h": 32,
+      "anchorY": 32
+    },
+    "zephyr_moth:back:atk": {
+      "x": 542,
+      "y": 790,
+      "w": 34,
+      "h": 32,
+      "anchorY": 32
+    },
+    "prism_arachnid:front": {
+      "x": 2,
+      "y": 824,
+      "w": 36,
+      "h": 32,
+      "anchorY": 32
+    },
+    "prism_arachnid:front:1": {
+      "x": 40,
+      "y": 824,
+      "w": 36,
+      "h": 32,
+      "anchorY": 32
+    },
+    "prism_arachnid:front:2": {
+      "x": 78,
+      "y": 824,
+      "w": 36,
+      "h": 32,
+      "anchorY": 32
+    },
+    "prism_arachnid:front:atk": {
+      "x": 116,
+      "y": 824,
+      "w": 36,
+      "h": 32,
+      "anchorY": 32
+    },
+    "prism_arachnid:right": {
+      "x": 154,
+      "y": 824,
+      "w": 36,
+      "h": 32,
+      "anchorY": 32
+    },
+    "prism_arachnid:right:1": {
+      "x": 192,
+      "y": 824,
+      "w": 36,
+      "h": 32,
+      "anchorY": 32
+    },
+    "prism_arachnid:right:2": {
+      "x": 230,
+      "y": 824,
+      "w": 36,
+      "h": 32,
+      "anchorY": 32
+    },
+    "prism_arachnid:right:atk": {
+      "x": 268,
+      "y": 824,
+      "w": 36,
+      "h": 32,
+      "anchorY": 32
+    },
+    "prism_arachnid:left": {
+      "x": 306,
+      "y": 824,
+      "w": 36,
+      "h": 32,
+      "anchorY": 32
+    },
+    "prism_arachnid:left:1": {
+      "x": 344,
+      "y": 824,
+      "w": 36,
+      "h": 32,
+      "anchorY": 32
+    },
+    "prism_arachnid:left:2": {
+      "x": 382,
+      "y": 824,
+      "w": 36,
+      "h": 32,
+      "anchorY": 32
+    },
+    "prism_arachnid:left:atk": {
+      "x": 420,
+      "y": 824,
+      "w": 36,
+      "h": 32,
+      "anchorY": 32
+    },
+    "prism_arachnid:back": {
+      "x": 458,
+      "y": 824,
+      "w": 36,
+      "h": 32,
+      "anchorY": 32
+    },
+    "prism_arachnid:back:1": {
+      "x": 496,
+      "y": 824,
+      "w": 36,
+      "h": 32,
+      "anchorY": 32
+    },
+    "prism_arachnid:back:2": {
+      "x": 534,
+      "y": 824,
+      "w": 36,
+      "h": 32,
+      "anchorY": 32
+    },
+    "prism_arachnid:back:atk": {
+      "x": 572,
+      "y": 824,
+      "w": 36,
+      "h": 32,
+      "anchorY": 32
+    },
+    "amber_crucible:front": {
+      "x": 2,
+      "y": 858,
+      "w": 36,
+      "h": 38,
+      "anchorY": 38
+    },
+    "amber_crucible:front:1": {
+      "x": 40,
+      "y": 858,
+      "w": 36,
+      "h": 38,
+      "anchorY": 38
+    },
+    "amber_crucible:front:2": {
+      "x": 78,
+      "y": 858,
+      "w": 36,
+      "h": 38,
+      "anchorY": 38
+    },
+    "amber_crucible:front:atk": {
+      "x": 116,
+      "y": 858,
+      "w": 36,
+      "h": 38,
+      "anchorY": 38
+    },
+    "amber_crucible:right": {
+      "x": 154,
+      "y": 858,
+      "w": 36,
+      "h": 38,
+      "anchorY": 38
+    },
+    "amber_crucible:right:1": {
+      "x": 192,
+      "y": 858,
+      "w": 36,
+      "h": 38,
+      "anchorY": 38
+    },
+    "amber_crucible:right:2": {
+      "x": 230,
+      "y": 858,
+      "w": 36,
+      "h": 38,
+      "anchorY": 38
+    },
+    "amber_crucible:right:atk": {
+      "x": 268,
+      "y": 858,
+      "w": 36,
+      "h": 38,
+      "anchorY": 38
+    },
+    "amber_crucible:left": {
+      "x": 306,
+      "y": 858,
+      "w": 36,
+      "h": 38,
+      "anchorY": 38
+    },
+    "amber_crucible:left:1": {
+      "x": 344,
+      "y": 858,
+      "w": 36,
+      "h": 38,
+      "anchorY": 38
+    },
+    "amber_crucible:left:2": {
+      "x": 382,
+      "y": 858,
+      "w": 36,
+      "h": 38,
+      "anchorY": 38
+    },
+    "amber_crucible:left:atk": {
+      "x": 420,
+      "y": 858,
+      "w": 36,
+      "h": 38,
+      "anchorY": 38
+    },
+    "amber_crucible:back": {
+      "x": 458,
+      "y": 858,
+      "w": 36,
+      "h": 38,
+      "anchorY": 38
+    },
+    "amber_crucible:back:1": {
+      "x": 496,
+      "y": 858,
+      "w": 36,
+      "h": 38,
+      "anchorY": 38
+    },
+    "amber_crucible:back:2": {
+      "x": 534,
+      "y": 858,
+      "w": 36,
+      "h": 38,
+      "anchorY": 38
+    },
+    "amber_crucible:back:atk": {
+      "x": 572,
+      "y": 858,
+      "w": 36,
+      "h": 38,
+      "anchorY": 38
+    },
+    "chrono_arbiter:front": {
+      "x": 2,
+      "y": 898,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "chrono_arbiter:front:1": {
+      "x": 52,
+      "y": 898,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "chrono_arbiter:front:2": {
+      "x": 102,
+      "y": 898,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "chrono_arbiter:front:atk": {
+      "x": 152,
+      "y": 898,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "chrono_arbiter:right": {
+      "x": 202,
+      "y": 898,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "chrono_arbiter:right:1": {
+      "x": 252,
+      "y": 898,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "chrono_arbiter:right:2": {
+      "x": 302,
+      "y": 898,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "chrono_arbiter:right:atk": {
+      "x": 352,
+      "y": 898,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "chrono_arbiter:left": {
+      "x": 402,
+      "y": 898,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "chrono_arbiter:left:1": {
+      "x": 452,
+      "y": 898,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "chrono_arbiter:left:2": {
+      "x": 502,
+      "y": 898,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "chrono_arbiter:left:atk": {
+      "x": 552,
+      "y": 898,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "chrono_arbiter:back": {
+      "x": 602,
+      "y": 898,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "chrono_arbiter:back:1": {
+      "x": 652,
+      "y": 898,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "chrono_arbiter:back:2": {
+      "x": 702,
+      "y": 898,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
+    },
+    "chrono_arbiter:back:atk": {
+      "x": 752,
+      "y": 898,
+      "w": 48,
+      "h": 46,
+      "anchorY": 46
     }
   },
   "monsters": {
@@ -2237,6 +2685,26 @@
     "boss_the_eraser": {
       "w": 60,
       "h": 58,
+      "floating": true
+    },
+    "zephyr_moth": {
+      "w": 34,
+      "h": 32,
+      "floating": true
+    },
+    "prism_arachnid": {
+      "w": 36,
+      "h": 32,
+      "floating": false
+    },
+    "amber_crucible": {
+      "w": 36,
+      "h": 38,
+      "floating": true
+    },
+    "chrono_arbiter": {
+      "w": 48,
+      "h": 46,
       "floating": true
     }
   }

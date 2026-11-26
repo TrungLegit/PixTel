@@ -350,6 +350,11 @@ export class ItemEffectSystem {
       }
     }
 
+    // Huyết Giáp Cuồng Huyết (Curse): Nhận thêm +18% sát thương
+    if (passives.has("blood_frenzy_curse")) {
+      dmg = Math.round(dmg * 1.18);
+    }
+
     // Áo Choàng Gai Cổ Thụ: Phản 20% sát thương cận chiến
     if (passives.has("thorns_regen") && dealPassiveDamage) {
       const attacker = spawner.enemies
@@ -423,6 +428,38 @@ export class ItemEffectSystem {
           en.burnTime = Math.max(en.burnTime, 3.0);
           if (dealPassiveDamage) {
             dealPassiveDamage(en, Math.max(6, Math.round(player.atk * 0.85)), false, "hit-fire", "fire", nx, ny, 0.8);
+          }
+        }
+      }
+    }
+
+    // Huyết Giáp Cuồng Huyết (Curse): Khi trúng đòn kích nổ Sóng Huyết Hư Không 64px (1.35x ATK) & +22% ATK / +10% Crit 4s (ICD 3.5s)
+    if (passives.has("blood_frenzy_curse") && this.getCooldown("blood_frenzy_curse") <= 0) {
+      this.cooldowns.blood_frenzy_curse = 3.5;
+      player.atkBuffTime = Math.max(player.atkBuffTime, 4.0);
+      player.atkBuffPct = Math.max(player.atkBuffPct, 0.22);
+      player.atkBuffCrit = Math.max(player.atkBuffCrit, 10);
+      vfx.spawnLive("pixtel/b1_item_crimson_ward", {
+        x: player.x,
+        y: player.y - 6,
+        priority: 5,
+        maxLife: 0.75,
+      });
+      vfx.spawnDamageText(player.x, player.y - 22, "☠ CUỒNG HUYẾT (+22% ATK)", {
+        color: "#f43f5e",
+        crit: true,
+      });
+      sfx.playExplosion();
+      for (const en of [...spawner.enemies]) {
+        const dx = en.x - player.x;
+        const dy = en.y - player.y;
+        const d = Math.hypot(dx, dy);
+        if (d <= 64 + en.radius) {
+          const nx = d > 0 ? dx / d : 1;
+          const ny = d > 0 ? dy / d : 0;
+          ctx.world.moveWithCollision(en, nx * 16, ny * 16, en.radius * 0.7);
+          if (dealPassiveDamage) {
+            dealPassiveDamage(en, Math.max(8, Math.round(player.atk * 1.35)), true, "explode-void", "void", nx, ny, 1.2);
           }
         }
       }

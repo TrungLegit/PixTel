@@ -990,6 +990,54 @@
       "y": 480,
       "w": 24,
       "h": 24
+    },
+    "b1_refract_lance": {
+      "x": 120,
+      "y": 480,
+      "w": 24,
+      "h": 24
+    },
+    "b1_tempest_astrolabe": {
+      "x": 144,
+      "y": 480,
+      "w": 24,
+      "h": 24
+    },
+    "b1_chrono_disruptor": {
+      "x": 168,
+      "y": 480,
+      "w": 24,
+      "h": 24
+    },
+    "b1_crimson_ward": {
+      "x": 0,
+      "y": 504,
+      "w": 24,
+      "h": 24
+    },
+    "ws_b1_refract_lance": {
+      "x": 24,
+      "y": 504,
+      "w": 24,
+      "h": 24
+    },
+    "ws_b1_tri_cascade": {
+      "x": 48,
+      "y": 504,
+      "w": 24,
+      "h": 24
+    },
+    "ws_b1_chrono_mines": {
+      "x": 72,
+      "y": 504,
+      "w": 24,
+      "h": 24
+    },
+    "b1_passive_blood_frenzy": {
+      "x": 96,
+      "y": 504,
+      "w": 24,
+      "h": 24
     }
   }
 }

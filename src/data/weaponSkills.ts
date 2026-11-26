@@ -436,6 +436,37 @@ export const WEAPON_SKILLS: Record<WeaponSkillId, WeaponSkillDef> = {
     element: "void",
     accent: "#ee66ff",
   },
+  // === BATCH 1 WEAPON SKILLS (M1) ===
+  ws_refract_lance: {
+    id: "ws_refract_lance",
+    name: "Thương Khúc Xạ",
+    shortDesc: "Đâm băng 76px & tách 3 tia Lăng Kính ở mũi thương",
+    detailDesc: "Phóng mũi thương Băng xuyên tuyến 76px (1.55× ATK, +60% phá Giáp Trắng) rồi tách 3 tia Lăng Kính hình quạt (0.42× mỗi tia) kích Khúc Xạ Cầu Vồng.",
+    iconKey: "ws_b1_refract_lance",
+    cooldown: 5.2,
+    element: "prism",
+    accent: "#5ef2ff",
+  },
+  ws_tri_prism_cascade: {
+    id: "ws_tri_prism_cascade",
+    name: "Thiên Bàn Bão Tố",
+    shortDesc: "Cuộn gió hút gom quái rồi kích nổ ấn Lôi sau 0.45s",
+    detailDesc: "Triệu hồi Ấn Thiên Bàn cách 56px cuốn hút quái vào tâm (0.65× Gió), sau 0.45s giáng sét nổ 56px (1.75× Lôi, choáng 0.45s) kích Lốc Sét Cộng Hưởng hồi Thể Lực.",
+    iconKey: "ws_b1_tri_cascade",
+    cooldown: 5.4,
+    element: "volt",
+    accent: "#5ef2d6",
+  },
+  ws_chrono_minefield: {
+    id: "ws_chrono_minefield",
+    name: "Mạng Lưới Mìn Lượng Tử",
+    shortDesc: "Giật lùi né đòn, rải 3 Mìn Băng/Chấn Động & Quá Tải Trụ",
+    detailDesc: "Khai hỏa giật lùi (0.24s bất tử), Quá Tải toàn bộ Trụ 5.0s và rải 3 Mìn Lượng Tử (Băng + Chấn Động, 0.85×/quả, nổ sau 0.25s khi chạm địch hoặc 1.25s) kích Băng Nứt Địa Chấn.",
+    iconKey: "ws_b1_chrono_mines",
+    cooldown: 5.8,
+    element: "quake",
+    accent: "#66eeff",
+  },
 };
 
 /** Default mapping for existing equipments & hidden weapons so EVERY weapon has its own unique [E] skill! */
@@ -451,6 +482,7 @@ export const WEAPON_TO_SKILL_MAP: Record<string, WeaponSkillId> = {
   wpn_chroma_sovereign: "ws_prism_judgment",
   hid_craft_prism_blade: "ws_seven_prism_arc",
   hid_boss_eraser_edge: "ws_void_sever",
+  b1_wpn_refract_lance: "ws_refract_lance",
   // Mage
   wpn_apprentice_staff: "ws_arcane_nova",
   wpn_meadow_wand: "ws_thorn_bloom",
@@ -458,6 +490,7 @@ export const WEAPON_TO_SKILL_MAP: Record<string, WeaponSkillId> = {
   wpn_amber_staff: "ws_solar_flare",
   wpn_astral_scepter: "ws_starfall_barrage",
   hid_craft_nebula_staff: "ws_nebula_collapse",
+  b1_wpn_tempest_astrolabe: "ws_tri_prism_cascade",
   // Rogue
   wpn_rust_daggers: "ws_shadow_step",
   wpn_leaf_daggers: "ws_gale_daggers",
@@ -473,6 +506,7 @@ export const WEAPON_TO_SKILL_MAP: Record<string, WeaponSkillId> = {
   wpn_thermal_repeater: "ws_napalm_mortar",
   wpn_singularity_cannon: "ws_gravity_beam",
   hid_craft_nova_railgun: "ws_orbital_strike",
+  b1_wpn_chrono_disruptor: "ws_chrono_minefield",
 };
 
 export function getWeaponSkillId(defId?: string): WeaponSkillId | null {

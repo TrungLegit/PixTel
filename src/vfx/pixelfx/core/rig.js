@@ -401,6 +401,202 @@ export const WEAPONS = {
     haft(T, -2.6, 6, WCOL.grip, WCOL.gripD);
     for (let k = -1.6; k <= 1.6; k += 0.35) (T(-3, k, WCOL.gold), T(6.4, k, WCOL.gold));
   } },
+  prism_blade: { two: -5.2, draw(T) {
+    haft(T, -7.8, 2.2, WCOL.grip, WCOL.gripD, 0.9);
+    for (let k = -2.2; k <= 2.2; k += 0.35) T(-8.2, k, WCOL.gold);
+    // Swept winged sovereign crossguard
+    for (let k = -7.6; k <= 7.6; k += 0.35) {
+      const sweepFwd = Math.abs(k) * 0.42;
+      T(2.6 + sweepFwd, k, Math.abs(k) > 5.4 ? WCOL.hi : WCOL.gold);
+      T(3.2 + sweepFwd, k, WCOL.goldD);
+    }
+    // Broad twin-fuller blade with glowing prism energy channel
+    blade(T, 3.4, 33, 3.4);
+    for (let i = 5; i <= 31; i += 0.35) {
+      T(i, 0, i % 3 < 1.5 ? WCOL.hi : WCOL.gold);
+      T(i, -0.5, WCOL.hi);
+    }
+    const gemPt = T.at(3.6, 0);
+    sphere(gemPt, 1.5, PART.weapon, 2, WCOL.hi);
+    if (COLLECT_GLOWS) {
+      COLLECT_GLOWS.push({ x: gemPt[0] * renderScale, y: -gemPt[1] * renderScale, color: WCOL.gold, radius: 6 * renderScale });
+      const tip = T.at(33, 0);
+      COLLECT_GLOWS.push({ x: tip[0] * renderScale, y: -tip[1] * renderScale, color: WCOL.hi, radius: 6 * renderScale });
+    }
+  } },
+  null_sever: { two: -5.2, draw(T) {
+    haft(T, -7.8, 2.2, WCOL.dark, WCOL.darkD, 0.9);
+    for (let k = -2.0; k <= 2.0; k += 0.35) T(-8.2, k, WCOL.gold);
+    for (let k = -6.8; k <= 6.8; k += 0.35) {
+      T(2.5 + Math.abs(k) * 0.25, k, Math.abs(k) > 5 ? WCOL.gold : WCOL.dark);
+    }
+    // Fractured obsidian void-rift greatsword with detached glowing tip & glitch shards
+    for (let i = 3.2; i <= 35; i += 0.35) {
+      if (i > 19.2 && i < 21.6) continue; // Eraser rift split!
+      const r = i - 3.2;
+      const saw = Math.floor(r * 0.45) % 2 === 0 ? 0.65 : 0;
+      const wd = (r > 26 ? Math.max(0, ((32 - r) / 6) * 3.3) : 3.1) + saw;
+      for (let k = -wd; k <= wd + 0.01; k += 0.35) {
+        const edge = Math.abs(k) > wd - 0.85;
+        const col = Math.abs(k) < 0.7 ? WCOL.gold : edge ? WCOL.hi : WCOL.d;
+        T(i, k, col);
+      }
+    }
+    // Floating glitch fragments near rift
+    for (const [fi, fk] of [[20.4, 0], [18.5, 4.6], [22.8, -4.4]]) {
+      T(fi, fk, WCOL.hi);
+      T(fi + 0.5, fk, WCOL.gold);
+    }
+    if (COLLECT_GLOWS) {
+      const rift = T.at(20.4, 0);
+      COLLECT_GLOWS.push({ x: rift[0] * renderScale, y: -rift[1] * renderScale, color: WCOL.gold, radius: 7.5 * renderScale });
+    }
+  } },
+  greataxe: { two: -9.0, draw(T) {
+    haft(T, -13, 27, WCOL.wood, WCOL.woodD, 0.85);
+    blade(T, 27, 6.5, 1.5);
+    // Double-bit crescent battleaxe heads
+    for (const sgn of [-1, 1]) {
+      for (let i = 15.5; i <= 26.5; i += 0.35) {
+        const u = (i - 21) / 5.5; // -1..1
+        const inner = 1.4 + u * u * 2.2;
+        const outer = 9.4 - u * u * 1.4;
+        for (let k = inner; k <= outer; k += 0.35) {
+          const col = k > outer - 1.1 ? WCOL.hi : k < inner + 1.2 ? WCOL.gold : sgn < 0 ? WCOL.a : WCOL.d;
+          T(i, sgn * k, col);
+        }
+      }
+    }
+    const core = T.at(21, 0);
+    sphere(core, 1.7, PART.weapon, 2, WCOL.gold);
+    if (COLLECT_GLOWS) {
+      COLLECT_GLOWS.push({ x: core[0] * renderScale, y: -core[1] * renderScale, color: WCOL.gold, radius: 5.5 * renderScale });
+    }
+  } },
+  astral_staff: { two: -7.5, draw(T) {
+    haft(T, -12, 21.5, WCOL.dark, WCOL.goldD, 0.78);
+    for (let k = -3.2; k <= 3.2; k += 0.35) T(21.8, k, WCOL.gold);
+    // Cosmic golden halo ring cradling levitating nebula orb
+    const cx = 27.5;
+    for (let a = 0; a < Math.PI * 2; a += 0.14) {
+      const ri = cx + Math.cos(a) * 5.2;
+      const rk = Math.sin(a) * 5.2;
+      T(ri, rk, Math.abs(Math.sin(a)) > 0.7 ? WCOL.hi : WCOL.gold);
+    }
+    const orbCenter = T.at(cx, 0);
+    sphere(orbCenter, 3.0, PART.weapon, 2, WCOL.a);
+    sphere([orbCenter[0] - 0.7, orbCenter[1] + 0.7, orbCenter[2] + 0.6], 1.4, PART.weapon, 2, WCOL.hi);
+    // Crown tip star
+    const tipStar = T.at(cx + 6.4, 0);
+    sphere(tipStar, 1.0, PART.weapon, 2, WCOL.hi);
+    if (COLLECT_GLOWS) {
+      COLLECT_GLOWS.push({ x: orbCenter[0] * renderScale, y: -orbCenter[1] * renderScale, color: WCOL.a, radius: 8.5 * renderScale });
+    }
+  } },
+  twin_quantum: { draw(T) {
+    haft(T, -2.8, 2.0, WCOL.dark, WCOL.darkD, 0.72);
+    for (let k = -3.2; k <= 3.2; k += 0.35) T(2.3, k, WCOL.gold);
+    // Curved plasma energy blade
+    for (let i = 2.6; i <= 16.5; i += 0.35) {
+      const u = (i - 2.6) / 13.9;
+      const curve = u * u * 3.2;
+      const wd = 1.65 * (u > 0.72 ? (1.03 - u) / 0.31 : 1);
+      for (let k = -wd; k <= wd + 0.01; k += 0.35) {
+        T(i, curve + k, k < -wd * 0.25 ? WCOL.hi : k > wd * 0.35 ? WCOL.d : WCOL.a);
+      }
+    }
+    if (COLLECT_GLOWS) {
+      const tip = T.at(15.2, 2.8);
+      COLLECT_GLOWS.push({ x: tip[0] * renderScale, y: -tip[1] * renderScale, color: WCOL.a, radius: 5.5 * renderScale });
+    }
+  } },
+  rail_cannon: { two: -9, draw(T) {
+    // Upper & lower magnetic accelerator rails + glowing energy core channel
+    for (let i = -13; i <= 24; i += 0.35) {
+      for (let k = -6.8; k <= -4.6; k += 0.35) T(i, k, k < -5.8 ? WCOL.oliveA : WCOL.olive);
+      for (let k = -2.2; k <= -0.3; k += 0.35) T(i, k, k > -1.0 ? WCOL.oliveD : WCOL.olive);
+      if (i < 16) {
+        for (let k = -4.5; k <= -2.3; k += 0.35) T(i, k, WCOL.dark);
+      }
+    }
+    // Glowing plasma accelerator coils between twin rails
+    for (const ci of [2, 8, 14, 20]) {
+      for (let k = -4.6; k <= -2.2; k += 0.35) T(ci, k, ci >= 14 ? WCOL.hi : WCOL.gold);
+      for (let k = -4.6; k <= -2.2; k += 0.35) T(ci + 0.6, k, WCOL.gold);
+    }
+    if (COLLECT_GLOWS) {
+      const tip = T.at(23.5, -3.4);
+      COLLECT_GLOWS.push({ x: tip[0] * renderScale, y: -tip[1] * renderScale, color: WCOL.gold, radius: 7.5 * renderScale });
+    }
+  } },
+  b1_refract_lance: { two: -8.5, draw(T) {
+    haft(T, -12, 20, WCOL.dark, WCOL.darkD, 0.55);
+    // Twin crystal prism collar fins
+    for (let k = -4.6; k <= 4.6; k += 0.35) {
+      const fwd = Math.abs(k) * 0.42;
+      T(19.5 + fwd, k, Math.abs(k) > 3.0 ? WCOL.hi : WCOL.gold);
+      T(20.2 + fwd, k, WCOL.goldD);
+    }
+    const corePt = T.at(21.2, 0);
+    sphere(corePt, 1.7, PART.weapon, 2, WCOL.gold);
+    // Faceted elongated diamond refraction lance head
+    for (let i = 22; i <= 35; i += 0.35) {
+      const u = (i - 22) / 13;
+      const wd = u < 0.22 ? 1.4 + u * 6.0 : Math.max(0.25, (1 - (u - 0.22) / 0.78) * 2.75);
+      for (let k = -wd; k <= wd + 0.01; k += 0.35) {
+        const col = Math.abs(k) < 0.55 ? WCOL.hi : k < 0 ? WCOL.a : WCOL.d;
+        T(i, k, col);
+      }
+    }
+    if (COLLECT_GLOWS) {
+      COLLECT_GLOWS.push({ x: corePt[0] * renderScale, y: -corePt[1] * renderScale, color: WCOL.gold, radius: 5.5 * renderScale });
+      const tip = T.at(34, 0);
+      COLLECT_GLOWS.push({ x: tip[0] * renderScale, y: -tip[1] * renderScale, color: WCOL.hi, radius: 5 * renderScale });
+    }
+  } },
+  b1_tempest_astrolabe: { two: -7.5, draw(T) {
+    haft(T, -12, 21.5, WCOL.wood, WCOL.woodD, 0.72);
+    for (let k = -3.0; k <= 3.0; k += 0.35) T(21.8, k, WCOL.gold);
+    const cx = 27.6;
+    // Outer brass/gold astrolabe ring + cardinal points
+    for (let a = 0; a < Math.PI * 2; a += 0.13) {
+      T(cx + Math.cos(a) * 5.6, Math.sin(a) * 5.6, Math.abs(Math.sin(a)) > 0.75 ? WCOL.hi : WCOL.gold);
+      // Inner tilted gyroscope ring
+      T(cx + Math.cos(a + 0.4) * 4.4, Math.sin(a + 0.4) * 2.6, WCOL.goldD);
+    }
+    for (const [pi, pk] of [[cx + 6.6, 0], [cx - 6.2, 0], [cx, -6.5], [cx, 6.5]]) {
+      T(pi, pk, WCOL.hi);
+    }
+    const orbCenter = T.at(cx, 0);
+    sphere(orbCenter, 2.6, PART.weapon, 2, WCOL.a);
+    sphere([orbCenter[0] - 0.6, orbCenter[1] + 0.6, orbCenter[2] + 0.5], 1.2, PART.weapon, 2, WCOL.hi);
+    if (COLLECT_GLOWS) {
+      COLLECT_GLOWS.push({ x: orbCenter[0] * renderScale, y: -orbCenter[1] * renderScale, color: WCOL.a, radius: 8.5 * renderScale });
+    }
+  } },
+  b1_chrono_disruptor: { two: -9, draw(T) {
+    // Rear stock + angled heavy grip
+    for (let i = -13; i <= -5; i += 0.35) for (let k = -4.2; k <= 0.6; k += 0.35) T(i, k, k < -2.6 ? WCOL.oliveA : WCOL.oliveD);
+    for (let i = -3; i <= 1.2; i += 0.35) for (let k = -1.2; k <= 3.4; k += 0.35) T(i, k, WCOL.dark);
+    // Twin splayed chrono accelerator prongs + glowing core channel
+    for (let i = -5; i <= 24.5; i += 0.35) {
+      const splay = i > 16 ? (i - 16) * 0.14 : 0;
+      for (let k = -6.8 - splay; k <= -4.4 - splay; k += 0.35) T(i, k, k < -5.8 - splay ? WCOL.oliveA : WCOL.olive);
+      for (let k = -2.2 + splay; k <= -0.1 + splay; k += 0.35) T(i, k, k > -0.9 + splay ? WCOL.oliveD : WCOL.olive);
+      if (i >= 1 && i <= 19) {
+        for (let k = -4.2; k <= -2.4; k += 0.35) T(i, k, WCOL.dark);
+      }
+    }
+    for (const ci of [3, 8.5, 14, 19.5]) {
+      for (let k = -4.5; k <= -2.2; k += 0.35) T(ci, k, ci >= 14 ? WCOL.hi : WCOL.gold);
+    }
+    if (COLLECT_GLOWS) {
+      const core = T.at(11, -3.3);
+      COLLECT_GLOWS.push({ x: core[0] * renderScale, y: -core[1] * renderScale, color: WCOL.a, radius: 6 * renderScale });
+      const tip = T.at(24, -3.3);
+      COLLECT_GLOWS.push({ x: tip[0] * renderScale, y: -tip[1] * renderScale, color: WCOL.gold, radius: 7.5 * renderScale });
+    }
+  } },
 };
 
 function drawExtras(S) {
@@ -475,6 +671,26 @@ function drawExtras(S) {
       sweep(vent, flame, 0.9, 0.45, PART.pack, 2, 0, WCOL.gold);
       addGlow(flame, WCOL.gold, 5);
     }
+  } else if (th.backAccessory === "b1_crimson_ward") {
+    // Tattered blood-crimson ward mantle + twin jagged ruby shoulder spikes + glowing blood crest
+    const topL = atC([-2.6, 2.8, -2.6]), topR = atC([-2.4, 2.7, 2.4]);
+    const botL = add(P, [-6.0, -5.2, -3.4]), botR = add(P, [-5.5, -5.4, 3.0]);
+    for (let u = 0; u <= 1.001; u += 0.25) {
+      const a = add(mul(topL, 1 - u), mul(topR, u));
+      const b = add(mul(botL, 1 - u), mul(botR, u));
+      sweep(a, b, 1.35, 2.1, PART.cloak, 6);
+    }
+    for (const sgn of [-1, 1]) {
+      const base = atC([-1.8, 3.2, sgn * 4.4]);
+      const tip = atC([-5.8, 8.2, sgn * 6.4]);
+      const barb = atC([-7.6, 3.4, sgn * 5.6]);
+      sweep(base, tip, 1.5, 0.55, PART.cloak, 2, 0, th.mark || WCOL.gold);
+      sweep(base, barb, 1.2, 0.5, PART.cloak, 6);
+      addGlow(tip, th.mark || WCOL.gold, 5.5);
+    }
+    const sigil = atC([-4.2, 2.2, 0]);
+    sphere(sigil, 1.9, PART.pack, 2, th.mark || WCOL.gold);
+    addGlow(sigil, th.mark || WCOL.gold, 6.5);
   }
 
   // Armor silhouettes build on the selected class rig without replacing its pose.

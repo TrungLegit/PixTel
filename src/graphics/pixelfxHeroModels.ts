@@ -101,7 +101,10 @@ export type HeroAttackKind =
   | "shoot_heavy"
   | "beam"
   | "recoil_barrage"
-  | "storm";
+  | "storm"
+  | "b1_lance_refract"
+  | "b1_astrolabe_cast"
+  | "b1_chrono_recoil";
 
 export interface PixelfxHeroDrawOptions {
   classId: ClassId;
@@ -387,6 +390,12 @@ function mapWeaponToRig(
     def.id === "sea_wpn_eclipse_cannon"
   ) {
     weapon = "rail_cannon";
+  } else if (def.id === "b1_wpn_refract_lance") {
+    weapon = "b1_refract_lance";
+  } else if (def.id === "b1_wpn_tempest_astrolabe") {
+    weapon = "b1_tempest_astrolabe";
+  } else if (def.id === "b1_wpn_chrono_disruptor") {
+    weapon = "b1_chrono_disruptor";
   } else if (kind === "dagger" || shape === "daggers") {
     weapon = "dagger";
     offWeapon = "dagger";
@@ -421,10 +430,10 @@ function mapWeaponToRig(
     goldD: mix(eU, hex("#2a1b10") >>> 0, 0.45) >>> 0,
   };
 
-  if (weapon === "staff" || weapon === "astral_staff") {
+  if (weapon === "staff" || weapon === "astral_staff" || weapon === "b1_tempest_astrolabe") {
     weaponColors.wood = mix(bU, hex("#5e3c24") >>> 0, 0.4) >>> 0;
     weaponColors.woodD = mix(weaponColors.wood, hex("#180e08") >>> 0, 0.55) >>> 0;
-  } else if (weapon === "launcher" || weapon === "rail_cannon") {
+  } else if (weapon === "launcher" || weapon === "rail_cannon" || weapon === "b1_chrono_disruptor") {
     weaponColors.olive = bU;
     weaponColors.oliveA = mix(bU, wU, 0.35) >>> 0;
     weaponColors.oliveD = mix(bU, hex("#101418") >>> 0, 0.5) >>> 0;
@@ -462,7 +471,8 @@ function buildAttackPose(
           weaponName === "prism_blade" ||
           weaponName === "null_sever" ||
           weaponName === "greataxe" ||
-          weaponName === "spear"),
+          weaponName === "spear" ||
+          weaponName === "b1_refract_lance"),
     };
   }
 
@@ -698,6 +708,36 @@ function buildAttackPose(
         [1.0, { ...READY_POSE, two: forceTwo, crouch: 3, lean: 1, fx: 14, fy: -21 + pitch * 5, bx: 7, by: -20, sa: pitch, ffx: 8, fbx: -7 }],
       ];
       break;
+    case "b1_lance_refract":
+      // Coiled polearm brace -> lunging twin-hand horizontal crystal lance thrust & prism split follow-through
+      forceTwo = hasWeapon;
+      track = [
+        [0, { ...READY_POSE, two: forceTwo, crouch: 5.5, lean: -4, yaw: 0.35, fx: -4, fy: -21, sa: -0.22 + pitch * 0.4, ffx: 9, fbx: -9 }],
+        [0.20, { ...READY_POSE, two: forceTwo, crouch: 4.5, lean: 6, yaw: -0.18, fx: 19, fy: -22 + pitch * 6, sa: pitch, ffx: 14, fbx: -11, toeB: true }],
+        [0.58, { ...READY_POSE, two: forceTwo, crouch: 5, lean: 5, yaw: -0.25, fx: 18, fy: -21 + pitch * 6, sa: pitch + 0.08, ffx: 13, fbx: -11, toeB: true }],
+        [1.0, { ...READY_POSE, two: forceTwo, crouch: 2.5, lean: 1, yaw: 0, fx: 12, fy: -21, sa: -0.35, ffx: 8, fbx: -7 }],
+      ];
+      break;
+    case "b1_astrolabe_cast":
+      // Levitating two-stage celestial astrolabe elevation -> snapping forward storm-sigil release
+      forceTwo = weaponName === "staff" || weaponName === "astral_staff" || weaponName === "b1_tempest_astrolabe";
+      track = [
+        [0, { ...READY_POSE, two: forceTwo, crouch: 4, y: 0, lean: -1, fx: 7, fy: -22, sa: -1.45, ffx: 8, fbx: -7 }],
+        [0.24, { ...READY_POSE, two: forceTwo, crouch: -2, y: -5, lean: -3, fx: 9, fy: -40, sa: -1.62, ffx: 6, fbx: -6, toeF: true }],
+        [0.60, { ...READY_POSE, two: forceTwo, crouch: 1, y: -3.5, lean: 5, fx: 20, fy: -29 + pitch * 5, sa: -0.18 + pitch * 0.5, ffx: 10, fbx: -8 }],
+        [1.0, { ...READY_POSE, two: forceTwo, crouch: 2, y: 0, lean: 1, fx: 10, fy: -19, sa: -1.1, ffx: 7, fbx: -7 }],
+      ];
+      break;
+    case "b1_chrono_recoil":
+      // Twin-hand heavy quantum cannon blast -> sharp airborne backstep recoil kick & mine eject
+      forceTwo = weaponName === "launcher" || weaponName === "rail_cannon" || weaponName === "b1_chrono_disruptor";
+      track = [
+        [0, { ...READY_POSE, two: forceTwo, crouch: 5, lean: 4, fx: 17, fy: -24 + pitch * 5, bx: 8, by: -22, sa: pitch, ffx: 11, fbx: -9 }],
+        [0.18, { ...READY_POSE, two: forceTwo, crouch: 2, y: -3, lean: -6, fx: 4, fy: -29 + pitch * 4, bx: 1, by: -25, sa: pitch - 0.58, ffx: 9, fbx: -11, toeF: true }],
+        [0.54, { ...READY_POSE, two: forceTwo, crouch: 6.5, y: 0, lean: -3, fx: 8, fy: -26 + pitch * 4, bx: 3, by: -23, sa: pitch - 0.32, ffx: 10, fbx: -10 }],
+        [1.0, { ...READY_POSE, two: forceTwo, crouch: 3, y: 0, lean: 1, fx: 13, fy: -22 + pitch * 5, bx: 6, by: -21, sa: pitch, ffx: 8, fbx: -7 }],
+      ];
+      break;
   }
 
   const sampled = poseAtFn(track, u);
@@ -748,15 +788,23 @@ function buildPoseForState(
       weaponName === "null_sever" ||
       weaponName === "greataxe" ||
       weaponName === "hammer" ||
-      weaponName === "scythe"
+      weaponName === "scythe" ||
+      weaponName === "b1_refract_lance"
     ) {
       base.two = true;
       base.sa = 0.28;
-    } else if (weaponName === "staff" || weaponName === "astral_staff") {
+    } else if (weaponName === "staff" || weaponName === "astral_staff" || weaponName === "b1_tempest_astrolabe") {
       base.sa = -1.15;
-    } else if (weaponName === "pistol" || weaponName === "launcher" || weaponName === "rail_cannon") {
+    } else if (
+      weaponName === "pistol" ||
+      weaponName === "launcher" ||
+      weaponName === "rail_cannon" ||
+      weaponName === "b1_chrono_disruptor"
+    ) {
       base.sa = 0.0;
-      if (weaponName === "launcher" || weaponName === "rail_cannon") base.two = true;
+      if (weaponName === "launcher" || weaponName === "rail_cannon" || weaponName === "b1_chrono_disruptor") {
+        base.two = true;
+      }
     }
   }
   if (hasOffDagger && (weaponName === "dagger" || weaponName === "twin_quantum")) {
@@ -1013,6 +1061,8 @@ function buildLoadoutKey(
       backAccessory = "cape";
     } else if (aDef.rarity === "legendary") {
       backAccessory = "prism_wings";
+    } else if (aDef.id === "b1_arm_crimson_ward") {
+      backAccessory = "b1_crimson_ward";
     }
   }
   const cloakRamp = aDef
@@ -1066,9 +1116,12 @@ function buildLoadoutKey(
 
   const defaultAttackKind: HeroAttackKind = isBareHanded
     ? "punch_1"
-    : wRig.weapon === "staff" || wRig.weapon === "astral_staff"
+    : wRig.weapon === "staff" || wRig.weapon === "astral_staff" || wRig.weapon === "b1_tempest_astrolabe"
       ? "cast_1"
-      : wRig.weapon === "pistol" || wRig.weapon === "launcher" || wRig.weapon === "rail_cannon"
+      : wRig.weapon === "pistol" ||
+          wRig.weapon === "launcher" ||
+          wRig.weapon === "rail_cannon" ||
+          wRig.weapon === "b1_chrono_disruptor"
         ? "shoot"
         : wRig.weapon === "dagger" || wRig.weapon === "twin_quantum"
           ? "flurry_1"

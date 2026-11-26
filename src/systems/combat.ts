@@ -33,7 +33,7 @@ import { WorldSpawner, nextEntityUid } from "../world/spawner";
 import type { ColorRestorationSystem } from "../graphics/colorRestoration";
 import type { HeroAttackKind } from "../graphics/paperDoll";
 import { sprites } from "../graphics/pixelSprites";
-import type { VfxManager } from "../vfx/vfxManager";
+import type { LiveFxEntry, VfxManager } from "../vfx/vfxManager";
 import { PAL } from "../vfx/pixelfx/core/index.js";
 import { sfx } from "../audio/chiptuneSynth";
 import type { InventorySystem } from "./inventorySystem";
@@ -131,6 +131,29 @@ const ELEMENT_HIT_PRESET: Record<ElementType, string> = {
 export class CombatSystem {
   private lastLevelWarnTime = 0;
   private fallbackItemEffects = new ItemEffectSystem();
+  private _mineLiveFx = new Map<number, LiveFxEntry>();
+
+  public reset(): void {
+    this._mineLiveFx.clear();
+  }
+
+  private _pruneMineLiveFx(ctx: CombatContext): void {
+    if (this._mineLiveFx.size === 0) return;
+    const activeMineUids = new Set<number>();
+    for (const h of ctx.hazards) {
+      if (h.kind === "quantum_mine") activeMineUids.add(h.uid);
+    }
+    const livePool = (ctx.vfx as unknown as { livePool?: readonly LiveFxEntry[] } | null | undefined)?.livePool;
+    const hasLivePool = Array.isArray(livePool);
+    for (const [mUid, mFx] of this._mineLiveFx) {
+      const hazardMissing = !activeMineUids.has(mUid);
+      const fxFinished = mFx.fx.done() || (mFx.maxLife !== null && mFx.age >= mFx.maxLife);
+      const fxEvicted = hasLivePool && !livePool.includes(mFx);
+      if (hazardMissing || fxFinished || fxEvicted) {
+        this._mineLiveFx.delete(mUid);
+      }
+    }
+  }
 
   private _fx(ctx: CombatContext): ItemEffectSystem {
     return ctx.itemEffects ?? this.fallbackItemEffects;
@@ -690,6 +713,9 @@ export class CombatSystem {
       if (wpnId === "wpn_quake_maul" || wpnId === "exo_wpn_blood_greatsword" || wpnId === "hid_boss_eraser_edge") {
         return step === 2 ? "overhead_slam" : fallback;
       }
+      if (wpnId === "b1_wpn_refract_lance") {
+        return step >= 1 ? "b1_lance_refract" : fallback;
+      }
     } else if (classId === "chroma_mage") {
       if (
         wpnId === "exo_wpn_blackhole_orb" ||
@@ -701,6 +727,9 @@ export class CombatSystem {
       }
       if (wpnId === "exo_wpn_phoenix_rod" || wpnId === "wpn_amber_staff") {
         return step >= 1 ? "staff_whirl" : fallback;
+      }
+      if (wpnId === "b1_wpn_tempest_astrolabe") {
+        return step >= 1 ? "b1_astrolabe_cast" : fallback;
       }
     } else if (classId === "bit_rogue") {
       if (wpnId === "exo_wpn_phantom_boomerang") {
@@ -723,6 +752,9 @@ export class CombatSystem {
         wpnId === "wpn_singularity_cannon"
       ) {
         return step === 2 ? "recoil_barrage" : fallback;
+      }
+      if (wpnId === "b1_wpn_chrono_disruptor") {
+        return step === 2 ? "b1_chrono_recoil" : fallback;
       }
     }
     return fallback;
@@ -1764,6 +1796,125 @@ export class CombatSystem {
               poiseMult: 1.0,
             });
           }
+        }
+        return;
+      }
+      case "ws_refract_lance": {
+        this._startAttackAnim(player, "b1_lance_refract", 0.36, ang);
+        sfx.playDash();
+        const thrustElem: ElementType = elem === "prism" ? "ice" : elem;
+        this._linePierceHit(ctx, player.x, player.y, ang, 76, 16, 1.55, ELEMENT_HIT_PRESET[thrustElem], thrustElem, 1.6);
+        const tipX = player.x + Math.cos(ang) * 52;
+        const tipY = player.y + Math.sin(ang) * 52;
+        vfx.spawnLive("pixtel/b1_item_refract_lance", {
+          x: tipX,
+          y: tipY - 6,
+          angle: ang,
+          flip: false,
+          priority: 5,
+          maxLife: 0.65,
+        });
+        for (const off of [-0.52, 0, 0.52]) {
+          const { dmg, crit } = this._rollDamage(ctx, 0.42, 10, true);
+          this._spawnPlayerProj(ctx, {
+            x: tipX,
+            y: tipY - 6,
+            angle: ang + off,
+            speed: 255,
+            radius: 5,
+            damage: dmg,
+            crit,
+            pierce: 1,
+            maxLife: 0.45,
+            preset: "proj-laser",
+            element: "prism",
+            hitPreset: "crit-gold",
+            poiseMult: 0.9,
+          });
+        }
+        return;
+      }
+      case "ws_tri_prism_cascade": {
+        this._startAttackAnim(player, "b1_astrolabe_cast", 0.4, ang);
+        sfx.playMagic(1);
+        const tx = player.x + Math.cos(ang) * 56;
+        const ty = player.y + Math.sin(ang) * 56;
+        this._pullEnemiesAround(ctx, tx, ty, 62, 20);
+        for (const e of [...ctx.spawner.enemies]) {
+          if (Math.hypot(e.x - tx, e.y - ty) <= 60 + e.radius) {
+            const { dmg, crit } = this._rollDamage(ctx, 0.65, 8, true, e);
+            this.damageEnemy(ctx, e, dmg, crit, ELEMENT_HIT_PRESET["wind"], "wind", 0, 0, 1.0);
+          }
+        }
+        vfx.spawnLive("pixtel/b1_item_tempest_astrolabe", {
+          x: tx,
+          y: ty,
+          priority: 5,
+          maxLife: 0.78,
+        });
+        vfx.spawnLive("pixtel/boss-telegraph", {
+          x: tx,
+          y: ty,
+          options: { radius: 46, shape: "circle", palette: PAL.volt },
+          priority: 3,
+          maxLife: 0.48,
+        });
+        ctx.hazards.push({
+          uid: nextEntityUid(),
+          owner: "player",
+          kind: "tempest_sigil",
+          x: tx,
+          y: ty,
+          radius: 56,
+          delay: 0.45,
+          age: 0,
+          maxLife: 0.65,
+          tickTimer: 0,
+          damage: Math.round(player.atk * 1.75),
+          triggered: false,
+        });
+        return;
+      }
+      case "ws_chrono_minefield": {
+        this._startAttackAnim(player, "b1_chrono_recoil", 0.34, ang);
+        sfx.playShoot(680);
+        player.dashing = 0.14;
+        player.invuln = Math.max(player.invuln, 0.24);
+        player.dashVx = -Math.cos(ang) * 210;
+        player.dashVy = -Math.sin(ang) * 210;
+        for (const t of ctx.turrets) {
+          t.overclockTime = Math.max(t.overclockTime, 5.0);
+          t.hp = Math.min(t.maxHp, t.hp + 15);
+        }
+        this._pruneMineLiveFx(ctx);
+        const offsets = [-0.36, 0, 0.36];
+        const dists = [46, 62, 46];
+        for (let k = 0; k < 3; k++) {
+          const mx = player.x + Math.cos(ang + offsets[k]) * dists[k];
+          const my = player.y + Math.sin(ang + offsets[k]) * dists[k];
+          const mineUid = nextEntityUid();
+          const mineFx = vfx.spawnLive("pixtel/b1_item_chrono_disruptor", {
+            x: mx,
+            y: my,
+            priority: 4,
+            maxLife: 1.55,
+          });
+          if (mineFx) this._mineLiveFx.set(mineUid, mineFx);
+          ctx.hazards.push({
+            uid: mineUid,
+            owner: "player",
+            kind: "quantum_mine",
+            x: mx,
+            y: my,
+            radius: 38,
+            delay: 1.25,
+            age: 0,
+            maxLife: 1.45,
+            tickTimer: 0,
+            damage: Math.round(player.atk * 0.85),
+            angle: k,
+            triggered: false,
+          });
         }
         return;
       }
@@ -3375,6 +3526,7 @@ export class CombatSystem {
   /** Updates projectiles, turrets, hazards, passives, status DOTs, active Ultimates, and enemy/boss AI. */
   update(ctx: CombatContext, dt: number) {
     const { player, spawner, vfx, world } = ctx;
+    this._pruneMineLiveFx(ctx);
 
     this._fx(ctx).update(ctx, dt, (tgt, pdmg, c, preset, el, kx = 0, ky = 0, pm = 0.2) => {
       this.damageEnemy(ctx, tgt, pdmg, c, preset, el, kx, ky, pm, true);
@@ -3625,6 +3777,19 @@ export class CombatSystem {
           p.vy = Math.sin(p.angle) * spd;
         }
       }
+      if (p.turnRate) {
+        p.angle += p.turnRate * dt;
+        const spd = Math.hypot(p.vx, p.vy);
+        p.vx = Math.cos(p.angle) * spd;
+        p.vy = Math.sin(p.angle) * spd;
+      }
+      if (p.boomerangTime !== undefined && p.life >= p.boomerangTime) {
+        p.boomerangTime = undefined;
+        p.vx = -p.vx;
+        p.vy = -p.vy;
+        p.angle += Math.PI;
+        p.hitSet.clear();
+      }
       p.x += p.vx * dt;
       p.y += p.vy * dt;
 
@@ -3820,9 +3985,42 @@ export class CombatSystem {
           player.stamina = Math.max(0, player.stamina - 10 * dt);
           player.bleachDebuffTime = Math.max(player.bleachDebuffTime, 1.0);
         }
+      } else if (h.kind === "quantum_mine") {
+        const earlyTrigger =
+          h.age < h.delay && spawner.enemies.some((e) => Math.hypot(e.x - h.x, e.y - h.y) <= 28 + e.radius);
+        if (!h.triggered && h.age >= 0.25 && (h.age >= h.delay || earlyTrigger)) {
+          h.triggered = true;
+          h.age = h.maxLife;
+          const linkedFx = this._mineLiveFx.get(h.uid);
+          if (linkedFx) {
+            if (earlyTrigger) vfx.expireLive?.(linkedFx);
+            this._mineLiveFx.delete(h.uid);
+          }
+          const mineEl: ElementType = Math.round(h.angle ?? 0) % 2 === 1 ? "quake" : "ice";
+          sfx.playExplosion();
+          ctx.addShake(2.6);
+          vfx.spawnPooled(mineEl === "ice" ? "ice-shatter" : "ground-slam", { x: h.x, y: h.y, scale: 0.9 });
+          for (const e of [...spawner.enemies]) {
+            if (Math.hypot(e.x - h.x, e.y - h.y) <= h.radius + e.radius) {
+              const { dmg, crit } = this._rollDamage(ctx, 0.85, 10, true, e);
+              this.damageEnemy(ctx, e, dmg, crit, ELEMENT_HIT_PRESET[mineEl], mineEl, 0, 0, 1.4);
+            }
+          }
+        }
       } else if (!h.triggered && h.age >= h.delay) {
         h.triggered = true;
-        if (h.kind === "meteor") {
+        if (h.kind === "tempest_sigil") {
+          sfx.playExplosion();
+          ctx.addShake(3.4);
+          vfx.spawnPooled("zap-hit", { x: h.x, y: h.y - 4, scale: 1.1 });
+          for (const e of [...spawner.enemies]) {
+            if (Math.hypot(e.x - h.x, e.y - h.y) <= h.radius + e.radius) {
+              const { dmg, crit } = this._rollDamage(ctx, 1.75, 12, true, e);
+              if (!e.isBoss) e.stunTime = Math.max(e.stunTime, 0.45);
+              this.damageEnemy(ctx, e, dmg, crit, "zap-hit", "volt", 0, 0, 1.8);
+            }
+          }
+        } else if (h.kind === "meteor") {
           sfx.playExplosion();
           ctx.addShake(3.0);
           vfx.spawnPooled("boss-starfall", { x: h.x, y: h.y });
@@ -3850,10 +4048,75 @@ export class CombatSystem {
           ctx.addShake(3.2);
           if (h.kind === "boss_thorns") vfx.spawnPooled("boss-thorns", { x: h.x, y: h.y });
           else if (h.kind === "skyfall_crystal") vfx.spawnPooled("ice-shatter", { x: h.x, y: h.y });
-          else if (h.kind === "boss_slam" || h.kind === "boss_cone") {
+          else if (h.kind === "pollen_vortex") {
+            vfx.spawnLive("pixtel/b1_mob_zephyr_moth", {
+              x: h.x,
+              y: h.y - 6,
+              startTime: 0.18,
+              options: { mode: "vortex" },
+              priority: 4,
+              maxLife: 0.65,
+            });
+          } else if (h.kind === "volt_snare") {
+            vfx.spawnLive("pixtel/b1_mob_prism_arachnid", {
+              x: h.x,
+              y: h.y - 4,
+              options: { mode: "web" },
+              priority: 4,
+              maxLife: 0.62,
+            });
+          } else if (h.kind === "parallel_beam") {
+            vfx.spawnLive("pixtel/prism-beam", {
+              x: h.x,
+              y: h.y - 14,
+              angle: h.angle ?? 0,
+              startTime: 0.03,
+              maxLife: 0.65,
+              options: { length: Math.min(180, h.radius), palette: PAL.neon },
+              priority: 5,
+            });
+            if (h.liveVfx) {
+              vfx.spawnLive(h.liveVfx.modId, {
+                x: h.x,
+                y: h.y + (h.liveVfx.offsetY ?? 0),
+                angle: h.angle ?? 0,
+                startTime: h.liveVfx.startTime,
+                options: h.liveVfx.mode ? { mode: h.liveVfx.mode } : undefined,
+                priority: 4,
+              });
+            }
+          } else if (h.kind === "chrono_ring") {
+            vfx.spawnLive("pixtel/b1_mob_chrono_arbiter", {
+              x: h.x,
+              y: h.y - 14,
+              options: { mode: "shear" },
+              priority: 4,
+              maxLife: 0.72,
+            });
+          } else if (h.kind === "stasis_implosion") {
+            vfx.spawnPooled("explode-void", { x: h.x, y: h.y });
+            vfx.spawnLive("pixtel/b1_mob_chrono_arbiter", {
+              x: h.x,
+              y: h.y - 8,
+              startTime: 0.2,
+              options: { mode: "implosion" },
+              priority: 4,
+              maxLife: 0.72,
+            });
+          } else if (h.kind === "boss_slam" || h.kind === "boss_cone") {
             vfx.spawnPooled(h.vfxPreset ?? "ground-slam", { x: h.x, y: h.y });
             if (h.vfxPreset === "ground-slam-nature") {
               vfx.spawnPooled("dirt-puff", { x: h.x, y: h.y - 2, scale: 0.65 });
+            }
+            if (h.liveVfx) {
+              vfx.spawnLive(h.liveVfx.modId, {
+                x: h.x,
+                y: h.y + (h.liveVfx.offsetY ?? 0),
+                angle: h.angle ?? 0,
+                startTime: h.liveVfx.startTime,
+                options: h.liveVfx.mode ? { mode: h.liveVfx.mode } : undefined,
+                priority: 4,
+              });
             }
           }
           else if (h.kind === "boss_erase") {
@@ -3907,13 +4170,49 @@ export class CombatSystem {
             if (d <= h.radius + player.radius && Math.abs(diff) <= 0.85) {
               this.damagePlayer(ctx, h.damage, h.x, h.y);
             }
+          } else if (h.kind === "parallel_beam") {
+            const a = h.angle ?? 0;
+            const dirX = Math.cos(a);
+            const dirY = Math.sin(a);
+            const rx = player.x - h.x;
+            const ry = player.y - h.y;
+            const along = rx * dirX + ry * dirY;
+            const perp = Math.abs(rx * -dirY + ry * dirX);
+            if (along >= 0 && along <= h.radius && perp <= 11 + player.radius) {
+              this.damagePlayer(ctx, h.damage, h.x, h.y, true);
+            }
+          } else if (h.kind === "pollen_vortex") {
+            const dx = h.x - player.x;
+            const dy = h.y - player.y;
+            const d = Math.hypot(dx, dy);
+            if (d > 4 && d <= 48 + player.radius) {
+              const pull = Math.min(16, d - 4);
+              world.moveWithCollision(player, (dx / d) * pull, (dy / d) * pull, player.radius);
+            }
+            if (d <= h.radius + player.radius) {
+              this.damagePlayer(ctx, h.damage, h.x, h.y);
+            }
+          } else if (h.kind === "volt_snare") {
+            if (Math.hypot(player.x - h.x, player.y - h.y) <= h.radius + player.radius) {
+              if (player.perfectDashWindow <= 0 && player.invuln <= 0) {
+                player.stamina = Math.max(0, player.stamina - 12);
+              }
+              this.damagePlayer(ctx, h.damage, h.x, h.y);
+            }
           } else if (Math.hypot(player.x - h.x, player.y - h.y) <= h.radius + player.radius) {
-            this.damagePlayer(ctx, h.damage, h.x, h.y, h.kind === "boss_erase");
+            if (h.knockback && h.knockback > 0 && player.perfectDashWindow <= 0 && player.invuln <= 0) {
+              const dx = player.x - h.x;
+              const dy = player.y - h.y;
+              const d = Math.hypot(dx, dy) || 1;
+              world.moveWithCollision(player, (dx / d) * h.knockback, (dy / d) * h.knockback, player.radius);
+            }
+            this.damagePlayer(ctx, h.damage, h.x, h.y, h.kind === "boss_erase" || h.kind === "chrono_ring");
           }
         }
       }
 
       if (h.age >= h.maxLife) {
+        if (h.kind === "quantum_mine") this._mineLiveFx.delete(h.uid);
         ctx.hazards.splice(i, 1);
       }
     }
@@ -3963,6 +4262,13 @@ export class CombatSystem {
         if (e.animKind === "roll_charge" && !e.animImpactDone && animProgress >= 0.42) {
           e.animImpactDone = true;
           vfx.spawnPooled("dirt-puff", { x: e.x, y: e.y - 2, scale: 0.42 });
+        }
+        if (e.animKind === "chrono_shear" && !e.animImpactDone && animProgress >= 0.88) {
+          e.animImpactDone = true;
+          const bAng = e.animAngle + Math.PI / 2;
+          e.dashTime = 0.14;
+          e.dashVx = Math.cos(bAng) * 230;
+          e.dashVy = Math.sin(bAng) * 230;
         }
         if (e.animTime === 0) e.animKind = "idle";
       }
@@ -4182,7 +4488,8 @@ export class CombatSystem {
             (edef.ai === "mini_root_golem" ||
             edef.ai === "mini_quartz_knight" ||
             edef.ai === "mini_amber_warrior" ||
-            edef.ai === "mini_void_gatekeeper"
+            edef.ai === "mini_void_gatekeeper" ||
+            edef.ai === "mini_chrono_arbiter"
               ? 122
               : 95)
         ) {

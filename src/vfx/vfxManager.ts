@@ -22,6 +22,14 @@ import * as cursedAuraMod from "./pixelfx/fx/pixtel/cursed-aura.js";
 import * as eclipseReapMod from "./pixelfx/fx/pixtel/eclipse-reap.js";
 import * as emberNovaMod from "./pixelfx/fx/pixtel/ember-nova.js";
 import * as bleedSlashMod from "./pixelfx/fx/pixtel/bleed-slash.js";
+import * as b1ItemRefractLanceMod from "./pixelfx/fx/pixtel/b1_item_refract_lance.js";
+import * as b1ItemTempestAstrolabeMod from "./pixelfx/fx/pixtel/b1_item_tempest_astrolabe.js";
+import * as b1ItemChronoDisruptorMod from "./pixelfx/fx/pixtel/b1_item_chrono_disruptor.js";
+import * as b1ItemCrimsonWardMod from "./pixelfx/fx/pixtel/b1_item_crimson_ward.js";
+import * as b1MobZephyrMothMod from "./pixelfx/fx/pixtel/b1_mob_zephyr_moth.js";
+import * as b1MobPrismArachnidMod from "./pixelfx/fx/pixtel/b1_mob_prism_arachnid.js";
+import * as b1MobAmberCrucibleMod from "./pixelfx/fx/pixtel/b1_mob_amber_crucible.js";
+import * as b1MobChronoArbiterMod from "./pixelfx/fx/pixtel/b1_mob_chrono_arbiter.js";
 
 // Melee & Combat pixelfx
 import * as swordSlashMod from "./pixelfx/fx/melee/sword-slash.js";
@@ -92,6 +100,14 @@ export const PIXELFX_MODS: Record<string, PixelfxModule> = {
   "pixtel/eclipse-reap": eclipseReapMod,
   "pixtel/ember-nova": emberNovaMod,
   "pixtel/bleed-slash": bleedSlashMod,
+  "pixtel/b1_item_refract_lance": b1ItemRefractLanceMod,
+  "pixtel/b1_item_tempest_astrolabe": b1ItemTempestAstrolabeMod,
+  "pixtel/b1_item_chrono_disruptor": b1ItemChronoDisruptorMod,
+  "pixtel/b1_item_crimson_ward": b1ItemCrimsonWardMod,
+  "pixtel/b1_mob_zephyr_moth": b1MobZephyrMothMod,
+  "pixtel/b1_mob_prism_arachnid": b1MobPrismArachnidMod,
+  "pixtel/b1_mob_amber_crucible": b1MobAmberCrucibleMod,
+  "pixtel/b1_mob_chrono_arbiter": b1MobChronoArbiterMod,
   "melee/sword-slash": swordSlashMod,
   "melee/double-slash": doubleSlashMod,
   "melee/heavy-cleave": heavyCleaveMod,
@@ -241,7 +257,7 @@ export const ATLAS_PRESETS: Record<string, { mod: PixelfxModule; opts: BakeOptio
   "muzzle-smg": { mod: muzzleSmgMod, opts: { options: { palette: PAL.heal, height: 6 }, fps: 22, maxDuration: 0.36, downscale: 0.52 } },
 };
 
-interface LiveFxEntry {
+export interface LiveFxEntry {
   modId: string;
   fx: PixelfxInstance;
   x: number;
@@ -493,6 +509,15 @@ export class VfxManager {
     };
     this.livePool.push(entry);
     return entry;
+  }
+
+  expireLive(entry: LiveFxEntry | null | undefined) {
+    if (!entry) return;
+    entry.maxLife = entry.age;
+    const idx = this.livePool.indexOf(entry);
+    if (idx !== -1) {
+      this.livePool.splice(idx, 1);
+    }
   }
 
   private _applyPivot(tx: number, ty: number, lx: number, ly: number, flip: boolean, angle: number) {

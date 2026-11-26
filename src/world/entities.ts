@@ -164,7 +164,19 @@ export type EnemyAnimKind =
   | "void_slam"
   | "void_blink"
   | "void_barrage"
-  | "erase_cast";
+  | "erase_cast"
+  | "gale_crescent"
+  | "pollen_vortex"
+  | "flutter_scatter"
+  | "prism_boomerang"
+  | "volt_web_snare"
+  | "static_discharge"
+  | "slag_pour"
+  | "crucible_mortar"
+  | "furnace_overpressure"
+  | "chrono_shear"
+  | "null_guillotine"
+  | "stasis_implosion";
 
 export interface EnemyEntity {
   uid: number;
@@ -274,7 +286,9 @@ export interface ProjectileEntity {
   canOverclockTurret?: boolean;
   hitPreset?: string;
   poiseMult?: number;
-  spawnHazardOnHit?: "moss_pool";
+  turnRate?: number;
+  boomerangTime?: number;
+  spawnHazardOnHit?: "moss_pool" | "volt_snare";
   hazardDamage?: number;
 }
 
@@ -311,7 +325,14 @@ export interface HazardEntity {
     | "boss_thorns"
     | "boss_erase"
     | "boss_cross"
-    | "boss_rot_cross";
+    | "boss_rot_cross"
+    | "tempest_sigil"
+    | "quantum_mine"
+    | "pollen_vortex"
+    | "volt_snare"
+    | "parallel_beam"
+    | "chrono_ring"
+    | "stasis_implosion";
   x: number;
   y: number;
   radius: number;
@@ -322,6 +343,8 @@ export interface HazardEntity {
   damage: number;
   angle?: number;
   vfxPreset?: string;
+  liveVfx?: { modId: string; mode?: string; offsetY?: number; startTime?: number };
+  knockback?: number;
   triggered: boolean;
 }
 
