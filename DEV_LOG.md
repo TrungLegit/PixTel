@@ -40,6 +40,17 @@
 
 ## Nhật Ký Cập Nhật (Newest First)
 
+### [2026-11-26 06:54 UTC] — GitHub Copilot — Đồng bộ hình dáng trang bị & dư ảnh Dash
+- **Commit / Branch:** `feat/vietnamese-pixel-game-font`
+- **Giai đoạn / Version:** `PIXTEL v2.6+` — Paper-Doll & Combat VFX Polish
+- **Đã làm (Done):**
+  - Ánh xạ `visualStyle.shape` của mũ, giáp, giày và phụ kiện vào rig/palette nhân vật; thêm các hình mũ, vai giáp, giày và icon phụ kiện pixel có viền rõ. Renderer tiếp tục dùng class và loadout hiện tại của người chơi.
+  - Thêm một bóng dư ảnh nhân vật theo hướng Dash bằng sprite đã cache, giữ Canvas pixel-sharp; tái sử dụng VFX manager và hook combat hiện có, không đổi damage/cooldown/drop/AI.
+- **File chính đã sửa / thêm:** `src/graphics/pixelfxHeroModels.ts`, `src/graphics/paperDoll.ts`, `src/vfx/pixelfx/core/rig.js`, `src/vfx/pixelfxTypes.ts`, `src/game.ts`, `tests/featureTests.ts`
+- **Kiểm tra (Verified):** `npm run build`, `npm run test` (11/11 feature suites after syncing the latest main changes), `git diff --check`.
+- **Lưu ý / Handoff (Breaking changes / Đang dở):** Không có thay đổi schema trang bị hoặc cân bằng. VFX combo/[E]/[Q]/hitstop tiếp tục dùng pipeline hiện có.
+- **Gợi ý bước tiếp theo (Next Steps):** Push nhánh đã đồng bộ và mở draft PR cho phần render/VFX.
+
 ### [2026-11-25 15:02] — GitHub Copilot — Đồng bộ nhánh font với main
 - **Commit / Branch:** `feat/vietnamese-pixel-game-font` (merge `origin/main`)
 - **Giai đoạn / Version:** `PIXTEL v2.6+` — Merge & Hidden Relics

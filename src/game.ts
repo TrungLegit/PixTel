@@ -2074,6 +2074,7 @@ export class PixTelOpenWorldGame {
               Math.max(0, 1 - p.attackAnimTime / Math.max(0.05, p.attackAnimDuration))
             );
       const activeAimAngle = p.attackAnimTime > 0 ? p.attackAnimAngle : p.aimAngle;
+      const heroDashAngle = p.dashing > 0 ? Math.atan2(p.dashVy, p.dashVx) : undefined;
       const reqCharge = p.quickChargeTimer > 0 ? 0.26 : 0.38;
       const chargePct = p.charging ? Math.min(1, p.chargeTime / reqCharge) : 0;
       const inJustWindow =
@@ -2102,6 +2103,7 @@ export class PixTelOpenWorldGame {
               attackKind: activeAttackKind,
               attackProgress: activeAttackProgress,
               aimAngle: activeAimAngle,
+              dashAngle: heroDashAngle,
               shieldGuard: p.shieldTime > 0,
               bleached: heroBleached,
               time: this.time,
@@ -2142,6 +2144,7 @@ export class PixTelOpenWorldGame {
               attackKind: activeAttackKind,
               attackProgress: activeAttackProgress,
               aimAngle: activeAimAngle,
+              dashAngle: heroDashAngle,
               shieldGuard: p.shieldTime > 0,
               hitFlash: p.hitFlash > 0,
               bleached: heroBleached,

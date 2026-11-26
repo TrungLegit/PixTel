@@ -42,6 +42,8 @@
 {"created": "2026-11-25T14:37:34.006437+00:00", "dst": "file:src/ui/ClassSelect.ts", "note": "", "schema_version": 1, "src": "decision:20261125143734-blockpixel-logo-lettering", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:44:11.183107+00:00", "dst": "file:DEV_LOG.md", "note": "", "schema_version": 1, "src": "decision:20261125144411-resolve-current-main-conflicts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:46:03.447853+00:00", "dst": "file:style.css", "note": "", "schema_version": 1, "src": "decision:20261125144603-selfhosted-vietnamese-pixel-ui", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-26T06:51:26.315461+00:00", "dst": "file:src/game.ts", "note": "", "schema_version": 1, "src": "decision:20261126065126-render-gear-from-equipment", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-26T06:51:26.315461+00:00", "dst": "file:src/graphics/pixelfxHeroModels.ts", "note": "", "schema_version": 1, "src": "decision:20261126065126-render-gear-from-equipment", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T13:30:11.378545+00:00", "dst": "file:.agents/skills/codixel/SKILL.md", "note": "", "schema_version": 1, "src": "file:.agents/skills/codixel/package.json", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T13:30:11.809596+00:00", "dst": "file:src/vfx/vfxManager.ts", "note": "", "schema_version": 1, "src": "file:.agents/skills/pixelfx/SKILL.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:.agents/skills/spritecook-polish-sprites/scripts/compare_alpha.py", "note": "", "schema_version": 1, "src": "file:.agents/skills/spritecook-polish-sprites/scripts/test_compare_alpha.py", "type": "imports", "weight": 1.0}
@@ -54,7 +56,8 @@
 {"created": "2026-11-25T14:30:13.212983+00:00", "dst": "decision:20261125142812-epic-pixelgrid-title-screen", "note": "", "schema_version": 1, "src": "file:DEV_LOG.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:38:31.739343+00:00", "dst": "decision:20261125143734-blockpixel-logo-lettering", "note": "", "schema_version": 1, "src": "file:DEV_LOG.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:46:08.998756+00:00", "dst": "decision:20261125144411-resolve-current-main-conflicts", "note": "", "schema_version": 1, "src": "file:DEV_LOG.md", "type": "relates_to", "weight": 1.0}
-{"created": "2026-11-25T15:04:15.944025+00:00", "dst": "decision:20261125144603-selfhosted-vietnamese-pixel-ui", "note": "", "schema_version": 1, "src": "file:DEV_LOG.md", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-25T14:50:03.210322+00:00", "dst": "decision:20261125144603-selfhosted-vietnamese-pixel-ui", "note": "", "schema_version": 1, "src": "file:DEV_LOG.md", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-26T06:56:47.669438+00:00", "dst": "decision:20261126065126-render-gear-from-equipment", "note": "", "schema_version": 1, "src": "file:DEV_LOG.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:07:10.739244+00:00", "dst": "file:AGENTS.md", "note": "", "schema_version": 1, "src": "file:DEV_LOG.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:30:28.472899+00:00", "dst": "file:src/data/hiddenItems.ts", "note": "", "schema_version": 1, "src": "file:DEV_LOG.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:07:11.036763+00:00", "dst": "file:DEV_LOG.md", "note": "", "schema_version": 1, "src": "file:GEMINI.md", "type": "relates_to", "weight": 1.0}
@@ -137,6 +140,7 @@
 {"created": "2026-11-25T03:24:13.086846+00:00", "dst": "file:src/sprites/spriteGen.js", "note": "", "schema_version": 1, "src": "file:src/engine/game.js", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T03:24:13.086846+00:00", "dst": "file:src/vfx/pixelfx/core/color.js", "note": "", "schema_version": 1, "src": "file:src/engine/game.js", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T03:24:13.086846+00:00", "dst": "file:src/vfx/vfxManager.js", "note": "", "schema_version": 1, "src": "file:src/engine/game.js", "type": "imports", "weight": 1.0}
+{"created": "2026-11-26T06:53:04.256817+00:00", "dst": "decision:20261126065126-render-gear-from-equipment", "note": "", "schema_version": 1, "src": "file:src/game.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/audio/chiptuneSynth.ts", "note": "", "schema_version": 1, "src": "file:src/game.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/classes.ts", "note": "", "schema_version": 1, "src": "file:src/game.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/elements.ts", "note": "", "schema_version": 1, "src": "file:src/game.ts", "type": "imports", "weight": 1.0}
@@ -192,6 +196,7 @@
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/graphics/pixelfxHeroModels.ts", "note": "", "schema_version": 1, "src": "file:src/graphics/itemIcons.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:04:57.293840+00:00", "dst": "file:src/data/items.ts", "note": "", "schema_version": 1, "src": "file:src/graphics/paperDoll.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/types.ts", "note": "", "schema_version": 1, "src": "file:src/graphics/paperDoll.ts", "type": "imports", "weight": 1.0}
+{"created": "2026-11-26T06:53:03.967052+00:00", "dst": "file:src/game.ts", "note": "", "schema_version": 1, "src": "file:src/graphics/paperDoll.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T07:18:53.526610+00:00", "dst": "file:src/graphics/codixelAtlas.ts", "note": "", "schema_version": 1, "src": "file:src/graphics/paperDoll.ts", "type": "depends_on", "weight": 1.0}
 {"created": "2026-11-25T11:04:57.293840+00:00", "dst": "file:src/graphics/codixelAtlas.ts", "note": "", "schema_version": 1, "src": "file:src/graphics/paperDoll.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T06:00:49.906660+00:00", "dst": "file:src/graphics/pixelSprites.ts", "note": "", "schema_version": 1, "src": "file:src/graphics/paperDoll.ts", "type": "depends_on", "weight": 1.0}
@@ -209,6 +214,7 @@
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/vfx/pixelfx/core/color.js", "note": "", "schema_version": 1, "src": "file:src/graphics/pixelSprites.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/vfx/pixelfxTypes.ts", "note": "", "schema_version": 1, "src": "file:src/graphics/pixelSprites.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:56:55.417143+00:00", "dst": "decision:20261125113206-pixelfx-hero-models-selective", "note": "", "schema_version": 1, "src": "file:src/graphics/pixelfxHeroModels.ts", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-26T06:54:22.807704+00:00", "dst": "decision:20261126065126-render-gear-from-equipment", "note": "", "schema_version": 1, "src": "file:src/graphics/pixelfxHeroModels.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/classes.ts", "note": "", "schema_version": 1, "src": "file:src/graphics/pixelfxHeroModels.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/elements.ts", "note": "", "schema_version": 1, "src": "file:src/graphics/pixelfxHeroModels.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/items.ts", "note": "", "schema_version": 1, "src": "file:src/graphics/pixelfxHeroModels.ts", "type": "imports", "weight": 1.0}
@@ -454,6 +460,7 @@
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/vfx/pixelfx/core/font.js", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/core/painter.js", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/vfx/pixelfx/core/math.js", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/core/painter.js", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/vfx/pixelfx/core/math.js", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/core/particles.js", "type": "imports", "weight": 1.0}
+{"created": "2026-11-26T06:54:23.205677+00:00", "dst": "file:src/graphics/pixelfxHeroModels.ts", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/core/rig.js", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/vfx/pixelfx/core/actor.js", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/core/rig.js", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/vfx/pixelfx/core/color.js", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/core/rig.js", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/vfx/pixelfx/core/color.js", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/core/scene.js", "type": "imports", "weight": 1.0}
@@ -586,6 +593,7 @@
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/vfx/pixelfx/core/index.js", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/fx/ui/_lib.js", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/vfx/pixelfx/core/index.js", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/fx/ui/level-up.js", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/vfx/pixelfx/fx/ui/_lib.js", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/fx/ui/level-up.js", "type": "imports", "weight": 1.0}
+{"created": "2026-11-26T06:54:23.003482+00:00", "dst": "file:src/graphics/pixelfxHeroModels.ts", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfxTypes.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/items.ts", "note": "", "schema_version": 1, "src": "file:src/vfx/uiRarityFx.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/types.ts", "note": "", "schema_version": 1, "src": "file:src/vfx/uiRarityFx.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/graphics/codixelAtlas.ts", "note": "", "schema_version": 1, "src": "file:src/vfx/uiRarityFx.ts", "type": "imports", "weight": 1.0}
@@ -766,6 +774,7 @@
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/data/worldConfig.ts", "note": "", "schema_version": 1, "src": "file:tests/featureTests.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/graphics/colorRestoration.ts", "note": "", "schema_version": 1, "src": "file:tests/featureTests.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/graphics/pixelfxHeroModels.ts", "note": "", "schema_version": 1, "src": "file:tests/featureTests.ts", "type": "imports", "weight": 1.0}
+{"created": "2026-11-26T06:54:23.414570+00:00", "dst": "file:src/graphics/pixelfxHeroModels.ts", "note": "", "schema_version": 1, "src": "file:tests/featureTests.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T11:56:57.672682+00:00", "dst": "file:src/graphics/pixelfxHeroModels.ts", "note": "", "schema_version": 1, "src": "file:tests/featureTests.ts", "type": "tests", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/systems/combat.ts", "note": "", "schema_version": 1, "src": "file:tests/featureTests.ts", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T09:24:51.517771+00:00", "dst": "file:src/systems/combat.ts", "note": "", "schema_version": 1, "src": "file:tests/featureTests.ts", "type": "relates_to", "weight": 1.0}

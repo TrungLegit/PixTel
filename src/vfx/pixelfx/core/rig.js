@@ -217,6 +217,13 @@ function drawBody(S) {
   const { B, armN, armF, legN, legF, sN, sF, hipN, hipF, turn } = S, F_ = (name) => B[name];
   const bareHands = !!ACTIVE_THEME.bareHands;
   const bareHead = !ACTIVE_THEME.headgear || ACTIVE_THEME.headgear === "hair";
+  const bootWidth =
+    ACTIVE_THEME.bootsShape === "greaves" ? 2.0 : ACTIVE_THEME.bootsShape === "void_step" ? 1.5 : 1.7;
+  const bootHeight =
+    ACTIVE_THEME.bootsShape === "greaves" ? 1.5
+      : ACTIVE_THEME.bootsShape === "treads" ? 1.55
+        : ACTIVE_THEME.bootsShape === "void_step" || ACTIVE_THEME.bootsShape === "strider" ? 1.0
+          : 1.25;
   useFrame("pelvis");
   ellipsoid(add(F_("pelvis").t, mv(F_("pelvis").R, [0, -0.2, 0])), F_("pelvis").R, [2.9, 2.6, 4.2], PART.pelvis, 1);
   useFrame("waist");
@@ -249,7 +256,7 @@ function drawBody(S) {
     sweep(L.joint, L.end, 2.15, 1.4, sh, 5, 0.4);
     useFrame(nameFt);
     const R = F_(nameFt).R, a = F_(nameFt).t;
-    sweep(add(a, mv(R, [-1.5, -0.6, 0])), add(a, mv(R, [4.6, -1.1, 0])), 1.7, 1.25, fo, 5);
+    sweep(add(a, mv(R, [-1.5, -0.6, 0])), add(a, mv(R, [4.6, -1.1, 0])), bootWidth, bootHeight, fo, 5);
   };
   leg(false, legN, hipN, PART.thighN, PART.kneeN, PART.shinN, PART.footN, "thighN", "shinN", "footN");
   leg(true, legF, hipF, PART.thighF, PART.kneeF, PART.shinF, PART.footF, "thighF", "shinF", "footF");
@@ -432,6 +439,23 @@ function drawExtras(S) {
     addGlow(coilTop, th.eye || WCOL.gold, 5);
   }
 
+  // Armor silhouettes build on the selected class rig without replacing its pose.
+  if (th.armorShape === "plate" || th.armorShape === "aegis") {
+    for (const side of [-1, 1]) {
+      const shoulder = atC([0.1, 3.8, side * 3.0]);
+      ellipsoid(shoulder, CR, [2.4, 1.55, 2.0], PART.chest, 0);
+      if (th.armorShape === "aegis") {
+        const rivet = atC([2.35, 4.0, side * 3.0]);
+        sphere(rivet, 0.65, PART.chest, 2, th.armorAccent || th.mark || WCOL.gold);
+      }
+    }
+    if (th.armorShape === "aegis") {
+      const crest = atC([3.25, 1.6, 0]);
+      ellipsoid(crest, CR, [0.55, 1.3, 1.05], PART.chest, 2, th.armorAccent || th.mark);
+      addGlow(crest, th.armorAccent || th.mark || WCOL.gold, 3.5);
+    }
+  }
+
   // Headgear / Bare Hair + Class Face Accent
   const hg = th.headgear || "hair";
   if (hg === "hair") {
@@ -468,13 +492,41 @@ function drawExtras(S) {
       sphere(pt, 0.75, PART.helmet, 2, th.mark || WCOL.gold);
     }
     addGlow(haloPos, th.mark || WCOL.gold, 7);
+  } else if (hg === "gear_hood") {
+    ellipsoid(atH([-0.2, 0.8, 0]), HR, [3.7, 3.5, 3.3], PART.helmet, 3);
+    sweep(atH([-1.8, 2.0, -2.0]), atH([-2.7, -1.5, -2.2]), 1.15, 0.9, PART.helmet, 3);
+    sweep(atH([-1.8, 2.0, 2.0]), atH([-2.7, -1.5, 2.2]), 1.15, 0.9, PART.helmet, 3);
+    ellipsoid(atH([1.8, -1.2, 0]), HR, [1.5, 0.55, 2.1], PART.helmet, 6);
+  } else if (hg === "gear_visor") {
+    ellipsoid(atH([-0.3, 0.8, 0]), HR, [3.45, 2.6, 3.2], PART.helmet, 3);
+    const v1 = atH([2.8, 0.35, -1.9]), v2 = atH([2.8, 0.35, 1.9]);
+    sweep(v1, v2, 0.65, 0.65, PART.helmet, 2, 0, th.helmetAccent || WCOL.gold);
+    addGlow(atH([2.9, 0.35, 0]), th.helmetAccent || WCOL.gold, 3.5);
+  } else if (hg === "gear_crest") {
+    ellipsoid(atH([-0.2, 0.8, 0]), HR, [3.4, 3.0, 3.1], PART.helmet, 3);
+    ellipsoid(atH([0.9, 2.8, 0]), HR, [1.9, 1.0, 1.15], PART.helmet, 6);
+    sweep(atH([-0.1, 3.2, 0]), atH([-3.5, 6.2, 0]), 1.25, 0.45, PART.helmet, 6, 0, th.helmetAccent);
+  } else if (hg === "gear_crown") {
+    ellipsoid(atH([-0.5, 1.0, 0]), HR, [3.0, 2.4, 2.9], PART.hair, 7);
+    sweep(atH([-0.1, 3.1, -2.2]), atH([-0.1, 3.1, 2.2]), 0.65, 0.65, PART.helmet, 2, 0, th.helmetAccent);
+    for (const z of [-1.6, 0, 1.6]) {
+      sweep(atH([-0.1, 3.2, z]), atH([-0.1, z === 0 ? 5.2 : 4.5, z]), 0.65, 0.45, PART.helmet, 2, 0, th.helmetAccent);
+    }
+  } else if (hg === "gear_halo") {
+    ellipsoid(atH([-0.5, 1.0, 0]), HR, [3.0, 2.4, 2.9], PART.hair, 7);
+    const haloPos = atH([-0.4, 5.0, 0]);
+    for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
+      const pt = [haloPos[0] + Math.cos(a) * 3.1, haloPos[1], haloPos[2] + Math.sin(a) * 2.4];
+      sphere(pt, 0.75, PART.helmet, 2, th.helmetAccent || WCOL.gold);
+    }
+    addGlow(haloPos, th.helmetAccent || WCOL.gold, 6);
   }
 
   // Eyes / Glowing Visor slit on face front
   if (mv(HR, [1, 0, 0])[2] > -0.25 && th.eye) {
     const e1 = atH([2.6, 0.0, 1.0]);
     const e2 = atH([2.7, 0.0, -0.7]);
-    if (hg === "plume_helm") {
+    if (hg === "plume_helm" || hg === "gear_visor") {
       sweep(e1, e2, 0.7, 0.7, PART.helmet, 2, 0, th.eye);
     } else if (hg !== "tinker_goggles") {
       sphere(e1, 0.75, PART.face, 2, th.eye);

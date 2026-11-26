@@ -1,7 +1,13 @@
 import { CLASSES } from "../data/classes";
 import { ITEMS, RARITY_INFO } from "../data/items";
 import { ELEMENT_META, normalizeElement } from "../data/elements";
-import type { ClassId, EquipSlot, ItemDef, ItemInstance } from "../data/types";
+import type {
+  ClassId,
+  EquipSlot,
+  EquipVisualShape,
+  ItemDef,
+  ItemInstance,
+} from "../data/types";
 import {
   clearFrame,
   createFrame,
@@ -56,6 +62,7 @@ export interface PixelfxHeroDrawOptions {
   attackKind?: HeroAttackKind;
   attackProgress?: number;
   aimAngle?: number;
+  dashAngle?: number;
   shieldGuard?: boolean;
   hitFlash?: boolean;
   bleached?: boolean;
@@ -101,6 +108,67 @@ const INK_DEFAULT = hex("#0e0c18") >>> 0;
 const SEAM_DEFAULT = hex("#222436") >>> 0;
 const SKIN_RAMP = ["#ffe0c4", "#f0b98e", "#c98b63", "#8f5940"].map((c) => hex(c) >>> 0);
 const NOVICE_BOOTS_RAMP = ["#9c7352", "#785338", "#573924", "#362214"].map((c) => hex(c) >>> 0);
+const HERO_HEADGEAR_BY_SHAPE: Partial<
+  Record<EquipVisualShape, NonNullable<PixelfxPosedTheme["headgear"]>>
+> = {
+  hood: "gear_hood",
+  visor: "gear_visor",
+  crest: "gear_crest",
+  crown: "gear_crown",
+  halo: "gear_halo",
+};
+const ACCESSORY_PIXELS: Record<"ring_orb" | "chip_orb" | "halo_orb", string[]> = {
+  ring_orb: ["..xxx..", ".xpppx.", "xp...px", "xp...px", "xp...px", ".xpppx.", "..xxx.."],
+  halo_orb: ["..xxx..", ".xpppx.", "xp...px", "xp.a.px", "xp...px", ".xpppx.", "..xxx.."],
+  chip_orb: ["xxxxxxx", "xpppppx", "xppappx", "xpapapx", "xppappx", "xpppppx", "xxxxxxx"],
+};
+
+type HeroGearShapeBySlot = {
+  weapon: Extract<
+    EquipVisualShape,
+    "blade" | "greatsword" | "halberd" | "staff" | "daggers" | "carbine" | "sovereign"
+  >;
+  helmet: Extract<EquipVisualShape, "hood" | "visor" | "crest" | "crown" | "halo">;
+  armor: Extract<EquipVisualShape, "tunic" | "mail" | "plate" | "aegis" | "mantle" | "leather">;
+  boots: Extract<EquipVisualShape, "greaves" | "treads" | "void_step" | "strider">;
+  accessory: Extract<EquipVisualShape, "ring_orb" | "chip_orb" | "halo_orb">;
+};
+
+const HERO_GEAR_SHAPES: { [K in EquipSlot]: readonly HeroGearShapeBySlot[K][] } = {
+  weapon: ["blade", "greatsword", "halberd", "staff", "daggers", "carbine", "sovereign"],
+  helmet: ["hood", "visor", "crest", "crown", "halo"],
+  armor: ["tunic", "mail", "plate", "aegis", "mantle", "leather"],
+  boots: ["greaves", "treads", "void_step", "strider"],
+  accessory: ["ring_orb", "chip_orb", "halo_orb"],
+};
+
+export function resolveHeroGearShape(
+  slot: "helmet",
+  shape?: EquipVisualShape
+): HeroGearShapeBySlot["helmet"] | undefined;
+export function resolveHeroGearShape(
+  slot: "armor",
+  shape?: EquipVisualShape
+): HeroGearShapeBySlot["armor"] | undefined;
+export function resolveHeroGearShape(
+  slot: "boots",
+  shape?: EquipVisualShape
+): HeroGearShapeBySlot["boots"] | undefined;
+export function resolveHeroGearShape(
+  slot: "accessory",
+  shape?: EquipVisualShape
+): HeroGearShapeBySlot["accessory"] | undefined;
+export function resolveHeroGearShape(
+  slot: "weapon",
+  shape?: EquipVisualShape
+): HeroGearShapeBySlot["weapon"] | undefined;
+export function resolveHeroGearShape<K extends EquipSlot>(
+  slot: K,
+  shape?: EquipVisualShape
+): HeroGearShapeBySlot[K] | undefined {
+  const allowed: readonly EquipVisualShape[] = HERO_GEAR_SHAPES[slot];
+  return shape && allowed.includes(shape) ? (shape as HeroGearShapeBySlot[K]) : undefined;
+}
 
 function rampFromHex(baseHex: string, darkHex = "#111322", hiHex = "#ffffff"): number[] {
   const b = hex(baseHex) >>> 0;
@@ -634,8 +702,13 @@ function buildLoadoutKey(
   const hDef = equipment.helmet ? ITEMS[equipment.helmet.defId] : undefined;
   const aDef = equipment.armor ? ITEMS[equipment.armor.defId] : undefined;
   const bDef = equipment.boots ? ITEMS[equipment.boots.defId] : undefined;
+  const accDef = equipment.accessory ? ITEMS[equipment.accessory.defId] : undefined;
   const wInst = equipment.weapon;
   const wDef = wInst ? ITEMS[wInst.defId] : undefined;
+  const helmetShape = resolveHeroGearShape("helmet", hDef?.visualStyle?.shape);
+  const armorShape = resolveHeroGearShape("armor", aDef?.visualStyle?.shape);
+  const bootsShape = resolveHeroGearShape("boots", bDef?.visualStyle?.shape);
+  const accessoryShape = resolveHeroGearShape("accessory", accDef?.visualStyle?.shape);
 
   const isBareHanded = !wDef;
   const isUnarmored = !aDef;
@@ -644,12 +717,20 @@ function buildLoadoutKey(
   const shellRamp = aDef
     ? rampFromHex(aDef.visualStyle?.primary ?? aDef.visualColor ?? RARITY_INFO[aDef.rarity].color)
     : preset.noviceTunic;
-  const coreRamp = aDef ? preset.armorCore : preset.noviceCore;
+  const coreRamp = aDef
+    ? rampFromHex(aDef.accentColor ?? aDef.visualColor ?? RARITY_INFO[aDef.rarity].color)
+    : preset.noviceCore;
 
   let headgear: PixelfxPosedTheme["headgear"] = "hair";
   let headRamp = preset.hairRamp;
   if (hDef) {
-    if (hDef.id === "hlm_prism_halo" || hDef.rarity === "legendary") {
+    const mappedHeadgear = helmetShape ? HERO_HEADGEAR_BY_SHAPE[helmetShape] : undefined;
+    if (mappedHeadgear) {
+      headgear = mappedHeadgear;
+      headRamp = rampFromHex(
+        hDef.visualStyle?.primary ?? hDef.visualColor ?? RARITY_INFO[hDef.rarity].color
+      );
+    } else if (hDef.id === "hlm_prism_halo" || hDef.rarity === "legendary") {
       headgear = "halo_crown";
       headRamp = preset.hairRamp;
     } else {
@@ -659,7 +740,9 @@ function buildLoadoutKey(
   }
 
   const backAccessory: PixelfxPosedTheme["backAccessory"] = aDef
-    ? preset.backAccessory
+    ? armorShape === "mantle"
+      ? "cape"
+      : preset.backAccessory
     : "none";
   const cloakRamp = aDef
     ? rampFromHex(aDef.accentColor ?? aDef.visualColor ?? RARITY_INFO[aDef.rarity].color, "#0e0a1a", "#ffffff")
@@ -668,6 +751,9 @@ function buildLoadoutKey(
   const bootsRamp = bDef
     ? rampFromHex(bDef.visualStyle?.primary ?? bDef.visualColor ?? RARITY_INFO[bDef.rarity].color)
     : NOVICE_BOOTS_RAMP;
+  const armorAccent = aDef
+    ? hex(aDef.accentColor ?? RARITY_INFO[aDef.rarity].color) >>> 0
+    : hex(preset.markHex) >>> 0;
 
   const markCol =
     wInst && wInst.enhanceLevel >= 5 && wInst.infusedElement
@@ -685,6 +771,8 @@ function buildLoadoutKey(
     bareHands: isBareHanded,
     headgear,
     backAccessory,
+    armorShape,
+    bootsShape,
     shielded,
     shell: shellRamp,
     core: coreRamp,
@@ -698,6 +786,10 @@ function buildLoadoutKey(
     seam: SEAM_DEFAULT,
     mark: markCol,
     eye: eyeCol,
+    helmetAccent: hDef
+      ? hex(hDef.accentColor ?? RARITY_INFO[hDef.rarity].color) >>> 0
+      : hex(preset.markHex) >>> 0,
+    armorAccent,
     weaponColors: wRig.weaponColors,
   };
 
@@ -971,6 +1063,7 @@ export function drawPixelfxHero(ctx: CanvasRenderingContext2D, opts: PixelfxHero
     attackKind,
     attackProgress,
     aimAngle,
+    dashAngle,
     chargePct,
     shieldGuard,
     hitFlash = false,
@@ -1002,6 +1095,15 @@ export function drawPixelfxHero(ctx: CanvasRenderingContext2D, opts: PixelfxHero
       ? baked.bleachedCanvas
       : baked.colorCanvas;
 
+  if (animState === "dash" && dashAngle !== undefined && !hitFlash) {
+    const trailX = Math.round(Math.cos(dashAngle) * 5 * drawScale);
+    const trailY = Math.round(Math.sin(dashAngle) * 5 * drawScale);
+    ctx.save();
+    ctx.globalAlpha = 0.28;
+    ctx.drawImage(baseImg, 0, 0, baked.w, baked.h, dx - trailX, dy - trailY, dw, dh);
+    ctx.restore();
+  }
+
   ctx.drawImage(baseImg, 0, 0, baked.w, baked.h, dx, dy, dw, dh);
 
   if (!hitFlash && !bleached) {
@@ -1018,12 +1120,21 @@ export function drawPixelfxHero(ctx: CanvasRenderingContext2D, opts: PixelfxHero
     const orbitR = 11 * rigScale * drawScale;
     const ox = Math.round(x + Math.cos(time * 3.4) * orbitR);
     const oy = Math.round(y - 18 * rigScale * drawScale + Math.sin(time * 5.2) * (2.5 * drawScale));
-    const col = bleached ? "#b8c0d0" : accDef.accentColor ?? RARITY_INFO[accDef.rarity].color;
-    const sz = Math.max(2, Math.round(3 * drawScale));
-    ctx.fillStyle = "#100c18";
-    ctx.fillRect(ox - 1, oy - 1, sz + 2, sz + 2);
-    ctx.fillStyle = col;
-    ctx.fillRect(ox, oy, sz, sz);
+    const col = bleached
+      ? "#b8c0d0"
+      : accDef.visualStyle?.primary ?? accDef.accentColor ?? RARITY_INFO[accDef.rarity].color;
+    const accent = bleached ? "#e4e9f2" : accDef.visualStyle?.accent ?? "#ffffff";
+    const unit = Math.max(1, Math.round(drawScale));
+    const shape = resolveHeroGearShape("accessory", accDef.visualStyle?.shape) ?? "chip_orb";
+    const pattern = ACCESSORY_PIXELS[shape];
+    for (let py = 0; py < pattern.length; py++) {
+      for (let px = 0; px < pattern[py].length; px++) {
+        const cell = pattern[py][px];
+        if (cell === ".") continue;
+        ctx.fillStyle = cell === "x" ? "#100c18" : cell === "a" ? accent : col;
+        ctx.fillRect(ox + (px - 3) * unit, oy + (py - 3) * unit, unit, unit);
+      }
+    }
   }
 
   // Active Buff / Aegis Energy Halo

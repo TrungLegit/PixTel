@@ -55,8 +55,21 @@ export interface PixelfxActor {
 
 export interface PixelfxPosedTheme {
   bareHands?: boolean;
-  headgear?: "hair" | "plume_helm" | "wizard_hat" | "assassin_hood" | "tinker_goggles" | "halo_crown";
+  headgear?:
+    | "hair"
+    | "plume_helm"
+    | "wizard_hat"
+    | "assassin_hood"
+    | "tinker_goggles"
+    | "halo_crown"
+    | "gear_hood"
+    | "gear_visor"
+    | "gear_crest"
+    | "gear_crown"
+    | "gear_halo";
   backAccessory?: "none" | "cape" | "scarf" | "volt_pack";
+  armorShape?: "tunic" | "mail" | "plate" | "aegis" | "mantle" | "leather";
+  bootsShape?: "greaves" | "treads" | "void_step" | "strider";
   shielded?: boolean;
   shell?: number[];
   core?: number[];
@@ -70,6 +83,8 @@ export interface PixelfxPosedTheme {
   seam?: number;
   mark?: number;
   eye?: number;
+  helmetAccent?: number;
+  armorAccent?: number;
   weaponColors?: Record<string, number>;
 }
 
