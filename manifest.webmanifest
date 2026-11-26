@@ -1,0 +1,19 @@
+{
+  "name": "PIXTEL — 16-Bit Co-op Open-World Action RPG",
+  "short_name": "PIXTEL",
+  "description": "Game 16-Bit Action RPG Thế Giới Mở hỗ trợ Mobile Cảm Ứng & Tổ Đội Co-op 2-4 Người!",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#090712",
+  "theme_color": "#090712",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
