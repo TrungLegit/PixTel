@@ -2,6 +2,7 @@ import { getClassDef } from "./data/classes";
 import { getBossCutsceneId, type StoryCutsceneId } from "./data/cutscenes";
 import { ELEMENT_META, normalizeElement } from "./data/elements";
 import { ENEMIES } from "./data/enemies";
+import { STARTER_WEAPON_BY_CLASS } from "./data/equipments";
 import { CONSUMABLE_GROUP_LABELS, ITEMS, RARITY_INFO, createItemInstance } from "./data/items";
 import { rollEnemyDropTable } from "./data/lootTables";
 import { LORE_TABLETS } from "./data/lore";
@@ -73,6 +74,7 @@ import type {
 } from "./net/protocol";
 import { BEGINNER_PRACTICE_STEPS } from "./ui/TutorialModal";
 import { sfx } from "./audio/chiptuneSynth";
+import { DEFAULT_HERO_NAME, sanitizePlayerName } from "./utils/playerName";
 
 export type ModalId =
   | null
@@ -143,7 +145,8 @@ export class PixTelOpenWorldGame {
   unlockedHiddenRecipes = new Set<string>();
   defeatedBossIds = new Set<string>();
   seenCutscenes = new Set<string>(["scene_intro"]);
-  pendingPlayerName = "Chroma-Walker";
+  pendingPlayerName = DEFAULT_HERO_NAME;
+  compactHud = false;
 
   camX = 0;
   camY = 0;
@@ -242,7 +245,7 @@ export class PixTelOpenWorldGame {
   private _initBlankPlayer(classId: ClassId, playerName?: string) {
     const cdef = getClassDef(classId);
     const spawnWp = WAYPOINTS[0];
-    const cleanName = (playerName ?? this.pendingPlayerName ?? "Chroma-Walker").trim().slice(0, 16) || "Chroma-Walker";
+    const cleanName = sanitizePlayerName(playerName ?? this.pendingPlayerName, DEFAULT_HERO_NAME);
     this.player = {
       name: cleanName,
       classId,
@@ -490,6 +493,10 @@ export class PixTelOpenWorldGame {
     this.vfx.clearAll();
 
     this.inv.resetStarterKit(classId);
+    const starterWeaponId = STARTER_WEAPON_BY_CLASS[classId];
+    if (starterWeaponId && ITEMS[starterWeaponId]) {
+      this.inv.stash.push(createItemInstance(starterWeaponId, 1, 0));
+    }
     this.quests.reset();
     this.gacha.reset();
     this.itemEffects.reset();
@@ -501,10 +508,11 @@ export class PixTelOpenWorldGame {
     this.spawner.reset([]);
     this.stats = { kills: 0, mined: 0, chestsOpened: 0, bossesDefeated: 0, reactionsTriggered: 0 };
 
-    const cleanName = (playerName ?? this.pendingPlayerName ?? "Chroma-Walker").trim().slice(0, 16) || "Chroma-Walker";
+    const cleanName = sanitizePlayerName(playerName ?? this.pendingPlayerName, DEFAULT_HERO_NAME);
     this.pendingPlayerName = cleanName;
     this._initBlankPlayer(classId, cleanName);
-    if (playerName || !this.coop.playerName || this.coop.playerName === "Chroma-Walker") {
+    this.coop.playerName = sanitizePlayerName(this.coop.playerName, cleanName);
+    if (playerName || !this.coop.playerName || this.coop.playerName === DEFAULT_HERO_NAME) {
       this.coop.playerName = cleanName;
     }
     this.recalcPlayerStats(false);
@@ -526,8 +534,8 @@ export class PixTelOpenWorldGame {
       this.playCutscene("scene_intro", null, () => {
         this.ui.onToast(
           enableTutorial
-            ? `HỒI I: NGỌN ĐÈN CUỐI CÙNG — Chào mừng ${cleanName}! Làm theo Hướng Dẫn Tân Thủ hoặc bấm [H] mở Cẩm Nang!`
-            : `HỒI I: NGỌN ĐÈN CUỐI CÙNG — Chào mừng ${cleanName}! Gặp Trưởng Làng Elian [F] tại Quảng Trường!`,
+            ? `HỒI I — Chào mừng ${cleanName}! Mở Rương Tân Thủ [F] nhận Vũ Khí & xem Hướng Dẫn góc trái!`
+            : `HỒI I — Chào mừng ${cleanName}! Mở Rương Tân Thủ [F] nhận Vũ Khí hoặc gặp Trưởng Làng Elian!`,
           "epic"
         );
       });
@@ -535,8 +543,8 @@ export class PixTelOpenWorldGame {
       this.setModal(null);
       this.ui.onToast(
         enableTutorial
-          ? `HỒI I: NGỌN ĐÈN CUỐI CÙNG — Làm theo Hướng Dẫn Tân Thủ ở giữa màn hình hoặc bấm [H] mở Cẩm Nang!`
-          : `HỒI I: NGỌN ĐÈN CUỐI CÙNG — Gặp Trưởng Làng Elian [F] hoặc giải mã Bia Ký tại Quảng Trường!`,
+          ? `HỒI I — Mở Rương Tân Thủ [F] nhận Vũ Khí & làm theo Hướng Dẫn góc trái!`
+          : `HỒI I — Mở Rương Tân Thủ [F] nhận Vũ Khí hoặc gặp Trưởng Làng Elian!`,
         "epic"
       );
     }
@@ -599,7 +607,7 @@ export class PixTelOpenWorldGame {
     this.tutorialComboHits = 0;
     this.tutorialReturnModal = null;
 
-    const loadedName = (data.player.name ?? this.pendingPlayerName ?? "Chroma-Walker").trim().slice(0, 16) || "Chroma-Walker";
+    const loadedName = sanitizePlayerName(data.player.name ?? this.pendingPlayerName, DEFAULT_HERO_NAME);
     this.pendingPlayerName = loadedName;
     this._initBlankPlayer(data.classId, loadedName);
     this.coop.playerName = loadedName;
@@ -645,6 +653,14 @@ export class PixTelOpenWorldGame {
       return;
     }
     this.player.classId = classId;
+    const starterIds = new Set<string>(Object.values(STARTER_WEAPON_BY_CLASS));
+    const nextStarterId = STARTER_WEAPON_BY_CLASS[classId];
+    const stashStarterIdx = this.inv.stash.findIndex(
+      (it) => starterIds.has(it.defId) && it.enhanceLevel === 0 && !it.infusedElement
+    );
+    if (stashStarterIdx >= 0 && nextStarterId && ITEMS[nextStarterId]) {
+      this.inv.stash[stashStarterIdx] = createItemInstance(nextStarterId, 1, 0);
+    }
     const unequipped = this.inv.unequipIncompatibleForClass(classId);
     this.turrets.length = 0;
     this.player.stormTime = 0;
@@ -669,7 +685,7 @@ export class PixTelOpenWorldGame {
       savedAt: Date.now(),
       classId: this.player.classId,
       player: {
-        name: this.player.name || this.pendingPlayerName || "Chroma-Walker",
+        name: sanitizePlayerName(this.player.name || this.pendingPlayerName, DEFAULT_HERO_NAME),
         x: Math.round(this.player.x),
         y: Math.round(this.player.y),
         hp: Math.round(this.player.hp),
@@ -769,13 +785,9 @@ export class PixTelOpenWorldGame {
       this.saveGame(false);
     } else {
       sfx.playLootPickup(false);
-      const next = BEGINNER_PRACTICE_STEPS[this.tutorialStep];
       this.vfx.spawnDamageText(this.player.x, this.player.y - 14, `✓ BƯỚC ${this.tutorialStep}/6`, {
         color: "#44ee88",
       });
-      if (next) {
-        this.ui.onToast(`Tiếp theo (${this.tutorialStep + 1}/6): ${next.title} [${next.keyBadge}]`, "info");
-      }
     }
     this.ui.onHudUpdate();
   }
@@ -998,9 +1010,19 @@ export class PixTelOpenWorldGame {
       } else {
         await document.exitFullscreen?.();
       }
+      this.ui.onHudUpdate();
     } catch {
       this.ui.onToast("Trên iPhone/iPad: bấm Chia sẻ ➔ Thêm vào MH chính để chơi Toàn màn hình!", "info");
     }
+  }
+
+  toggleCompactHud(force?: boolean): boolean {
+    this.compactHud = typeof force === "boolean" ? force : !this.compactHud;
+    if (typeof document !== "undefined" && document.body?.classList) {
+      document.body.classList.toggle("hud-compact", this.compactHud);
+    }
+    this.ui.onHudUpdate();
+    return this.compactHud;
   }
 
   // =========================================================================
@@ -1043,10 +1065,11 @@ export class PixTelOpenWorldGame {
     if (!target) return;
     this.player.x = target.snap.x + 14;
     this.player.y = target.snap.y + 6;
+    this.currentBiome = this.world.getBiomeAtWorld(this.player.x, this.player.y);
     this._snapCamera();
     sfx.playWaypoint();
     this.vfx.spawnPooled("waypoint-pillar", { x: this.player.x, y: this.player.y });
-    this.ui.onToast(`⚡ Đã dịch chuyển tới cạnh ${target.snap.name}!`, "good");
+    this.ui.onToast(`⚡ Đã dịch chuyển tới cạnh ${sanitizePlayerName(target.snap.name, DEFAULT_HERO_NAME)}!`, "good");
   }
 
   sendCoopPing(text = "Tập hợp tại đây!") {
@@ -1230,8 +1253,12 @@ export class PixTelOpenWorldGame {
     );
   }
 
-  private _upsertRemotePlayer(snap: PlayerNetSnapshot) {
-    if (snap.id === this.coop.localId) return;
+  private _upsertRemotePlayer(rawSnap: PlayerNetSnapshot) {
+    if (rawSnap.id === this.coop.localId) return;
+    const snap: PlayerNetSnapshot = {
+      ...rawSnap,
+      name: sanitizePlayerName(rawSnap.name, DEFAULT_HERO_NAME),
+    };
     const sig = EQUIP_SLOTS.map((s) => {
       const it = snap.equip[s];
       return it ? `${it.defId}:${it.enh}:${it.inf ?? ""}` : "-";
@@ -1410,7 +1437,7 @@ export class PixTelOpenWorldGame {
             ...Array.from(this.remotePlayers.values()).map((r) => r.snap),
           ],
         });
-        this.ui.onToast(`🤝 ${pkt.player.name} đã gia nhập Tổ Đội Co-op!`, "epic");
+        this.ui.onToast(`🤝 ${sanitizePlayerName(pkt.player.name, DEFAULT_HERO_NAME)} đã gia nhập Tổ Đội Co-op!`, "epic");
       }
       this.ui.onHudUpdate();
       return;
@@ -1429,6 +1456,7 @@ export class PixTelOpenWorldGame {
       if (hostSnap && this.world.isInSafeTown(this.player.x, this.player.y)) {
         this.player.x = hostSnap.x + 16;
         this.player.y = hostSnap.y + 4;
+        this.currentBiome = this.world.getBiomeAtWorld(this.player.x, this.player.y);
         this._snapCamera();
       }
       this.ui.onHudUpdate();
@@ -1557,7 +1585,7 @@ export class PixTelOpenWorldGame {
     if (pkt.type === "ping_beacon") {
       sfx.playWaypoint();
       this.vfx.spawnPooled("waypoint-pillar", { x: pkt.x, y: pkt.y });
-      this.ui.onToast(`📍 [${pkt.name}]: ${pkt.text}`, "epic");
+      this.ui.onToast(`📍 [${sanitizePlayerName(pkt.name, DEFAULT_HERO_NAME)}]: ${pkt.text}`, "epic");
       return;
     }
 
@@ -1619,6 +1647,7 @@ export class PixTelOpenWorldGame {
 
     this.player.x = wp.tx * TILE_SIZE + 8;
     this.player.y = (wp.ty + 1) * TILE_SIZE + 8;
+    this.currentBiome = this.world.getBiomeAtWorld(this.player.x, this.player.y);
     this.player.hp = this.player.maxHp;
     this.player.stamina = this.player.maxStamina;
     this.player.respawnWaypointId = wp.id;
@@ -2270,13 +2299,20 @@ export class PixTelOpenWorldGame {
         const wp = WAYPOINTS.find((w) => w.id === this.player.respawnWaypointId) ?? WAYPOINTS[0];
         this.player.x = wp.tx * TILE_SIZE + 8;
         this.player.y = (wp.ty + 1) * TILE_SIZE + 8;
+        this.currentBiome = this.world.getBiomeAtWorld(this.player.x, this.player.y);
         this.player.hp = this.player.maxHp;
         this.player.stamina = this.player.maxStamina;
         this.player.invuln = 1.5;
         this.projectiles.length = 0;
         this._snapCamera();
         this.vfx.spawnPooled("waypoint-pillar", { x: this.player.x, y: this.player.y });
-        this.ui.onToast(`Bạn đã gục ngã và hồi sinh tại ${wp.name}! Hãy cường hóa trang bị nhé!`, "warn");
+        const hasWeapon = Boolean(this.inv.getValidEquippedWeapon(this.player.classId));
+        this.ui.onToast(
+          hasWeapon
+            ? `Hồi sinh tại ${wp.name} (0 mất đồ)!`
+            : `Hồi sinh tại ${wp.name}! Hãy mở Rương Tân Thủ [F] lấy Vũ Khí nhé!`,
+          "warn"
+        );
         this.ui.onHudUpdate();
       },
       stats: this.stats,
@@ -2592,14 +2628,17 @@ export class PixTelOpenWorldGame {
       this.ui.onToast(`Tiến vào ${cfg.name} (${cfg.levelRange})`, "info");
     }
 
-    // Nearest [F] Interactable (includes Ancient Lore Tablets!)
+    // Nearest [F] Interactable (includes Ancient Lore Tablets & Starter Stash!)
+    const needsStarterStash =
+      !this.inv.getValidEquippedWeapon(p.classId) && this.inv.stash.length > 0;
     this.nearestInteractable = findNearestInteractable(
       p.x,
       p.y,
       this.colorSys,
       this.spawner.chests,
       this.spawner.groundLoot,
-      this.discoveredLore
+      this.discoveredLore,
+      needsStarterStash
     );
 
     // Smooth camera follow clamped to world bounds
@@ -2794,6 +2833,22 @@ export class PixTelOpenWorldGame {
     // 5. Y-Sorted World Drawables
     const drawList: { y: number; draw: () => void }[] = [];
 
+    const drawTownPlaque = (sx: number, ly: number, label: string, accentCol: string) => {
+      const tw = textWidth(label, "mini");
+      const lx = Math.round(sx - tw / 2);
+      ctx.fillStyle = "rgba(8, 7, 16, 0.92)";
+      ctx.fillRect(lx - 3, ly - 2, tw + 6, 9);
+      ctx.fillStyle = accentCol;
+      ctx.fillRect(lx - 3, ly - 2, tw + 6, 1);
+      ctx.fillRect(lx - 3, ly + 6, tw + 6, 1);
+      ctx.fillRect(lx - 3, ly - 2, 1, 9);
+      ctx.fillRect(lx + tw + 2, ly - 2, 1, 9);
+      ctx.fillStyle = "#05040a";
+      rasterText(label, "mini", (gx: number, gy: number) => ctx.fillRect(lx + gx + 1, ly + gy + 1, 1, 1));
+      ctx.fillStyle = accentCol;
+      rasterText(label, "mini", (gx: number, gy: number) => ctx.fillRect(lx + gx, ly + gy, 1, 1));
+    };
+
     // Town Buildings
     for (const b of this.world.buildings) {
       const sx = Math.round(b.x - camX);
@@ -2810,13 +2865,7 @@ export class PixTelOpenWorldGame {
             const crys = sprites.buildings.classAltarCrystal;
             const bob = Math.round(Math.sin(this.time * 3.2) * 2);
             ctx.drawImage(crys, Math.round(sx - crys.width / 2), Math.round(sy - 33 + bob));
-            const tw = textWidth("CLASS ALTAR", "mini");
-            const lx = Math.round(sx - tw / 2);
-            const ly = Math.round(sy - 41);
-            ctx.fillStyle = "#100c1c";
-            ctx.fillRect(lx - 2, ly - 1, tw + 4, 8);
-            ctx.fillStyle = "#4be8ff";
-            rasterText("CLASS ALTAR", "mini", (gx: number, gy: number) => ctx.fillRect(lx + gx, ly + gy, 1, 1));
+            drawTownPlaque(sx, Math.round(sy - 42), "CLASS ALTAR [F]", "#5ef2ff");
           } else {
             ctx.fillStyle = "rgba(8, 10, 20, 0.3)";
             ctx.fillRect(sx - 27, sy - 1, 54, 7);
@@ -2826,16 +2875,18 @@ export class PixTelOpenWorldGame {
       });
     }
 
-    // Personal Storage Chest right beside Spawn (Rương Cá Nhân)
+    // Personal Storage Chest right beside Spawn (Rương Cá Nhân / Rương Tân Thủ)
     {
       const cx = STORAGE_CHEST_POS.tx * TILE_SIZE + 8;
       const cy = STORAGE_CHEST_POS.ty * TILE_SIZE + 10;
       const sx = Math.round(cx - camX);
       const sy = Math.round(cy - camY);
-      if (sx > -44 && sy > -48 && sx < VIEW_W + 44 && sy < VIEW_H + 44) {
+      if (sx > -44 && sy > -56 && sx < VIEW_W + 44 && sy < VIEW_H + 44) {
         drawList.push({
           y: cy,
           draw: () => {
+            const needsStarterStash =
+              !this.inv.getValidEquippedWeapon(this.player.classId) && this.inv.stash.length > 0;
             // Cozy timber/stone pad right next to Spawn Waypoint
             ctx.fillStyle = "rgba(8, 10, 20, 0.36)";
             ctx.fillRect(sx - 13, sy - 2, 26, 6);
@@ -2843,27 +2894,31 @@ export class PixTelOpenWorldGame {
             ctx.fillRect(sx - 11, sy - 6, 22, 7);
             ctx.fillStyle = "#31486b";
             ctx.fillRect(sx - 10, sy - 5, 20, 5);
-            ctx.fillStyle = "#5ef2ff";
+            ctx.fillStyle = needsStarterStash ? "#ffe066" : "#5ef2ff";
             ctx.fillRect(sx - 9, sy - 5, 18, 1);
             // Crisp codixel Personal Stash Chest icon
-            const glow = 0.45 + 0.55 * Math.sin(this.time * 3.0);
-            if (glow > 0.5) {
-              ctx.fillStyle = "rgba(94, 242, 255, 0.16)";
+            const glow = 0.45 + 0.55 * Math.sin(this.time * (needsStarterStash ? 6.0 : 3.0));
+            if (glow > 0.45) {
+              ctx.fillStyle = needsStarterStash
+                ? "rgba(255, 224, 102, 0.28)"
+                : "rgba(94, 242, 255, 0.16)";
               ctx.fillRect(sx - 10, sy - 23, 20, 19);
             }
             if (!drawCodixelIcon(ctx, "ui_stash_chest", sx - 10, sy - 23, 20)) {
               ctx.fillStyle = "#c8863c";
               ctx.fillRect(sx - 8, sy - 18, 16, 12);
             }
-            // Crisp pixel label
-            const label = "STASH CHEST";
-            const tw = textWidth(label, "mini");
-            const lx = Math.round(sx - tw / 2);
-            const ly = Math.round(sy - 31);
-            ctx.fillStyle = "#100c1c";
-            ctx.fillRect(lx - 2, ly - 1, tw + 4, 8);
-            ctx.fillStyle = "#5ef2ff";
-            rasterText(label, "mini", (rx: number, ry: number) => ctx.fillRect(lx + rx, ly + ry, 1, 1));
+            const label = needsStarterStash ? "STARTER STASH [F]" : "STASH CHEST [F]";
+            drawTownPlaque(sx, Math.round(sy - 32), label, "#ffe066");
+            if (needsStarterStash) {
+              const by = Math.round(sy - 44 + Math.sin(this.time * 7) * 2);
+              ctx.fillStyle = "#080710";
+              ctx.fillRect(sx - 5, by - 1, 10, 10);
+              ctx.fillStyle = (Math.floor(this.time * 6) & 1) === 0 ? "#ffe066" : "#ffffff";
+              ctx.fillRect(sx - 4, by, 8, 8);
+              ctx.fillStyle = "#080710";
+              rasterText("!", "mini", (gx: number, gy: number) => ctx.fillRect(sx - 2 + gx, by + 1 + gy, 1, 1));
+            }
           },
         });
       }
@@ -2913,15 +2968,7 @@ export class PixTelOpenWorldGame {
               ctx.fillStyle = i === 0 ? "#ffffff" : rainbow;
               ctx.fillRect(px, py, 2, 2);
             }
-            // Crisp pixel label
-            const label = "GACHA ALTAR";
-            const tw = textWidth(label, "mini");
-            const lx = Math.round(sx - tw / 2);
-            const ly = Math.round(sy - 36);
-            ctx.fillStyle = "#100c1c";
-            ctx.fillRect(lx - 2, ly - 1, tw + 4, 8);
-            ctx.fillStyle = "#ffe066";
-            rasterText(label, "mini", (rx: number, ry: number) => ctx.fillRect(lx + rx, ly + ry, 1, 1));
+            drawTownPlaque(sx, Math.round(sy - 37), "GACHA ALTAR [F]", "#ff99cc");
           },
         });
       }
@@ -3696,6 +3743,12 @@ export class PixTelOpenWorldGame {
 
   private _bindInputs() {
     window.addEventListener("keydown", (e) => {
+      if (e.code === "F11") {
+        e.preventDefault();
+        this.toggleFullscreen();
+        return;
+      }
+
       const activeTag = (document.activeElement as HTMLElement | null)?.tagName;
       if (activeTag === "INPUT" || activeTag === "TEXTAREA") {
         if (e.code === "Escape") {
@@ -3754,6 +3807,15 @@ export class PixTelOpenWorldGame {
       }
 
       if (!this.running || this.activeModal !== null) return;
+      if (e.code === "KeyV") {
+        sfx.playUiClick();
+        const on = this.toggleCompactHud();
+        this.ui.onToast(
+          on ? "👁 Đã thu gọn HUD chiến đấu (Nhấn [V] để hiện đầy đủ)" : "👁 Đã hiện đầy đủ HUD",
+          "info"
+        );
+        return;
+      }
       sfx.unlock();
       this.keys.add(e.code);
 

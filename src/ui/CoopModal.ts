@@ -1,6 +1,7 @@
 import { getClassDef } from "../data/classes";
 import { MAX_COOP_PLAYERS, normalizeRoomCode, type CoopTransportMode } from "../net/protocol";
 import { sfx } from "../audio/chiptuneSynth";
+import { DEFAULT_HERO_NAME, sanitizePlayerName } from "../utils/playerName";
 import type { PixTelOpenWorldGame } from "../game";
 
 const NAME_STORAGE_KEY = "pixtel_coop_nickname_v1";
@@ -25,8 +26,12 @@ export class CoopModalUI {
 
     try {
       const savedName = localStorage.getItem(NAME_STORAGE_KEY);
-      if (savedName) {
-        this.game.coop.playerName = savedName;
+      if (savedName !== null) {
+        const clean = sanitizePlayerName(savedName, DEFAULT_HERO_NAME);
+        if (clean !== savedName) {
+          localStorage.setItem(NAME_STORAGE_KEY, clean);
+        }
+        this.game.coop.playerName = clean;
       }
     } catch {
       // ignore storage errors
@@ -64,7 +69,7 @@ export class CoopModalUI {
   }
 
   private _saveNickname(name: string) {
-    const clean = name.trim().slice(0, 16) || "Lữ Khách";
+    const clean = sanitizePlayerName(name, DEFAULT_HERO_NAME);
     this.game.coop.playerName = clean;
     try {
       localStorage.setItem(NAME_STORAGE_KEY, clean);

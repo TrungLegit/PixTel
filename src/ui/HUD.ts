@@ -21,6 +21,7 @@ import { BEGINNER_PRACTICE_STEPS } from "./TutorialModal";
 import { uiRarityFx } from "../vfx/uiRarityFx";
 import type { PixTelOpenWorldGame } from "../game";
 import { sfx } from "../audio/chiptuneSynth";
+import { DEFAULT_HERO_NAME, sanitizePlayerName } from "../utils/playerName";
 
 const CLASS_SKILL_ICONS: Record<ClassId, { lmb: string; skill: string; ult: string }> = {
   prism_knight: { lmb: "skill_knight_lmb", skill: "skill_knight_e", ult: "skill_knight_q" },
@@ -32,7 +33,7 @@ const CLASS_SKILL_ICONS: Record<ClassId, { lmb: string; skill: string; ult: stri
 type HudTipKind = "bag" | "gacha" | "lmb" | "skill" | "ult" | "dash";
 
 const ELEMENT_LABELS = [
-  { name: "HỎA", color: "#ff5533" },
+  { name: "HỎA", color: "#ff7b54" },
   { name: "BĂNG", color: "#38e8ff" },
   { name: "MỘC", color: "#44ee88" },
   { name: "LÔI", color: "#ffee44" },
@@ -62,6 +63,7 @@ export class HudUI {
   private lastPartySig = "";
   private cachedHotbarIcons = ["", "", "", ""];
   private cachedSkillIcons: Record<string, string> = {};
+  private toastTimers = new WeakMap<HTMLElement, { fade: number; remove?: number }>();
   onToggleTouch?: () => void;
 
   constructor(game: PixTelOpenWorldGame) {
@@ -85,6 +87,14 @@ export class HudUI {
     // Quick toolbar buttons
     document.getElementById("hud-btn-gacha")?.addEventListener("click", () => this.game.toggleModal("gacha"));
     document.getElementById("hud-btn-coop")?.addEventListener("click", () => this.game.toggleModal("coop"));
+    document.getElementById("hud-btn-hud")?.addEventListener("click", () => {
+      sfx.playUiClick();
+      const on = this.game.toggleCompactHud();
+      this.toast(
+        on ? "👁 Đã thu gọn HUD chiến đấu (Nhấn [V] để hiện đầy đủ)" : "👁 Đã hiện đầy đủ HUD",
+        "info"
+      );
+    });
     document.getElementById("hud-btn-touch")?.addEventListener("click", () => {
       sfx.playUiClick();
       this.onToggleTouch?.();
@@ -93,6 +103,7 @@ export class HudUI {
       sfx.playUiClick();
       this.game.toggleFullscreen();
     });
+    document.addEventListener("fullscreenchange", () => this._syncFullscreenBtn());
     document.getElementById("hud-btn-help")?.addEventListener("click", () => this.game.toggleModal("tutorial"));
     document.getElementById("hud-btn-map")!.addEventListener("click", () => this.game.toggleModal("world_map"));
     document.getElementById("hud-btn-bag")!.addEventListener("click", () => this.game.toggleModal("inventory"));
@@ -100,6 +111,7 @@ export class HudUI {
     document.getElementById("slot-gacha")?.addEventListener("click", () => this.game.toggleModal("gacha"));
     document.getElementById("hud-stat-pts-btn")?.addEventListener("click", () => this.game.toggleModal("inventory"));
     document.getElementById("hud-btn-quest")!.addEventListener("click", () => this.game.toggleModal("journal"));
+    this.hudRoot.querySelector(".qt-hdr")?.addEventListener("click", () => this.game.toggleModal("journal"));
     document.getElementById("hud-btn-save")!.addEventListener("click", () => this.game.saveGame(true));
     document.getElementById("hud-btn-mute")!.addEventListener("click", (ev) => {
       const muted = sfx.toggleMute();
@@ -159,18 +171,57 @@ export class HudUI {
     }
   }
 
+  private _syncFullscreenBtn() {
+    const fsBtn = document.getElementById("hud-btn-fs");
+    if (!fsBtn) return;
+    fsBtn.classList.toggle("active", Boolean(document.fullscreenElement));
+  }
+
+  private _clearToastTimer(el: HTMLElement) {
+    const prev = this.toastTimers.get(el);
+    if (prev) {
+      window.clearTimeout(prev.fade);
+      if (prev.remove !== undefined) window.clearTimeout(prev.remove);
+      this.toastTimers.delete(el);
+    }
+  }
+
+  private _scheduleToastDismiss(el: HTMLElement) {
+    this._clearToastTimer(el);
+    el.classList.remove("fade-out");
+    const fade = window.setTimeout(() => {
+      el.classList.add("fade-out");
+      const remove = window.setTimeout(() => {
+        this._clearToastTimer(el);
+        el.remove();
+      }, 220);
+      this.toastTimers.set(el, { fade, remove });
+    }, 2500);
+    this.toastTimers.set(el, { fade });
+  }
+
   toast(msg: string, tone: "info" | "good" | "warn" | "epic" = "info") {
+    for (let i = 0; i < this.toastContainer.children.length; i++) {
+      const child = this.toastContainer.children[i] as HTMLElement;
+      if (child.dataset.toastMsg === msg) {
+        child.className = `pixel-toast tone-${tone}`;
+        this._scheduleToastDismiss(child);
+        return;
+      }
+    }
+
     const el = document.createElement("div");
     el.className = `pixel-toast tone-${tone}`;
+    el.dataset.toastMsg = msg;
     el.textContent = msg;
     this.toastContainer.appendChild(el);
-    while (this.toastContainer.children.length > 4) {
-      this.toastContainer.removeChild(this.toastContainer.firstChild!);
+    while (this.toastContainer.children.length > 2) {
+      const oldest = this.toastContainer.firstElementChild as HTMLElement | null;
+      if (!oldest) break;
+      this._clearToastTimer(oldest);
+      oldest.remove();
     }
-    window.setTimeout(() => {
-      el.classList.add("fade-out");
-      window.setTimeout(() => el.remove(), 260);
-    }, 3600);
+    this._scheduleToastDismiss(el);
   }
 
   update() {
@@ -179,8 +230,15 @@ export class HudUI {
     const cdef = getClassDef(p.classId);
     const biomeCfg = BIOME_CONFIGS[this.game.currentBiome];
 
+    const hudBtn = document.getElementById("hud-btn-hud");
+    if (hudBtn) {
+      hudBtn.classList.toggle("active", this.game.compactHud);
+      hudBtn.textContent = this.game.compactHud ? "👁 HIỆN HUD [V]" : "👁 HUD [V]";
+    }
+    this._syncFullscreenBtn();
+
     const badge = document.getElementById("hud-class-badge")!;
-    const heroName = p.name || this.game.pendingPlayerName || "Chroma-Walker";
+    const heroName = sanitizePlayerName(p.name || this.game.pendingPlayerName, DEFAULT_HERO_NAME);
     badge.textContent = `${heroName} · ${cdef.vnName} · LV.${p.level}`;
     badge.style.color = cdef.accent;
 
@@ -194,7 +252,7 @@ export class HudUI {
 
     document.getElementById("hud-gold")!.textContent = `${this.game.inv.gold} G`;
     document.getElementById("hud-biome")!.textContent = `${biomeCfg.name} (${biomeCfg.levelRange})`;
-    document.getElementById("hud-restore")!.textContent = `Màu: ${this.game.colorSys.getProgressPct()}% · Trụ ${this.game.colorSys.unlockedWaypoints.size}/${WAYPOINTS.length} · Bia ${this.game.discoveredLore.size}/${LORE_TABLETS.length}`;
+    document.getElementById("hud-restore")!.textContent = `Màu: ${this.game.colorSys.getProgressPct()}% · Trụ ${this.game.colorSys.unlockedWaypoints.size}/${WAYPOINTS.length} · Bia Ký ${this.game.discoveredLore.size}/${LORE_TABLETS.length}`;
 
     // Stat Points pulsing button + Active buffs / Class / Weapon Infusion / Counter status
     const statPtsBtn = document.getElementById("hud-stat-pts-btn");
@@ -208,7 +266,7 @@ export class HudUI {
     const wpn = this.game.inv.getValidEquippedWeapon(p.classId);
     const extraBits: string[] = [];
     if (!wpn) {
-      extraBits.push(`<span style="color:#ff99aa">✊ Tay Không</span>`);
+      extraBits.push(`<span class="hud-unarmed-pill">✊ TAY KHÔNG</span>`);
     }
     if (p.classId === "chroma_mage") {
       const el = ELEMENT_LABELS[p.elementIdx % ELEMENT_LABELS.length];
@@ -253,22 +311,30 @@ export class HudUI {
     if (p.bleachDebuffTime > 0) {
       extraBits.push(`<span style="color:#b8c2d6">PHAI SẮC (${Math.ceil(p.bleachDebuffTime)}s)</span>`);
     }
-    document.getElementById("hud-status-line")!.innerHTML = extraBits.join(" · ");
+    document.getElementById("hud-status-line")!.innerHTML = extraBits.join(`<span style="color:#6d78a0">·</span>`);
 
-    // Live 6-Step Beginner Practice Banner (hidden automatically when inactive or when Boss bar is up)
+    // Live 6-Step Beginner Practice Banner (stacked cleanly in left column, never blocks center view!)
     if (this.tutorialBannerEl) {
       const bossActive = Boolean(this.game.getActiveBoss());
       const stepDef = BEGINNER_PRACTICE_STEPS[this.game.tutorialStep];
       if (this.game.tutorialActive && stepDef && !bossActive) {
         this.tutorialBannerEl.classList.remove("hidden");
-        const stepKey = `${this.game.tutorialStep}:${this.game.tutorialComboHits}`;
+        const needsWeaponForE = stepDef.id === "skill_e" && !wpn;
+        this.tutorialBannerEl.classList.toggle("warn-step", needsWeaponForE);
+        const stepKey = `${this.game.tutorialStep}:${this.game.tutorialComboHits}:${Boolean(wpn)}`;
         if (this.lastTutorialStepKey !== stepKey) {
           this.lastTutorialStepKey = stepKey;
           const extraCombo =
             stepDef.id === "combo3" ? ` (${Math.min(3, this.game.tutorialComboHits)}/3 nhịp)` : "";
+          const descHtml =
+            stepDef.id === "skill_e" && !wpn
+              ? `<span style="color:#ffe066;font-weight:700">📦 Mở Rương Tân Thủ [F] ngay cạnh Quảng Trường để nhận Vũ Khí, sau đó nhấn [E] (hoặc Chuột Phải) tung Kỹ Năng Vũ Khí!</span>`
+              : stepDef.id === "skill_e" && wpn
+                ? `<span style="color:#6effa8;font-weight:700">⚔ Đã trang bị Vũ Khí! Nhấn phím [E] (hoặc Chuột Phải) ngay bây giờ để tung Kỹ Năng Vũ Khí!</span>`
+                : stepDef.desc;
           this.tutorialBannerEl.innerHTML = `
             <div class="tut-banner-head">
-              <span class="tut-banner-step">🌱 HƯỚNG DẪN TÂN THỦ · BƯỚC ${this.game.tutorialStep + 1}/${BEGINNER_PRACTICE_STEPS.length}</span>
+              <span class="tut-banner-step">🌱 TÂN THỦ · BƯỚC ${this.game.tutorialStep + 1}/${BEGINNER_PRACTICE_STEPS.length}</span>
               <div class="tut-banner-btns">
                 <button id="hud-tut-open-book" class="hud-mini-btn" title="Mở Cẩm Nang [H]">CẨM NANG [H]</button>
                 <button id="hud-tut-skip" class="hud-mini-btn" title="Bỏ qua hướng dẫn">BỎ QUA ✕</button>
@@ -278,7 +344,7 @@ export class HudUI {
               <span class="tut-key-pill">${stepDef.keyBadge}</span>
               <b>${stepDef.title}${extraCombo}</b>
             </div>
-            <div class="tut-banner-desc">${stepDef.desc}</div>
+            <div class="tut-banner-desc">${descHtml}</div>
           `;
           this.tutorialBannerEl.querySelector("#hud-tut-open-book")?.addEventListener("click", () => {
             this.game.toggleModal("tutorial");
@@ -290,6 +356,7 @@ export class HudUI {
         }
       } else {
         this.tutorialBannerEl.classList.add("hidden");
+        this.tutorialBannerEl.classList.remove("warn-step");
         this.lastTutorialStepKey = "";
       }
     }
@@ -299,6 +366,7 @@ export class HudUI {
     const bossBox = document.getElementById("hud-boss-bar")!;
     const shieldWrap = document.getElementById("hud-boss-shield-wrap");
     const lockTag = document.getElementById("hud-boss-lock-tag");
+    this.toastContainer.classList.toggle("boss-up", Boolean(boss));
     if (boss) {
       bossBox.classList.remove("hidden");
       const bdef = ENEMIES[boss.defId];
@@ -349,7 +417,7 @@ export class HudUI {
     const tracker = document.getElementById("hud-quest-list")!;
     const tracked = this.game.quests.getTrackedQuests();
     if (tracked.length === 0) {
-      tracker.innerHTML = `<div class="qt-empty">Gặp Trưởng Làng Elian [F] để nhận nhiệm vụ hoặc bấm [J] đọc Biên Niên Sử!</div>`;
+      tracker.innerHTML = `<div class="qt-empty">Gặp <b style="color:#ffe066">Trưởng Làng Elian [F]</b> để nhận nhiệm vụ hoặc bấm <b style="color:#5ef2ff">[J]</b> đọc Biên Niên Sử!</div>`;
     } else {
       tracker.innerHTML = tracked
         .slice(0, 3)
@@ -389,13 +457,13 @@ export class HudUI {
     const totalGachaKeys = GACHA_BANNERS.reduce((sum, b) => sum + this.game.inv.countItem(b.keyItemId), 0);
     const gachaCntEl = document.getElementById("gacha-slot-count");
     if (gachaCntEl) {
-      gachaCntEl.textContent = `🗝${totalGachaKeys}`;
+      gachaCntEl.textContent = `${totalGachaKeys} CHÌA`;
     }
     document.getElementById("slot-gacha")?.classList.toggle("has-keys", totalGachaKeys > 0);
     document.getElementById("hud-btn-gacha")?.classList.toggle("has-keys", totalGachaKeys > 0);
 
     // Weapon-Driven Pixel Skill Icon Bar:
-    // LMB (Fixed Class Basic + Charge), [E] (Dynamic Weapon Skill per equipped weapon!), [Q] (Fixed Class Signature Skill!), [SPC] (Dash)
+    // LMB (Fixed Class Basic + Charge), [E] (Dynamic Weapon Skill per equipped weapon!), [Q] (Fixed Class Signature Skill!), [SPACE] (Dash)
     const eqWeapon = this.game.inv.getValidEquippedWeapon(p.classId);
     const weaponSkill = eqWeapon ? getWeaponSkillForItem(eqWeapon.defId) : null;
     const skillSet = CLASS_SKILL_ICONS[p.classId] ?? CLASS_SKILL_ICONS.prism_knight;
@@ -427,12 +495,15 @@ export class HudUI {
       slotE.style.removeProperty("--ws-accent");
       eLock?.classList.remove("hidden");
       this._paintCodixelCanvas("skill-e-lock", "ui_lock");
-      eCdEl.classList.add("hidden");
+      eCdEl.textContent = "CẦN VK";
+      eCdEl.style.color = "#ff8899";
+      eCdEl.classList.remove("hidden");
       if (eVeil) eVeil.style.height = "0%";
     } else {
       slotE.classList.remove("locked");
       slotE.style.setProperty("--ws-accent", weaponSkill.accent);
       eLock?.classList.add("hidden");
+      eCdEl.style.removeProperty("color");
       const onCd = p.skillCd > 0;
       slotE.classList.toggle("on-cd", onCd);
       eCdEl.textContent = onCd ? `${p.skillCd.toFixed(1)}s` : "";
@@ -546,12 +617,13 @@ export class HudUI {
               : remotes
                   .map((rp) => {
                     const rc = getClassDef(rp.snap.classId);
+                    const safePeerName = sanitizePlayerName(rp.snap.name, DEFAULT_HERO_NAME);
                     const pct = Math.max(0, Math.min(100, (rp.snap.hp / Math.max(1, rp.snap.maxHp)) * 100));
                     return `
                       <div class="hud-party-row">
                         <div class="hud-party-info">
                           <div class="hud-party-name">
-                            <span style="color:${rc.accent}">● ${rp.snap.name}</span>
+                            <span style="color:${rc.accent}">● ${safePeerName}</span>
                             <span class="hud-party-lv">LV.${rp.snap.level}</span>
                           </div>
                           <div class="hud-party-hp"><div style="width:${pct}%"></div></div>

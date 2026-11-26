@@ -9,20 +9,21 @@
 
 ## Trạng Thái Hiện Tại (Current Project Stage Snapshot)
 
-- **Giai đoạn / Phiên bản hiện tại:** `PIXTEL v3.2` (tích hợp trọn vẹn `v3.1.1` HD `48×48` Core-16 Sprites + Fixed `INFO` Panel + 5 Custom `pixelfx` VFX & `v3.2` Màn Hình Trang Chủ Đặt Tên → Chọn Class `SKILL [Q] PREVIEW` → 16 Cảnh Mở Đầu Sử Thi + 6 Phim Cốt Truyện `[J]`, Thánh Kiếm Phá Địa vàng, Phân Thân Ảo Ảnh Bit Rogue & 8 Hoạt Ảnh Vũ Khí Mới)
-- **Commit mới nhất trên `main`:** Hợp nhất `3026772` (`v3.1.1+`) + `12b7590` (`v3.2`) (`2026-11-26`)
-- **Thành viên / AI đóng góp gần đây:** `chu0n6-iot`, `TrungLegit`, `Antigravity`, `Yaros`, `GitHub Copilot`
+- **Giai đoạn / Phiên bản hiện tại:** `PIXTEL v3.2.6` — Zero-Overlap HUD Layout (`0 px²`), High-Contrast 16-Bit Typography, Fullscreen `[F11]` & Combat Minimal HUD `[V]`, Clean Name Filter (`"Lữ Khách"`), Starter Stash Weapon FTUE + trọn bộ `v3.2` (16-Scene Prologue, HD Core-16 Sprites, Gacha Mùa `[G]`, Mobile PWA & 2–4P Co-op)
+- **Commit mới nhất trên `main`:** `b07db9e` + `v3.2.6` HUD/UX/FTUE Overhaul (`2026-11-26`)
+- **Thành viên / AI đóng góp gần đây:** `chu0n6-iot`, `TrungLegit`, `Antigravity` (`qa_playtester` + `ui_ux_dev`), `Yaros`, `GitHub Copilot`
 - **Các hệ thống chính đã hoàn thiện:**
+  - **PIXTEL v3.2.6 — Đại Tu Bố Cục HUD `0 px²` Chồng Chéo, Tương Phản 16-Bit, `[F11]` / `[V]`, Bộ Lọc Tên Sạch & Luồng FTUE:** Tách cột trái `.hud-left-stack` (xếp gọn Hero Panel, Party Box, Tutorial Banner sang mép trái không bao giờ che trung tâm), neo `#toast-stack` mảnh sát mép trên (tối đa `2` toast, tự gộp trùng, `2.5s`), đồng bộ `currentBiome` khi hồi sinh/dịch chuyển dập tắt bắn kép toast, nâng tương phản `.hud-meta-row` / `Bia Ký 0/8` / `✊ TAY KHÔNG` / biển hiệu thế giới có viền sáng + glyph `[` `]`, sửa sạch thanh đáy (`58×56px`, `.key-cap` nền đặc xóa lỗi `LMB...`, `SPACE`, `0 CHÌA`, `CẦN VK`), gom Toolbar 2 hàng chuẩn, thêm `⛶ F11` + Thu gọn HUD chiến đấu `👁 HUD [V]`, bộ lọc `sanitizePlayerName` (`"Lữ Khách"`) tự dọn sạch `localStorage`/Save cũ, và đặt sẵn Vũ Khí Khởi Đầu vào `STARTER STASH [F]` kèm nút **`⚡ LẤY & TRANG BỊ NGAY`**.
   - **Web / Mobile PWA & Triển khai GitHub Pages:** Tự động test (`npm test`), build & deploy qua GitHub Actions lên `https://trunglegit.github.io/PixTel/`, kèm `manifest.webmanifest`, `sw.js`, `icon.svg`, chế độ màn hình ngang fullscreen, font Pixelify Sans tiếng Việt tự lưu trữ cục bộ (không phụ thuộc CDN).
   - **Giai đoạn 1 — Mobile Twin-Stick & Smart Auto-Aim:** Cần xoay Analog đa điểm (đẩy sát viền tự động Chạy Nhanh + nút khóa Sprint), cụm phím chiến đấu bên phải (`⚔ ĐÁNH / GIỮ TỤ LỰC` phát sáng vàng ở khung Just-Charge, `💨 LƯỚT`, `✦ [E]`, `🔥 [Q]`, `🖐 [F]`), Tự Ngắm Mục Tiêu Thông Minh (ưu tiên Trụ Đấu Trường -> Boss/Quái -> Mỏ quặng) hoặc kéo 360°, chạm xem chi tiết trang bị (Tap-to-Inspect).
   - **Giai đoạn 2 — Multiplayer Co-op 2–4 Người (`[P]` / Mã Phòng 6 Ký Tự):** Kiến trúc mạng kép hỗ trợ cả **Online WebRTC P2P (`PeerJS`)** chạy trực tiếp trên GitHub Pages / 4G điện thoại và **Dedicated WebSocket Room Server (`server/coopServer.ts`, `npm run server`)**; đồng bộ Paper-Doll 5 ô thời gian thực (kiểm tra đúng Class), kích nổ **Phản Ứng Nguyên Tố Kép 9 Hệ** chéo giữa các người chơi, chia sẻ mở khóa Trụ Sắc Màu / Trụ Đấu Trường Eraser, ưu tiên Aggro cho Khiên `Prism Knight`, và **100% XP + Instanced Loot** riêng cho từng thành viên.
-  - **PIXTEL v3.0 — Kỹ Năng Theo Vũ Khí, Trang Bị Độc Lạ Rơi Quái/Boss, Cân Bằng Độ Khó & Rương Gacha Mùa `[G]`:**
+  - **PIXTEL v3.0–v3.2 — Kỹ Năng Theo Vũ Khí (`41` skills), 16 Trang Bị Độc Lạ (`dropOnly`), 16 Core Items & 3 Set Bonus, Rương Gacha Mùa `[G]` & 16 Cảnh Phim Cốt Truyện:**
     - **Hệ Thống Kỹ Năng Theo Vũ Khí (`41` Weapon Skills `[E]`):** Nhân vật giữ **1 Đánh Thường (`LMB` + Tụ Lực)** và **1 Tuyệt Kỹ Cố Định của Class (`[Q]`, mở khóa sẵn không còn khóa theo Phụ kiện)**; mỗi vũ khí mang **1 Kỹ Năng `[E]` riêng biệt** (tự động đổi icon pixel trên HUD, viền màu nguyên tố, hồi chiêu, tooltip, hoạt ảnh & `pixelfx` VFX ngay khi đổi vũ khí!).
     - **16 Trang Bị Độc Lạ Biến Đổi Chiêu Thức (`dropOnly: true`):** Gồm 8 Vũ Khí Độc Lạ + 8 Mũ/Giáp/Giày/Phụ Kiện kích hoạt `12` Biến Thể Chiêu Thức có ICD cân bằng (sét dây chuyền, sóng băng/chấn động khi Lướt, phản nổ dung nham, hố đen khi dùng `[Q]`, thiên thạch chí mạng, phân đôi tia `[E]`...); chỉ rơi từ quái & Boss (tuyệt đối không bán shop / không rèn / không rò rỉ random chest).
     - **Rương Gacha Theo Mùa (`[G]` + Đài `GACHA ALTAR` Thị Trấn) & 4 Chìa Khóa Quần Xã:** Gỡ sạch toàn bộ rương bãi farm & Trụ Sắc Màu, **chỉ giữ lại đúng 4 Rương Chính tại 4 Đấu Trường Boss**; bổ sung 4 Chìa Mùa (*Xuân / Đông / Hạ / Nhật Thực*) rơi tỉ lệ thấp từ quái đúng quần xã hoặc rèn tại Kael + 8 trang bị Độc Quyền Mùa cân bằng theo Tier; sân khấu mở rương 60FPS có hoạt ảnh tra chìa, rung lắc nhịp tim chiptune, hiệu ứng **"★ LẬT KÈO NÂNG PHẨM! ★"** sét xé màn hình đổi màu phẩm chất, mưa sao confetti, Quay ×1/×5, Bảo hiểm Pity 10/25 & tự quy đổi đồ trùng thành Mảnh Lăng Kính + Vàng.
     - **Quái & Boss Sắc Nét HD (`306` frame) & Cân Bằng Hardcore Grind-to-Boss:** Tăng độ phân giải & làm nét toàn bộ 19 model quái/boss kèm frame đánh **`:atk`** 4 hướng, tia cảnh báo đòn (Danger Glint), gọi bầy đàn `"!"` (`125px`), bật lùi trúng đòn, xuất hiện cổng màu; tăng mạnh HP/ATK/DEF/Giáp Trắng của quái & Boss + hồi chiêu Bình Máu `2.5s` để buộc người chơi farm bãi quái, làm nhiệm vụ & cường hóa trang bị trước khi thách đấu Boss.
 - **Trọng tâm tiếp theo (Active / Next Focus Areas):**
-  - Commit & push toàn bộ cụm bản cập nhật `PIXTEL v3.0` lên `origin/main` (và làm mới ảnh/video README nếu muốn trưng bày Rương Gacha Mùa & HUD kỹ năng vũ khí mới).
+  - Tiếp tục thu thập phản hồi thực chiến trên `https://trunglegit.github.io/PixTel/` (PC & Mobile Co-op).
   - Giai đoạn 3 (tùy chọn mở rộng): Authoritative Cloud Server (Colyseus / Fly.io / Railway) chống cheat tuyệt đối, Bảng xếp hạng Time-Attack Boss, hoặc đóng gói Capacitor lên Google Play / App Store.
 
 ---
@@ -44,6 +45,22 @@
 ---
 
 ## Nhật Ký Cập Nhật (Newest First)
+
+### [2026-11-26 15:25 UTC] — chu0n6-iot (Antigravity Multi-Agent: `qa_playtester` + `ui_ux_dev`) — Đại Tu Bố Cục HUD `0 px²` Chồng Chéo, Độ Tương Phản 16-Bit, `[F11]` / `[V]`, Bộ Lọc Tên Sạch & Luồng FTUE Tân Thủ
+- **Commit / Branch:** `main`
+- **Giai đoạn / Version:** `PIXTEL v3.2.6` — QA Playtester ↔ Dev UI/UX & FTUE Overhaul
+- **Đã làm (Done):**
+  - **Tách lớp hiển thị HUD & Toast (`0 px²` chồng chéo trung tâm):** Bọc `.hud-top-left`, `#hud-party-box` và `#hud-tutorial-banner` vào cột trái `.hud-left-stack` (`width: 282px`); quy hoạch `#toast-stack` mảnh sát mép trên (`top: 6px`, tối đa `2` toast, tự gộp trùng, tự ẩn `2.5s`); đồng bộ `currentBiome` ngay trong `onPlayerDefeated()`, `fastTravelTo()`, `teleportToCoopPeer()` để dập tắt hoàn toàn lỗi bắn kép toast hồi sinh + toast vùng; thu gọn `#interact-prompt` (`bottom: 86px`) và `.class-select-box` vừa khít màn `1366×640`.
+  - **Nâng cấp độ tương phản & nhãn thế giới:** `.hud-meta-row` lên `13px weight 600` có nền tối mờ & bóng pixel `1px` (`15.9:1`); đổi `"Bia 0/8"` dễ nhầm thành **`"Bia Ký 0/8"`**; đóng pill cảnh báo đỏ **`✊ TAY KHÔNG`**; bổ sung glyph `[` `]` vào `pixelfx/core/font.js` và vẽ biển hiệu có viền sáng (`STARTER STASH [F]`, `GACHA ALTAR [F]`, `CLASS ALTAR [F]`).
+  - **Thanh phím tắt đáy (`#hud-bottom-bar`):** Mở rộng ô `58×56px` (icon `32×32px`), thêm nền đặc `#0b0a16` cho `.key-cap` xóa sạch lỗi lộ pixel nắm đấm thành `LMB...`; đổi `SPC` → **`SPACE`**, `🗝0` → **`0 CHÌA`**; ô `[E]` khi tay không hiện rõ ổ khóa đỏ + chữ **`CẦN VK`**.
+  - **Toàn màn hình (`⛶ F11`), Thu gọn HUD chiến đấu (`👁 HUD [V]`) & Toolbar 2 hàng chuẩn:** Chia `.hud-toolbar` thành đúng **2 hàng phẳng phiu** (6 nút Thao tác chính + 6 nút Hiển thị/Hệ thống, xóa hàng 3 lẻ); bắt phím `F11` đồng bộ `fullscreenchange` và phím `V` bật/tắt `body.hud-compact`.
+  - **Bộ lọc tên sạch (`src/utils/playerName.ts`):** Chuẩn hóa tên mặc định **`"Lữ Khách"`**, lọc từ nhạy cảm Anh/Việt & leetspeak, tự động quét dọn `localStorage` (`pixtel_last_player_name`, `pixtel_coop_nickname_v1`) và file Save cũ có tên xấu (như `"nigge"`).
+  - **Luồng FTUE Tân Thủ không kẹt Bước 5/6 `[E]`:** Giữ nguyên contract `resetStarterKit()` & 6 bước Tutorial; đặt sẵn Vũ Khí Khởi Đầu đúng Class vào `STARTER STASH [F]` trong `startNewGame()` (tự đổi theo Class nếu đổi ở Đài Đổi Class trước khi rút), thêm nút **`⚡ LẤY & TRANG BỊ NGAY`** trong `StorageChestModal.ts` và hướng dẫn động trên `#hud-tutorial-banner`.
+  - Xuất bản báo cáo trực quan Trước/Sau vào `preview for devs/2026-11-26-v3.2.6-hud-ux-ftue-qa-overhaul-preview.md`.
+- **File chính đã sửa / thêm:** `src/utils/playerName.ts`, `index.html`, `style.css`, `src/game.ts`, `src/main.ts`, `src/ui/HUD.ts`, `src/ui/HomeScreen.ts`, `src/ui/ClassSelect.ts`, `src/ui/StorageChestModal.ts`, `src/ui/TutorialModal.ts`, `src/ui/CoopModal.ts`, `src/ui/DialogueModal.ts`, `src/ui/CutsceneModal.ts`, `src/net/coopClient.ts`, `src/data/cutscenes.ts`, `src/world/interactables.ts`, `src/vfx/pixelfx/core/font.js`, `tests/featureTests.ts`, `preview for devs/*`, `DEV_LOG.md`
+- **Kiểm tra (Verified):** `npm run typecheck` (`0` lỗi), `npm test` (**19/19** feature suites pass, thêm Suite 19), `npm run build` (`vite build` sạch), và kiểm thử nghiệm thu tự động Vòng 2 của `qa_playtester` bằng Playwright trên `1366×640`, `1280×680`, `1280×720` (**`0 px²` overlap, `0` console/page errors**).
+- **Lưu ý / Handoff (Breaking changes / Đang dở):** Không có breaking change; dữ liệu Save và `localStorage` cũ hoàn toàn tương thích và tự động được làm sạch tên nếu chứa từ ngữ nhạy cảm.
+- **Gợi ý bước tiếp theo (Next Steps):** Kiểm thử thực tế Co-op & Mobile trên bản GitHub Pages mới nhất.
 
 ### [2026-11-26 07:35 UTC] — GitHub Copilot — Hợp nhất `main` mới nhất và xử lý xung đột
 - **Commit / Branch:** Merge `origin/main` vào `feat/vietnamese-pixel-game-font`

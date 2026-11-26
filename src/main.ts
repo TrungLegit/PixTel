@@ -18,6 +18,7 @@ import { ItemReviewTooltip } from "./ui/ItemReviewTooltip";
 import { normalizeRoomCode } from "./net/protocol";
 import { installRopeFrameAssets } from "./graphics/ropeFrame";
 import { sfx } from "./audio/chiptuneSynth";
+import { DEFAULT_HERO_NAME, sanitizePlayerName } from "./utils/playerName";
 
 function bootstrap() {
   installRopeFrameAssets();
@@ -104,7 +105,7 @@ function bootstrap() {
     },
     onBossVictory: (worldBoss: boolean, bossName: string) => {
       if (worldBoss) {
-        const heroName = game.player.name || game.pendingPlayerName || "Chroma-Walker";
+        const heroName = sanitizePlayerName(game.player.name || game.pendingPlayerName, DEFAULT_HERO_NAME);
         document.getElementById("victory-title")!.textContent =
           `BẢN GIAO HƯỞNG THẤT SẮC — ${heroName.toUpperCase()} ĐÃ THANH TẨY THE ERASER!`;
         document.getElementById("victory-desc")!.textContent =

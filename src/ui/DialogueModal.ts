@@ -13,6 +13,7 @@ import { BACKPACK_UPGRADES } from "../systems/inventorySystem";
 import { uiRarityFx } from "../vfx/uiRarityFx";
 import type { PixTelOpenWorldGame } from "../game";
 import { sfx } from "../audio/chiptuneSynth";
+import { DEFAULT_HERO_NAME, sanitizePlayerName } from "../utils/playerName";
 
 /**
  * RPG NPC Dialogue Modal:
@@ -59,7 +60,7 @@ export class DialogueModalUI {
     const npc = TOWN_NPCS.find((n) => n.id === this.currentNpcId) ?? TOWN_NPCS[0];
     this.titleEl.innerHTML = `<span style="color:${npc.accent}">${npc.name}</span> <small>— ${npc.role}</small>`;
 
-    const heroName = this.game.player.name || this.game.pendingPlayerName || "Chroma-Walker";
+    const heroName = sanitizePlayerName(this.game.player.name || this.game.pendingPlayerName, DEFAULT_HERO_NAME);
     let html = `<div class="npc-speech">Chào <b style="color:#ffe066">${heroName}</b>! "${npc.greeting}"</div>`;
 
     // Blacksmith Forge launch button

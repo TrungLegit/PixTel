@@ -5,6 +5,7 @@ import { PIXELFX_MODS } from "../vfx/vfxManager";
 import type { PixelfxFrame, PixelfxInstance } from "../vfx/pixelfxTypes";
 import type { PixTelOpenWorldGame } from "../game";
 import { sfx } from "../audio/chiptuneSynth";
+import { DEFAULT_HERO_NAME, isProfanePlayerName, sanitizePlayerName } from "../utils/playerName";
 import { renderPixtelLogo } from "./pixelLogo";
 
 const LAST_NAME_KEY = "pixtel_last_player_name";
@@ -100,16 +101,8 @@ export class HomeScreenUI {
     this.fxLightImg = this.fxLightCtx.createImageData(w, h);
     this.fxLightU32 = new Uint32Array(this.fxLightImg.data.buffer);
 
-    // Restore last entered name if present
-    try {
-      const savedName = localStorage.getItem(LAST_NAME_KEY);
-      if (savedName && savedName.trim()) {
-        this.nameInput.value = savedName.trim().slice(0, 16);
-        this.game.pendingPlayerName = this.nameInput.value;
-      }
-    } catch {
-      // ignore storage errors
-    }
+    // Restore last entered name if present (automatically purge profane legacy names!)
+    this._cleanAndRestoreStoredName();
 
     document.getElementById("btn-home-random-name")?.addEventListener("click", () => {
       sfx.unlock();
@@ -123,12 +116,14 @@ export class HomeScreenUI {
     });
 
     this.nameInput.addEventListener("input", () => {
-      const val = this.nameInput.value.trim().slice(0, 16);
-      if (val) {
+      const val = this.nameInput.value.replace(/\s+/g, " ").trim().slice(0, 16);
+      if (!val) {
+        this._setHint("Nhập tên nhân vật (1–16 ký tự) hoặc nhấn 🎲 Ngẫu Nhiên!", "#ffe066");
+      } else if (isProfanePlayerName(val)) {
+        this._setHint("⚠ Tên nhân vật chứa từ ngữ không phù hợp. Hãy chọn tên lịch sự hơn nhé!", "#ff6677");
+      } else {
         this.game.pendingPlayerName = val;
         this._setHint(`Tên hiển thị trong thế giới & Co-op: ★ ${val}`, "#88e6ff");
-      } else {
-        this._setHint("Nhập tên nhân vật (1–16 ký tự) hoặc nhấn 🎲 Ngẫu Nhiên!", "#ffe066");
       }
     });
 
@@ -179,9 +174,29 @@ export class HomeScreenUI {
     this._renderInviteBanner();
   }
 
-  private _persistLastName(name: string) {
+  private _cleanAndRestoreStoredName() {
     try {
-      localStorage.setItem(LAST_NAME_KEY, name);
+      const savedName = localStorage.getItem(LAST_NAME_KEY);
+      if (savedName !== null) {
+        if (isProfanePlayerName(savedName)) {
+          localStorage.setItem(LAST_NAME_KEY, DEFAULT_HERO_NAME);
+          this.nameInput.value = DEFAULT_HERO_NAME;
+          this.game.pendingPlayerName = DEFAULT_HERO_NAME;
+        } else if (savedName.trim()) {
+          const clean = sanitizePlayerName(savedName, DEFAULT_HERO_NAME);
+          this.nameInput.value = clean;
+          this.game.pendingPlayerName = clean;
+        }
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  private _persistLastName(name: string) {
+    const clean = sanitizePlayerName(name, DEFAULT_HERO_NAME);
+    try {
+      localStorage.setItem(LAST_NAME_KEY, clean);
     } catch {
       // ignore
     }
@@ -192,16 +207,29 @@ export class HomeScreenUI {
     this.nameHintEl.style.color = color;
   }
 
+  private _triggerInputError(msg: string) {
+    this.nameInput.focus();
+    this.nameInput.classList.remove("shake-err");
+    void this.nameInput.offsetWidth;
+    this.nameInput.classList.add("shake-err");
+    window.setTimeout(() => this.nameInput.classList.remove("shake-err"), 340);
+    this._setHint(msg, "#ff6677");
+  }
+
   private _resolveValidName(strict: boolean): string {
-    const raw = this.nameInput.value.trim().slice(0, 16);
+    const raw = this.nameInput.value.replace(/\s+/g, " ").trim().slice(0, 16);
     if (!raw && strict) {
-      this.nameInput.focus();
-      this.nameInput.classList.add("shake-err");
-      window.setTimeout(() => this.nameInput.classList.remove("shake-err"), 340);
-      this._setHint("⚠ Vui lòng nhập tên nhân vật trước khi chọn Class!", "#ff6677");
+      this._triggerInputError("⚠ Vui lòng nhập tên nhân vật trước khi chọn Class!");
       return "";
     }
-    return raw || this.game.pendingPlayerName || "Chroma-Walker";
+    if (raw && isProfanePlayerName(raw)) {
+      if (strict) {
+        this._triggerInputError("⚠ Tên nhân vật chứa từ ngữ không phù hợp. Vui lòng chọn tên lịch sự hơn!");
+        return "";
+      }
+      return sanitizePlayerName(this.game.pendingPlayerName, DEFAULT_HERO_NAME);
+    }
+    return sanitizePlayerName(raw || this.game.pendingPlayerName, DEFAULT_HERO_NAME);
   }
 
   private _proceedToClassSelect() {
@@ -234,21 +262,41 @@ export class HomeScreenUI {
 
   show() {
     this.root.classList.remove("hidden");
+    try {
+      const rawLast = localStorage.getItem(LAST_NAME_KEY);
+      if (rawLast && isProfanePlayerName(rawLast)) {
+        localStorage.setItem(LAST_NAME_KEY, DEFAULT_HERO_NAME);
+        if (!this.nameInput.value.trim() || isProfanePlayerName(this.nameInput.value)) {
+          this.nameInput.value = DEFAULT_HERO_NAME;
+        }
+        this.game.pendingPlayerName = DEFAULT_HERO_NAME;
+      } else if (isProfanePlayerName(this.nameInput.value)) {
+        this.nameInput.value = DEFAULT_HERO_NAME;
+        this.game.pendingPlayerName = DEFAULT_HERO_NAME;
+      }
+    } catch {
+      // ignore
+    }
+
     const saved = this.game.saveSys.load();
     if (saved) {
       const cls = getClassDef(saved.classId);
-      const savedName = saved.player.name || "Chroma-Walker";
+      const savedName = sanitizePlayerName(saved.player.name, DEFAULT_HERO_NAME);
+      if (saved.player.name !== savedName) {
+        saved.player.name = savedName;
+        this.game.saveSys.save(saved);
+      }
       this.continueBtn.classList.remove("hidden");
       this.continueBtn.textContent = `▶ TIẾP TỤC: ${savedName} (${cls.vnName} · LV.${saved.player.level})`;
-      if (!this.nameInput.value.trim() && saved.player.name) {
-        this.nameInput.value = saved.player.name;
-        this.game.pendingPlayerName = saved.player.name;
+      if (!this.nameInput.value.trim() && savedName) {
+        this.nameInput.value = savedName;
+        this.game.pendingPlayerName = savedName;
       }
     } else {
       this.continueBtn.classList.add("hidden");
     }
     this._renderInviteBanner();
-    const curVal = this.nameInput.value.trim();
+    const curVal = sanitizePlayerName(this.nameInput.value, "");
     if (curVal) {
       this._setHint(`Tên nhân vật sẵn sàng: ★ ${curVal} — Nhấn Enter hoặc Chọn Class!`, "#70f0b4");
     } else {

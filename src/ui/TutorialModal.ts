@@ -51,9 +51,9 @@ export const BEGINNER_PRACTICE_STEPS: readonly BeginnerStepDef[] = [
   },
   {
     id: "skill_e",
-    title: "Kỹ Năng Nguyên Tố [E]",
+    title: "Kỹ Năng Vũ Khí [E]",
     keyBadge: "E / Chuột Phải",
-    desc: "Nhấn phím E (hoặc Chuột Phải) để thi triển kỹ năng chiến thuật đặc trưng của Class.",
+    desc: "Mở Rương Tân Thủ [F] cạnh Quảng Trường để lấy & mặc Vũ Khí, rồi nhấn [E] (hoặc Chuột Phải) tung Kỹ Năng Vũ Khí!",
   },
   {
     id: "world_ui",
@@ -338,13 +338,15 @@ export class TutorialModalUI {
         <div><kbd>Space</kbd> Lướt / Chroma Dodge</div>
         <div><kbd>LMB</kbd> Combo 3 nhịp</div>
         <div><kbd>Giữ LMB</kbd> Tụ Lực / Just-Charge</div>
-        <div><kbd>E / RMB</kbd> Kỹ năng Class</div>
-        <div><kbd>Q</kbd> Tuyệt kỹ (100% Nộ)</div>
+        <div><kbd>E / RMB</kbd> Kỹ Năng Vũ Khí</div>
+        <div><kbd>Q</kbd> Tuyệt kỹ Class (100% Nộ)</div>
         <div><kbd>1 2 3 4</kbd> Dược phẩm thông minh</div>
         <div><kbd>F</kbd> Tương tác / Nhặt / Mở rương</div>
         <div><kbd>I / B</kbd> Túi đồ & Trang bị</div>
         <div><kbd>J</kbd> Nhiệm vụ & Biên Niên Sử</div>
         <div><kbd>M</kbd> Bản đồ & Dịch chuyển</div>
+        <div><kbd>V</kbd> Thu gọn HUD chiến đấu</div>
+        <div><kbd>F11</kbd> Toàn màn hình</div>
         <div><kbd>H / F1</kbd> Cẩm nang Tân thủ</div>
       </div>
 

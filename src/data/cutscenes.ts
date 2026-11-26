@@ -1,5 +1,6 @@
 import type { ClassId } from "./types";
 import type { HeroAttackKind } from "../graphics/pixelfxHeroModels";
+import { DEFAULT_HERO_NAME, sanitizePlayerName } from "../utils/playerName";
 
 export type StoryCutsceneId =
   | "scene_intro"
@@ -866,7 +867,7 @@ export function getBossCutsceneId(bossDefId: string): StoryCutsceneId | null {
 }
 
 export function interpolateCutsceneText(text: string, playerName: string, className: string): string {
-  const safeName = playerName.trim() || "Chroma-Walker";
+  const safeName = sanitizePlayerName(playerName, DEFAULT_HERO_NAME);
   const safeClass = className.trim() || "Chiến Binh Lăng Kính";
   return text.replace(/\{PLAYER_NAME\}/g, safeName).replace(/\{CLASS_NAME\}/g, safeClass);
 }

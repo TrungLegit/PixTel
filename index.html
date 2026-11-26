@@ -20,32 +20,38 @@
 
     <!-- IN-GAME HUD -->
     <div id="hud-layer" class="hidden">
-      <!-- Top-Left Hero Panel -->
-      <div class="hud-panel hud-top-left">
-        <div class="hud-hero-row">
-          <div id="hud-class-badge" class="hud-class-badge">Vệ Binh Lăng Kính · LV.1</div>
-          <div id="hud-gold" class="hud-gold">120 G</div>
+      <!-- Left Vertical Stack: Hero Panel -> Co-op Party -> Guided Beginner Banner (Zero center screen occlusion) -->
+      <div class="hud-left-stack">
+        <!-- Top-Left Hero Panel -->
+        <div class="hud-panel hud-top-left">
+          <div class="hud-hero-row">
+            <div id="hud-class-badge" class="hud-class-badge">Vệ Binh Lăng Kính · LV.1</div>
+            <div id="hud-gold" class="hud-gold">30 G</div>
+          </div>
+          <div class="px-bar hp-bar">
+            <div id="hud-hp-fill" class="px-bar-fill"></div>
+            <span id="hud-hp-text" class="px-bar-lbl">HP 155/155</span>
+          </div>
+          <div class="px-bar xp-bar">
+            <div id="hud-xp-fill" class="px-bar-fill"></div>
+            <span id="hud-xp-text" class="px-bar-lbl">XP 0/90</span>
+          </div>
+          <div class="hud-meta-row">
+            <span id="hud-biome">THỊ TRẤN KHỞI NGUYÊN (SAFE)</span>
+          </div>
+          <div class="hud-meta-row">
+            <span id="hud-restore">Màu: 5% · Trụ 1/9 · Bia Ký 0/8</span>
+          </div>
+          <div id="hud-status-line" class="hud-status-line"></div>
+          <button id="hud-stat-pts-btn" class="hud-stat-pts-btn hidden" title="Nhấn [I] để cộng điểm tiềm năng!">✨ +0 ĐIỂM TIỀM NĂNG [I]</button>
         </div>
-        <div class="px-bar hp-bar">
-          <div id="hud-hp-fill" class="px-bar-fill"></div>
-          <span id="hud-hp-text" class="px-bar-lbl">HP 155/155</span>
-        </div>
-        <div class="px-bar xp-bar">
-          <div id="hud-xp-fill" class="px-bar-fill"></div>
-          <span id="hud-xp-text" class="px-bar-lbl">XP 0/90</span>
-        </div>
-        <div class="hud-meta-row">
-          <span id="hud-biome">THỊ TRẤN KHỞI NGUYÊN (SAFE)</span>
-        </div>
-        <div class="hud-meta-row">
-          <span id="hud-restore" style="color:#5ef2ff">Màu: 5% · Trụ 1/9</span>
-        </div>
-        <div id="hud-status-line" class="hud-status-line"></div>
-        <button id="hud-stat-pts-btn" class="hud-stat-pts-btn hidden" title="Nhấn [I] để cộng điểm tiềm năng!">✨ +0 ĐIỂM TIỀM NĂNG [I]</button>
-      </div>
 
-      <!-- Top-Left Co-op Party Box -->
-      <div id="hud-party-box" class="hud-panel hud-party-box hidden"></div>
+        <!-- Co-op Party Box -->
+        <div id="hud-party-box" class="hud-panel hud-party-box hidden"></div>
+
+        <!-- Guided Beginner Practice Banner (stacked cleanly on left, never blocks center world!) -->
+        <div id="hud-tutorial-banner" class="hud-panel tutorial-banner hidden"></div>
+      </div>
 
       <!-- Top-Center Boss HP & Bleach Shield Bar -->
       <div id="hud-boss-bar" class="hud-panel hud-boss-bar hidden">
@@ -61,30 +67,32 @@
         <div id="hud-boss-lock-tag" class="boss-lock-tag hidden">🔒 LÃNH ĐỊA PHONG ẤN — KHÔNG THỂ THOÁT</div>
       </div>
 
-      <!-- Top-Center Guided Beginner Practice Banner (hidden when inactive or during Boss fights) -->
-      <div id="hud-tutorial-banner" class="hud-panel tutorial-banner hidden"></div>
-
-      <!-- Top-Right Minimap + Toolbar + Quest Tracker -->
+      <!-- Top-Right 2-Row Toolbar + Minimap + Quest Tracker -->
       <div class="hud-top-right">
         <div class="hud-toolbar">
-          <button id="hud-btn-gacha" class="hud-mini-btn" style="color:#ffe066;border-color:#ff99cc" title="Rương Gacha Theo Mùa [G]">G·GACHA</button>
-          <button id="hud-btn-coop" class="hud-mini-btn" style="color:#44ee88;border-color:#44ee88" title="Tổ Đội Co-op Online 2–4 Người [P]">P·COOP</button>
-          <button id="hud-btn-help" class="hud-mini-btn" style="color:#ffe066;border-color:#ffe066" title="Cẩm Nang Tân Thủ, Combo & 9 Nguyên Tố [H / F1]">H·HDẪN</button>
-          <button id="hud-btn-map" class="hud-mini-btn" title="Bản đồ thế giới [M]">M·MAP</button>
-          <button id="hud-btn-bag" class="hud-mini-btn" title="Túi đồ [I / B]">I·TÚI</button>
-          <button id="hud-btn-quest" class="hud-mini-btn" title="Nhiệm vụ & Biên Niên Sử [J]">J·SỔ</button>
-          <button id="hud-btn-touch" class="hud-mini-btn" title="Bật/Tắt nút cảm ứng Mobile">📱</button>
-          <button id="hud-btn-fs" class="hud-mini-btn" title="Toàn màn hình ngang">⛶</button>
-          <button id="hud-btn-save" class="hud-mini-btn" title="Lưu nhanh">LƯU</button>
-          <button id="hud-btn-mute" class="hud-mini-btn" title="Bật/Tắt âm thanh">SFX</button>
-          <button id="hud-btn-pause" class="hud-mini-btn" title="Tạm dừng [ESC]">ESC</button>
+          <div class="hud-toolbar-row hud-toolbar-row-primary">
+            <button id="hud-btn-bag" class="hud-mini-btn" title="Túi đồ [I / B]">I·TÚI</button>
+            <button id="hud-btn-map" class="hud-mini-btn" title="Bản đồ thế giới [M]">M·MAP</button>
+            <button id="hud-btn-quest" class="hud-mini-btn" title="Nhiệm vụ & Biên Niên Sử [J]">J·SỔ</button>
+            <button id="hud-btn-gacha" class="hud-mini-btn" style="color:#ffe066;border-color:#ff99cc" title="Rương Gacha Theo Mùa [G]">G·GACHA</button>
+            <button id="hud-btn-coop" class="hud-mini-btn" style="color:#44ee88;border-color:#44ee88" title="Tổ Đội Co-op Online 2–4 Người [P]">P·COOP</button>
+            <button id="hud-btn-help" class="hud-mini-btn" style="color:#ffe066;border-color:#ffe066" title="Cẩm Nang Tân Thủ, Combo & 9 Nguyên Tố [H / F1]">H·HDẪN</button>
+          </div>
+          <div class="hud-toolbar-row hud-toolbar-row-system">
+            <button id="hud-btn-hud" class="hud-mini-btn" title="Thu gọn / Hiện đầy đủ HUD chiến đấu [V]">👁 HUD [V]</button>
+            <button id="hud-btn-fs" class="hud-mini-btn" title="Bật / Tắt Toàn màn hình [F11]">⛶ F11</button>
+            <button id="hud-btn-touch" class="hud-mini-btn" title="Bật/Tắt nút cảm ứng Mobile">📱</button>
+            <button id="hud-btn-save" class="hud-mini-btn" title="Lưu nhanh">LƯU</button>
+            <button id="hud-btn-mute" class="hud-mini-btn" title="Bật/Tắt âm thanh">SFX</button>
+            <button id="hud-btn-pause" class="hud-mini-btn" title="Tạm dừng [ESC]">ESC</button>
+          </div>
         </div>
         <div class="minimap-wrap" title="Nhấn để mở Bản Đồ Thế Giới [M]">
           <canvas id="minimap-canvas" width="108" height="108"></canvas>
           <span class="minimap-tag">BẢN ĐỒ [M]</span>
         </div>
         <div class="hud-panel quest-tracker">
-          <div class="qt-hdr">NHIỆM VỤ & HỒI KÝ [J]</div>
+          <div class="qt-hdr" title="Nhấn để mở Sổ Nhiệm Vụ & Biên Niên Sử [J]">NHIỆM VỤ & HỒI KÝ [J]</div>
           <div id="hud-quest-list"></div>
         </div>
       </div>
@@ -101,38 +109,38 @@
         <button id="slot-bag" class="skill-slot icon-skill-slot bag-slot" type="button" data-hud-tip="bag" aria-label="Túi Đồ & Trang Bị [I]">
           <span class="key-cap">I</span>
           <span id="bag-slot-pts" class="bag-pts-pill hidden">+0</span>
-          <canvas id="bag-slot-icon" class="skill-icon-canvas" width="36" height="36"></canvas>
+          <canvas id="bag-slot-icon" class="skill-icon-canvas" width="32" height="32"></canvas>
           <span id="bag-slot-count" class="cons-qty">0/40</span>
         </button>
         <button id="slot-gacha" class="skill-slot icon-skill-slot gacha-slot" type="button" data-hud-tip="gacha" aria-label="Rương Gacha Mùa [G]">
           <span class="key-cap">G</span>
-          <canvas id="gacha-slot-icon" class="skill-icon-canvas" width="36" height="36"></canvas>
-          <span id="gacha-slot-count" class="cons-qty">🗝0</span>
+          <canvas id="gacha-slot-icon" class="skill-icon-canvas" width="32" height="32"></canvas>
+          <span id="gacha-slot-count" class="cons-qty">0 CHÌA</span>
         </button>
         <div class="hotbar-sep bag-sep"></div>
         <div id="slot-skill-lmb" class="skill-slot icon-skill-slot" data-hud-tip="lmb" aria-label="Đòn Đánh Thường & Tụ Lực [LMB]">
           <span class="key-cap">LMB</span>
-          <canvas id="skill-lmb-icon" class="skill-icon-canvas" width="36" height="36"></canvas>
+          <canvas id="skill-lmb-icon" class="skill-icon-canvas" width="32" height="32"></canvas>
           <span id="skill-lmb-sub" class="skill-badge hidden"></span>
         </div>
-        <div id="slot-skill-e" class="skill-slot icon-skill-slot" data-hud-tip="skill" aria-label="Kỹ Năng Đặc Trưng [E]">
+        <div id="slot-skill-e" class="skill-slot icon-skill-slot" data-hud-tip="skill" aria-label="Kỹ Năng Vũ Khí [E]">
           <span class="key-cap">E</span>
           <div id="skill-e-veil" class="skill-cd-veil"></div>
-          <canvas id="skill-e-icon" class="skill-icon-canvas" width="36" height="36"></canvas>
+          <canvas id="skill-e-icon" class="skill-icon-canvas" width="32" height="32"></canvas>
           <canvas id="skill-e-lock" class="skill-lock-icon hidden" width="16" height="16"></canvas>
           <span id="skill-e-cd" class="skill-badge hidden"></span>
         </div>
         <div id="slot-skill-q" class="skill-slot icon-skill-slot" data-hud-tip="ult" aria-label="Tuyệt Kỹ [Q]">
           <span class="key-cap">Q</span>
           <div id="skill-q-gauge" class="skill-ult-gauge"></div>
-          <canvas id="skill-q-icon" class="skill-icon-canvas" width="36" height="36"></canvas>
+          <canvas id="skill-q-icon" class="skill-icon-canvas" width="32" height="32"></canvas>
           <canvas id="skill-q-lock" class="skill-lock-icon hidden" width="16" height="16"></canvas>
           <span id="skill-q-cd" class="skill-badge">0%</span>
         </div>
         <div id="slot-dash" class="skill-slot icon-skill-slot" data-hud-tip="dash" aria-label="Chroma Dash [Space]">
-          <span class="key-cap">SPC</span>
+          <span class="key-cap">SPACE</span>
           <div id="skill-dash-veil" class="skill-cd-veil"></div>
-          <canvas id="skill-dash-icon" class="skill-icon-canvas" width="36" height="36"></canvas>
+          <canvas id="skill-dash-icon" class="skill-icon-canvas" width="32" height="32"></canvas>
           <span id="skill-dash-cd" class="skill-badge hidden"></span>
         </div>
         <div class="hotbar-sep"></div>
@@ -402,7 +410,8 @@
       <div class="modal-box modal-xl stash-modal-box">
         <div class="modal-header">
           <div>📦 RƯƠNG CÁ NHÂN — KHO LƯU TRỮ TẠI QUẢNG TRƯỜNG SPAWN (80 Ô)</div>
-          <div style="display:flex;gap:6px;align-items:center">
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <button id="btn-stash-take-equip" class="px-btn sm good hidden" title="Lấy trang bị phù hợp Class trong Rương và trang bị ngay lập tức">⚡ LẤY &amp; TRANG BỊ NGAY</button>
             <button id="btn-stash-deposit-mats" class="px-btn sm primary" title="Cất toàn bộ nguyên liệu thường vào Rương Cá Nhân">📦 CẤT NHANH NGUYÊN LIỆU</button>
             <button id="btn-close-stash" class="px-btn sm">✕ ĐÓNG</button>
           </div>

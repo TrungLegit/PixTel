@@ -1,4 +1,4 @@
-import { ITEMS, RARITY_INFO, getTierBadge } from "../data/items";
+import { ITEMS, RARITY_INFO, canClassEquip, getTierBadge } from "../data/items";
 import { onCodixelReady } from "../graphics/codixelAtlas";
 import { MAX_STASH_SLOTS } from "../systems/inventorySystem";
 import { uiRarityFx } from "../vfx/uiRarityFx";
@@ -19,6 +19,7 @@ export class StorageChestModalUI {
   private bagGridEl: HTMLElement;
   private stashGridEl: HTMLElement;
   private statusEl: HTMLElement;
+  private takeEquipBtn: HTMLButtonElement | null;
 
   constructor(game: PixTelOpenWorldGame) {
     this.game = game;
@@ -28,10 +29,15 @@ export class StorageChestModalUI {
     this.bagGridEl = document.getElementById("stash-bag-grid")!;
     this.stashGridEl = document.getElementById("stash-chest-grid")!;
     this.statusEl = document.getElementById("stash-status-msg")!;
+    this.takeEquipBtn = document.getElementById("btn-stash-take-equip") as HTMLButtonElement | null;
 
     document.getElementById("btn-close-stash")!.addEventListener("click", () => {
       sfx.playUiClick();
       this.game.setModal(null);
+    });
+
+    this.takeEquipBtn?.addEventListener("click", () => {
+      this._withdrawAndEquipCompatible();
     });
 
     document.getElementById("btn-stash-deposit-mats")?.addEventListener("click", () => {
@@ -55,9 +61,58 @@ export class StorageChestModalUI {
     });
   }
 
+  private _withdrawAndEquipCompatible() {
+    const inv = this.game.inv;
+    const classId = this.game.player.classId;
+    const candidates = inv.stash.filter((it) => {
+      const def = ITEMS[it.defId];
+      return def?.category === "equipment" && Boolean(def.slot) && canClassEquip(def, classId);
+    });
+    if (candidates.length === 0) {
+      sfx.playUiClick();
+      this.statusEl.innerHTML = `<span style="color:#b8b0d4">Trong Rương chưa có trang bị nào phù hợp với Class hiện tại.</span>`;
+      return;
+    }
+
+    const equippedNames: string[] = [];
+    for (const cand of candidates) {
+      const def = ITEMS[cand.defId];
+      if (!def?.slot) continue;
+      // Withdraw if slot is empty OR candidate outscores currently equipped item
+      const cur = inv.equipment[def.slot];
+      if (!cur || inv.computeEquipScore(cand) > inv.computeEquipScore(cur)) {
+        const wRes = inv.withdrawFromStash(cand.uid);
+        if (wRes.ok) {
+          const eqRes = inv.equipFromBag(cand.uid, classId);
+          if (eqRes.ok) {
+            equippedNames.push(def.name);
+          }
+        }
+      }
+    }
+
+    if (equippedNames.length > 0) {
+      sfx.playEquipWeapon();
+      this.game.recalcPlayerStats(true);
+      this.game.saveGame(false);
+      this.game.refreshHud();
+      this.statusEl.innerHTML = `<span style="color:#ffe066">⚡ Đã lấy & trang bị ngay: <b>${equippedNames.join(", ")}</b>! Đóng rương [ESC] để tung chiêu [E]!</span>`;
+      this.render();
+    } else {
+      sfx.playUiClick();
+      this.statusEl.innerHTML = `<span style="color:#b8b0d4">Bạn đang mặc trang bị tương đương hoặc mạnh hơn đồ trong Rương.</span>`;
+    }
+  }
+
   show() {
     this.root.classList.remove("hidden");
-    this.statusEl.textContent = "Nhấn vào vật phẩm bên Túi để CẤT vào Rương, hoặc nhấn bên Rương để LẤY về Túi.";
+    const unarmedWithStash =
+      !this.game.inv.getValidEquippedWeapon(this.game.player.classId) && this.game.inv.stash.length > 0;
+    if (unarmedWithStash) {
+      this.statusEl.innerHTML = `<span style="color:#ffe066">🌟 Rương Tân Thủ đang giữ Vũ Khí khởi đầu của bạn! Bấm <b>⚡ LẤY &amp; TRANG BỊ NGAY</b> hoặc click vào vũ khí bên phải!</span>`;
+    } else {
+      this.statusEl.textContent = "Nhấn vào vật phẩm bên Túi để CẤT vào Rương, hoặc nhấn bên Rương để LẤY về Túi.";
+    }
     this.render();
   }
 
@@ -67,6 +122,15 @@ export class StorageChestModalUI {
 
   render() {
     const inv = this.game.inv;
+    const classId = this.game.player.classId;
+    const hasAutoEquippable = inv.stash.some((it) => {
+      const def = ITEMS[it.defId];
+      if (!def || def.category !== "equipment" || !def.slot || !canClassEquip(def, classId)) return false;
+      const cur = inv.equipment[def.slot];
+      return !cur || inv.computeEquipScore(it) > inv.computeEquipScore(cur);
+    });
+    this.takeEquipBtn?.classList.toggle("hidden", !hasAutoEquippable);
+
     this.bagTitleEl.textContent = `TÚI ĐỒ HÀNH TRANG (${inv.bag.length}/${inv.bagCapacity} Ô) — Click để CẤT →`;
     this.stashTitleEl.textContent = `📦 RƯƠNG CÁ NHÂN (${inv.stash.length}/${MAX_STASH_SLOTS} Ô) — Click để LẤY ←`;
 
@@ -117,7 +181,7 @@ export class StorageChestModalUI {
             : ""
           : `x${item.qty}`;
       stashHtml.push(`
-        <button class="bag-slot stash-slot rarity-${def.rarity}" data-withdraw-uid="${item.uid}" data-review-uid="${item.uid}" style="border-color:${rCol}" title="Click để lấy về Túi Đồ">
+        <button class="bag-slot stash-slot rarity-${def.rarity}" data-withdraw-uid="${item.uid}" data-review-uid="${item.uid}" style="border-color:${rCol}" title="Click để lấy về Túi Đồ (tự mặc nếu ô trang bị đang trống!)">
           <canvas class="px-item-icon" width="32" height="32" data-icon-def="${def.id}" data-icon-enh="${item.enhanceLevel}"></canvas>
           <span class="slot-tier" style="color:${tInfo.color};background:${tInfo.bg}">${tInfo.badge}</span>
           ${badge ? `<span class="bag-badge">${badge}</span>` : ""}
@@ -147,12 +211,33 @@ export class StorageChestModalUI {
 
     this.stashGridEl.querySelectorAll<HTMLButtonElement>("[data-withdraw-uid]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        const res = inv.withdrawFromStash(btn.dataset.withdrawUid!);
+        const uid = btn.dataset.withdrawUid!;
+        const stashItem = inv.findInStash(uid);
+        const stashDef = stashItem ? ITEMS[stashItem.defId] : undefined;
+        const res = inv.withdrawFromStash(uid);
         if (res.ok) {
-          sfx.playBagOpen();
+          let autoEquipped = false;
+          if (
+            stashDef?.category === "equipment" &&
+            stashDef.slot &&
+            canClassEquip(stashDef, classId) &&
+            !inv.equipment[stashDef.slot]
+          ) {
+            const eqRes = inv.equipFromBag(uid, classId);
+            if (eqRes.ok) {
+              autoEquipped = true;
+              this.game.recalcPlayerStats(true);
+            }
+          }
+          if (autoEquipped) {
+            sfx.playEquipWeapon();
+            this.statusEl.innerHTML = `<span style="color:#ffe066">⚡ Đã lấy & trang bị ngay <b>${res.itemName}</b>! Đóng rương [ESC] để dùng chiêu [E]!</span>`;
+          } else {
+            sfx.playBagOpen();
+            this.statusEl.innerHTML = `<span style="color:#44ee88">← Đã lấy <b>${res.itemName}</b> về Túi Đồ.</span>`;
+          }
           this.game.saveGame(false);
           this.game.refreshHud();
-          this.statusEl.innerHTML = `<span style="color:#44ee88">← Đã lấy <b>${res.itemName}</b> về Túi Đồ.</span>`;
           this.render();
         } else {
           sfx.playForgeFail();

@@ -7,6 +7,7 @@ import { PIXELFX_MODS } from "../vfx/vfxManager";
 import type { PixelfxFrame, PixelfxInstance } from "../vfx/pixelfxTypes";
 import type { PixTelOpenWorldGame } from "../game";
 import { sfx } from "../audio/chiptuneSynth";
+import { DEFAULT_HERO_NAME, sanitizePlayerName } from "../utils/playerName";
 import { renderPixtelLogo } from "./pixelLogo";
 
 interface CardPreview {
@@ -296,7 +297,7 @@ export class ClassSelectUI {
       guideWrap?.classList.add("hidden");
       coopBtn?.classList.add("hidden");
     } else {
-      const heroName = this.game.pendingPlayerName || this.game.player.name || "Chroma-Walker";
+      const heroName = sanitizePlayerName(this.game.pendingPlayerName || this.game.player.name, DEFAULT_HERO_NAME);
       this.titleSubEl.textContent = "BƯỚC 2/2: CHỌN CLASS CHIẾN ĐẤU — Sau đó nhấn BẮT ĐẦU để mở màn Biên Niên Sử!";
       startBtn.textContent = `⚔ BẮT ĐẦU PHIÊU LƯU (${heroName})`;
       this.continueBtn.classList.toggle("hidden", !this.game.saveSys.hasSave());

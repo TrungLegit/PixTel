@@ -8,6 +8,7 @@ import {
   type WsClientToServerMsg,
   type WsServerToClientMsg,
 } from "./protocol";
+import { DEFAULT_HERO_NAME, sanitizePlayerName } from "../utils/playerName";
 
 export type CoopConnectionStatus = "offline" | "connecting" | "connected" | "error";
 
@@ -43,7 +44,7 @@ export class CoopClient {
   statusDetail = "";
   roomCode = "";
   localId = `p_${Math.random().toString(36).slice(2, 9)}`;
-  playerName = "Lữ Khách";
+  playerName = DEFAULT_HERO_NAME;
   isHost = false;
   hostId = "";
   wsServerUrl = "ws://127.0.0.1:8787";
@@ -85,7 +86,7 @@ export class CoopClient {
   }): Promise<string> {
     this.disconnect();
     this.mode = opts?.mode ?? this.mode;
-    if (opts?.playerName) this.playerName = opts.playerName.trim().slice(0, 16) || "Lữ Khách";
+    this.playerName = sanitizePlayerName(opts?.playerName ?? this.playerName, DEFAULT_HERO_NAME);
     if (opts?.wsUrl) this.wsServerUrl = opts.wsUrl.trim();
 
     const desiredCode = normalizeRoomCode(opts?.roomCode || generateRoomCode(6));
@@ -115,7 +116,7 @@ export class CoopClient {
     }
     this.disconnect();
     this.mode = opts?.mode ?? this.mode;
-    if (opts?.playerName) this.playerName = opts.playerName.trim().slice(0, 16) || "Đồng Đội";
+    this.playerName = sanitizePlayerName(opts?.playerName ?? this.playerName, DEFAULT_HERO_NAME);
     if (opts?.wsUrl) this.wsServerUrl = opts.wsUrl.trim();
 
     this.roomCode = code;

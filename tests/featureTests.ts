@@ -19,6 +19,7 @@ import { WEAPON_SKILLS, getWeaponSkillForItem } from "../src/data/weaponSkills";
 import codixelEnemiesMeta from "../src/assets/codixel-enemies.json";
 import codixelIconsMeta from "../src/assets/codixel-icons.json";
 import { PAL, clearFrame, createFrame, createFx, posedStyled } from "../src/vfx/pixelfx/core/index.js";
+import { rasterText } from "../src/vfx/pixelfx/core/font.js";
 import { GACHA_ALTAR_POS, STORAGE_CHEST_POS, TOWN_BOUNDS } from "../src/data/worldConfig";
 import { STARTER_WEAPON_BY_CLASS } from "../src/data/equipments";
 import {
@@ -61,6 +62,7 @@ import { ATLAS_PRESETS, PIXELFX_MODS } from "../src/vfx/vfxManager";
 import { createFrame, createFx } from "../src/vfx/pixelfx/core/index.js";
 import WebSocket from "ws";
 import { PixTelOpenWorldGame } from "../src/game";
+import { DEFAULT_HERO_NAME, isProfanePlayerName, sanitizePlayerName } from "../src/utils/playerName";
 import { startCoopServer } from "../server/coopServer";
 import type { WebSocketLike } from "../src/net/coopClient";
 
@@ -2766,6 +2768,132 @@ async function runAsyncSuitesAndPrint() {
 
     results.push(
       "PASS · Home Screen Naming, 6 pixelfx+codixel Story Cutscenes, Knight Overhead Slam & 8 Weapon Animations"
+    );
+  }
+
+  // =========================================================================
+  // SUITE 19: PLAYER NAME SANITIZER, FTUE STARTER STASH, BIOME TOAST SYNC & COMPACT HUD
+  // =========================================================================
+  {
+    // 1. Player Name Profanity Filter & Sanitizer ("nigge" -> "Lữ Khách", preserves Vietnamese names)
+    assert.equal(DEFAULT_HERO_NAME, "Lữ Khách");
+    assert.equal(isProfanePlayerName("nigge"), true, "Detects 'nigge' slur prefix");
+    assert.equal(isProfanePlayerName("N1GG3R"), true, "Detects leetspeak slur");
+    assert.equal(isProfanePlayerName("f u c k"), true, "Detects spaced profanity");
+    assert.equal(isProfanePlayerName("địt mẹ"), true, "Detects Vietnamese profanity with diacritics");
+    assert.equal(sanitizePlayerName("nigge"), "Lữ Khách", "Sanitizes 'nigge' to 'Lữ Khách'");
+    assert.equal(sanitizePlayerName("   "), "Lữ Khách", "Sanitizes empty whitespace to 'Lữ Khách'");
+
+    for (const goodName of ["Quang Khải", "Lữ Khách", "Hỏa Long", "Cầu Vồng", "Lăng Kính Sư", "Aetherion"]) {
+      assert.equal(isProfanePlayerName(goodName), false, `Preserves clean Vietnamese/fantasy name: ${goodName}`);
+      assert.equal(sanitizePlayerName(goodName), goodName, `sanitizePlayerName keeps '${goodName}' intact`);
+    }
+
+    // 2. FTUE Starter Weapon in Personal Stash on startNewGame + Class Altar Stash Swap + resetStarterKit contract
+    const rawInvCheck = new InventorySystem();
+    rawInvCheck.resetStarterKit("chroma_mage");
+    assert.equal(rawInvCheck.gold, 30, "resetStarterKit() keeps gold=30");
+    assert.equal(Object.keys(rawInvCheck.equipment).length, 0, "resetStarterKit() keeps equipment={}");
+    assert.equal(rawInvCheck.countItem("pot_hp"), 2, "resetStarterKit() keeps pot_hp=2");
+    assert.equal(rawInvCheck.stash.length, 0, "Direct resetStarterKit() leaves stash=[]");
+    assert.equal(BEGINNER_PRACTICE_STEPS.length, 6, "BEGINNER_PRACTICE_STEPS remains 6 steps");
+    assert.equal(BEGINNER_PRACTICE_STEPS[4].id, "skill_e");
+    assert.equal(BEGINNER_PRACTICE_STEPS[4].title, "Kỹ Năng Vũ Khí [E]");
+
+    const toasts: string[] = [];
+    const ftueGame = new PixTelOpenWorldGame(makeMockCanvas() as unknown as HTMLCanvasElement, {
+      onHudUpdate: () => {},
+      onModalChange: () => {},
+      onToast: (msg) => {
+        toasts.push(msg);
+      },
+      onBossVictory: () => {},
+    });
+
+    ftueGame.startNewGame("chroma_mage", true, "nigge", false);
+    assert.equal(ftueGame.player.name, "Lữ Khách", "startNewGame sanitizes profane name to 'Lữ Khách'");
+    assert.equal(ftueGame.coop.playerName, "Lữ Khách", "Co-op name also sanitized on startNewGame");
+    assert.equal(
+      ftueGame.inv.stash.some((it) => it.defId === STARTER_WEAPON_BY_CLASS["chroma_mage"]),
+      true,
+      "startNewGame('chroma_mage', true) places Mage starter weapon in Personal Stash"
+    );
+
+    // Switching class at Class Altar before using starter weapon swaps Stash starter weapon to new class!
+    ftueGame.switchClassInTown("bit_rogue");
+    assert.equal(
+      ftueGame.inv.stash.some((it) => it.defId === STARTER_WEAPON_BY_CLASS["bit_rogue"]),
+      true,
+      "switchClassInTown swaps unused +0 starter weapon in Stash to match new class"
+    );
+
+    // 3. Respawn & Fast Travel synchronize currentBiome (zero duplicate 'Tiến vào ...' toast on next frame!)
+    // Move hero out into Meadow biome first
+    const meadowWp = WAYPOINTS.find((w) => w.id !== "wp_town")!;
+    ftueGame.colorSys.unlockedWaypoints.add(meadowWp.id);
+    ftueGame.player.x = meadowWp.tx * TILE_SIZE + 8;
+    ftueGame.player.y = meadowWp.ty * TILE_SIZE + 8;
+    ftueGame.step(0.05);
+    assert.notEqual(ftueGame.currentBiome, "town", "Hero entered non-town biome");
+
+    // Trigger onPlayerDefeated back to wp_town while unarmed
+    toasts.length = 0;
+    const combatCtx = (ftueGame as unknown as { _makeCombatContext: () => CombatContext })._makeCombatContext();
+    combatCtx.onPlayerDefeated();
+    assert.equal(ftueGame.currentBiome, "town", "onPlayerDefeated immediately syncs currentBiome to respawn biome");
+    assert.equal(toasts.length, 1, "onPlayerDefeated emits single respawn toast");
+    assert.ok(
+      toasts[0].includes("Rương Tân Thủ [F]"),
+      "Unarmed respawn toast guides newbie to Starter Stash [F]"
+    );
+    ftueGame.step(0.05);
+    assert.equal(
+      toasts.some((m) => m.startsWith("Tiến vào")),
+      false,
+      "Next _update frame after onPlayerDefeated does NOT fire duplicate biome entry toast"
+    );
+
+    // Fast travel to meadowWp and verify currentBiome syncs with zero duplicate biome toast on next frame
+    toasts.length = 0;
+    ftueGame.fastTravelTo(meadowWp.id);
+    const expectedBiome = ftueGame.world.getBiomeAtWorld(ftueGame.player.x, ftueGame.player.y);
+    assert.equal(ftueGame.currentBiome, expectedBiome, "fastTravelTo immediately syncs currentBiome");
+    ftueGame.step(0.05);
+    assert.equal(
+      toasts.some((m) => m.startsWith("Tiến vào")),
+      false,
+      "Next _update frame after fastTravelTo does NOT fire duplicate biome entry toast"
+    );
+
+    // 4. Compact HUD toggle [V], pixelfx '[' ']' glyphs & Starter Stash [F] prompt
+    assert.equal(ftueGame.compactHud, false);
+    assert.equal(ftueGame.toggleCompactHud(), true, "toggleCompactHud turns on compact HUD");
+    assert.equal(ftueGame.compactHud, true);
+    assert.equal(ftueGame.toggleCompactHud(), false, "toggleCompactHud turns off compact HUD");
+    assert.equal(ftueGame.toggleCompactHud(true), true, "toggleCompactHud(true) forces compact HUD on");
+
+    let miniBracketPixels = 0;
+    let bigBracketPixels = 0;
+    rasterText("[]", "mini", () => {
+      miniBracketPixels++;
+    });
+    rasterText("[]", "big", () => {
+      bigBracketPixels++;
+    });
+    assert.equal(miniBracketPixels, 14, "MINI font renders crisp 7+7 inked pixels for '[' and ']'");
+    assert.equal(bigBracketPixels, 22, "BIG font renders crisp 11+11 inked pixels for '[' and ']'");
+
+    const sx = STORAGE_CHEST_POS.tx * TILE_SIZE + 8;
+    const sy = STORAGE_CHEST_POS.ty * TILE_SIZE + 8;
+    const starterPrompt = findNearestInteractable(sx + 2, sy + 2, ftueGame.colorSys, [], [], undefined, true);
+    assert.equal(
+      starterPrompt?.prompt,
+      "[F] 📦 Mở Rương Tân Thủ — Nhận & Trang Bị Vũ Khí!",
+      "Unarmed Starter Stash prompt guides newbie clearly"
+    );
+
+    results.push(
+      "PASS · Player Name Profanity Sanitizer, FTUE Starter Stash Weapon, Biome Toast Deduplication & Compact HUD [V]"
     );
   }
 

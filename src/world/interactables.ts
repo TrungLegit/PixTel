@@ -26,7 +26,8 @@ export function findNearestInteractable(
   colorSys: ColorRestorationSystem,
   chests: ChestEntity[],
   groundLoot: GroundLootEntity[],
-  discoveredLore?: ReadonlySet<string>
+  discoveredLore?: ReadonlySet<string>,
+  needsStarterStash = false
 ): InteractableTarget | null {
   let best: InteractableTarget | null = null;
   let bestScore = Infinity;
@@ -61,14 +62,22 @@ export function findNearestInteractable(
     );
   }
 
-  // 2b. Personal Storage Chest right beside Spawn (Rương Cá Nhân)
+  // 2b. Personal Storage Chest right beside Spawn (Rương Cá Nhân / Rương Tân Thủ)
   {
     const x = STORAGE_CHEST_POS.tx * TILE_SIZE + 8;
     const y = STORAGE_CHEST_POS.ty * TILE_SIZE + 8;
     const dist = Math.hypot(px - x, py - y);
     consider(
-      { kind: "stash_chest", x, y, prompt: `[F] 📦 Mở Rương Cá Nhân (Cất / Lấy Đồ)`, dist },
-      0
+      {
+        kind: "stash_chest",
+        x,
+        y,
+        prompt: needsStarterStash
+          ? `[F] 📦 Mở Rương Tân Thủ — Nhận & Trang Bị Vũ Khí!`
+          : `[F] 📦 Mở Rương Cá Nhân (Cất / Lấy Đồ)`,
+        dist,
+      },
+      needsStarterStash ? -2 : 0
     );
   }
 

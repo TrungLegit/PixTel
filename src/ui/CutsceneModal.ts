@@ -13,6 +13,7 @@ import { drawCodixelEnemy } from "../graphics/enemyAtlas";
 import { drawPixelfxHero, getClassShowcaseEquipment, type HeroAttackKind } from "../graphics/pixelfxHeroModels";
 import { createFrame, clearFrame, createFx, PAL } from "../vfx/pixelfx/core/index.js";
 import { PIXELFX_MODS } from "../vfx/vfxManager";
+import { DEFAULT_HERO_NAME, sanitizePlayerName } from "../utils/playerName";
 import type { PixelfxFrame, PixelfxInstance } from "../vfx/pixelfxTypes";
 import type { ModalId, PixTelOpenWorldGame } from "../game";
 import { sfx } from "../audio/chiptuneSynth";
@@ -250,7 +251,7 @@ export class CutsceneModalUI {
     const beat = this.activeScene.beats[idx];
     this.cueStates = beat.fxCues.map((c) => ({ nextAt: c.delay, firedOnce: false }));
 
-    const playerName = this.game.player?.name || this.game.pendingPlayerName || "Chroma-Walker";
+    const playerName = sanitizePlayerName(this.game.player?.name || this.game.pendingPlayerName, DEFAULT_HERO_NAME);
     const className = getClassDef(this.game.player?.classId ?? "prism_knight").vnName;
     this.speakerEl.textContent = interpolateCutsceneText(beat.speaker, playerName, className);
     this.speakerEl.style.color = beat.speakerColor;
