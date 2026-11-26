@@ -219,6 +219,8 @@ html, body {
   background: #100e1c;
   border: 1px solid #6b5822;
   padding: 1px 7px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .px-bar {
@@ -1017,8 +1019,16 @@ html, body {
 
 .class-fx-cv {
   width: 100%;
-  height: 68px;
+  height: 80px;
   image-rendering: pixelated;
+  display: block;
+}
+
+.class-weapon-e-note {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #88e6ff;
+  opacity: 0.88;
 }
 
 .fx-tag {
@@ -4524,4 +4534,398 @@ body.is-mobile-touch .hotbar-sep:not(.bag-sep) {
   #modal-inventory .inv-layout {
     grid-template-columns: 1fr;
   }
+}
+
+/* =========================================================================
+   HOME SCREEN (STEP 1: HERO NAMING) & CLASS SELECT PLAYER BANNER
+   ========================================================================= */
+
+.home-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #060814;
+  overflow: hidden;
+  z-index: 60;
+}
+
+.home-bg-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  opacity: 0.88;
+  pointer-events: none;
+}
+
+.home-card {
+  position: relative;
+  z-index: 2;
+  width: min(680px, 94vw);
+  max-height: 94vh;
+  overflow-y: auto;
+  background: rgba(12, 14, 28, 0.9);
+  border: 3px solid #5ef2ff;
+  box-shadow: 0 0 0 3px #070914, 0 18px 46px rgba(0, 0, 0, 0.82), inset 0 0 28px rgba(94, 242, 255, 0.12);
+  padding: 18px 22px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.home-logo-canvas {
+  max-width: 390px;
+  height: auto;
+}
+
+.home-name-panel {
+  width: 100%;
+  background: #101325;
+  border: 2px solid #3c4875;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.home-name-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffe066;
+  letter-spacing: 0.4px;
+}
+
+.home-name-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.home-name-input {
+  flex: 1;
+  background: #080a16;
+  border: 2px solid #5ef2ff;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 9px 12px;
+  outline: none;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.home-name-input:focus {
+  border-color: #ffe066;
+  box-shadow: 0 0 0 2px rgba(255, 224, 102, 0.25);
+}
+
+.home-name-input.shake-err {
+  border-color: #ff4466;
+  animation: homeInputShake 0.3s ease;
+}
+
+@keyframes homeInputShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+
+.home-name-hint {
+  font-size: 12px;
+  color: #a8d8ff;
+}
+
+.home-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.home-cta-btn {
+  width: 100%;
+  font-size: 16px !important;
+  letter-spacing: 0.5px;
+}
+
+.home-sub-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.home-sub-actions .px-btn {
+  flex: 1 1 170px;
+}
+
+.class-player-banner {
+  display: inline-block;
+  margin: 2px auto 1px;
+  padding: 3px 10px;
+  background: #141933;
+  border: 2px solid #ffe066;
+  color: #e6f2ff;
+  font-size: 12px;
+  letter-spacing: 0.3px;
+}
+
+#screen-class-select .class-select-box {
+  padding: 10px 16px 12px;
+  gap: 7px;
+}
+
+#screen-class-select .pixel-logo-canvas {
+  max-height: 112px;
+  width: auto;
+}
+
+#screen-class-select .title-header {
+  margin-bottom: 0;
+}
+
+#screen-class-select .title-sub {
+  margin-top: 2px;
+  font-size: 12px;
+}
+
+#screen-class-select .title-actions .px-btn.big {
+  padding: 7px 14px;
+  font-size: 14px;
+}
+
+/* =========================================================================
+   STORY CUTSCENE WIDESCREEN 16-BIT CINEMA MODAL
+   ========================================================================= */
+
+.cutscene-backdrop {
+  background: rgba(4, 5, 12, 0.94) !important;
+  z-index: 95 !important;
+}
+
+.cutscene-shell {
+  width: min(920px, 96vw);
+  max-height: 95vh;
+  background: #0b0d1b;
+  border: 3px solid #5ef2ff;
+  box-shadow: 0 0 0 3px #05060d, 0 22px 54px rgba(0, 0, 0, 0.9);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cutscene-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 14px;
+  background: #10142a;
+  border-bottom: 2px solid #2b355c;
+}
+
+.cutscene-chapter {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+}
+
+.cutscene-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.cutscene-progress-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  min-width: 190px;
+}
+
+.cutscene-counter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cutscene-counter {
+  font-size: 12px;
+  font-weight: 800;
+  color: #ffe066;
+  white-space: nowrap;
+}
+
+.cutscene-progress-bar {
+  width: 128px;
+  height: 7px;
+  background: #1a2038;
+  border: 1px solid #495784;
+  overflow: hidden;
+}
+
+.cutscene-progress-fill {
+  height: 100%;
+  width: 6%;
+  background: linear-gradient(90deg, #44ee88, #5ef2ff, #ffe066);
+  transition: width 0.2s ease;
+}
+
+.cutscene-pips {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.cs-pip {
+  width: 10px;
+  height: 6px;
+  padding: 0;
+  background: #252d4c;
+  border: 1px solid #495784;
+  cursor: pointer;
+}
+
+.cs-pip:hover {
+  border-color: #5ef2ff;
+}
+
+.cs-pip.done {
+  background: #44ee88;
+  border-color: #a8ffca;
+}
+
+.cs-pip.active {
+  width: 18px;
+  background: #ffe066;
+  border-color: #ffffff;
+}
+
+.cutscene-stage-wrap {
+  position: relative;
+  width: 100%;
+  background: #06070f;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-bottom: 2px solid #2b355c;
+  overflow: hidden;
+}
+
+.cutscene-scene-stamp {
+  position: absolute;
+  top: 18px;
+  left: 16px;
+  padding: 3px 9px;
+  background: rgba(8, 10, 22, 0.82);
+  border: 1px solid #5ef2ff;
+  color: #a8eeff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  pointer-events: none;
+}
+
+.cutscene-title-card {
+  position: absolute;
+  top: 22%;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  padding: 8px 20px;
+  background: rgba(7, 9, 20, 0.8);
+  border-top: 2px solid #ffe066;
+  border-bottom: 2px solid #5ef2ff;
+  pointer-events: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
+  animation: csTitleReveal 0.45s ease;
+}
+
+@keyframes csTitleReveal {
+  from { opacity: 0; transform: translate(-50%, -8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.cs-tc-main {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-shadow: 2px 2px 0 #04050c;
+}
+
+.cs-tc-sub {
+  margin-top: 2px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #dbe8ff;
+  letter-spacing: 0.8px;
+}
+
+.cutscene-controls-left {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.cutscene-controls button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.cutscene-canvas {
+  width: 100%;
+  max-height: 46vh;
+  aspect-ratio: 480 / 200;
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  cursor: pointer;
+}
+
+.cutscene-dialogue-box {
+  padding: 14px 18px 16px;
+  background: linear-gradient(180deg, #11152c 0%, #0b0e1e 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 138px;
+}
+
+.cutscene-speaker {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.cutscene-text {
+  font-size: 15px;
+  line-height: 1.55;
+  color: #f0f5ff;
+  min-height: 54px;
+}
+
+.cutscene-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.cs-journal-card {
+  transition: transform 0.12s ease;
+}
+
+.cs-journal-card:hover {
+  transform: translateY(-1px);
 }

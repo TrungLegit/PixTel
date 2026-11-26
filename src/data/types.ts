@@ -485,6 +485,7 @@ export interface SaveDataV2 {
   savedAt: number;
   classId: ClassId;
   player: {
+    name?: string;
     x: number;
     y: number;
     hp: number;
@@ -509,6 +510,7 @@ export interface SaveDataV2 {
   unlockedHiddenItems?: string[];
   unlockedHiddenRecipes?: string[];
   defeatedBossIds?: string[];
+  seenCutscenes?: string[];
   tutorialCompleted?: boolean;
   gachaState?: GachaSaveState;
   quests: Record<string, QuestProgress>;

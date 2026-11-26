@@ -56,19 +56,19 @@ export const CLASSES: ClassDef[] = [
         desc: "Combo 3 nhịp (Chém đơn → Chém chéo → Bổ Chấn Động [Quake] phá Giáp Trắng rộng).",
       },
       charge: {
-        name: "Đâm Lướt Lăng Kính (Giữ LMB)",
-        desc: "Tụ lực lao đâm xuyên thấu địch kèm tia Lăng Kính [Prism] kích nổ Khúc Xạ Cầu Vồng.",
+        name: "Thánh Kiếm Phá Địa (Giữ LMB)",
+        desc: "Giơ kiếm trên cao tụ quang rồi bật nhảy bổ mạnh xuống đất tạo sóng chấn động Lăng Kính [Prism] phá Giáp Trắng diện rộng!",
       },
       skill: {
-        name: "Khiên Phản Đòn (E / RMB)",
-        desc: "Giơ khiên 1.0s (chặn chuẩn 0.25s đầu giảm 50% CD) và bắn tia Lăng Kính [Prism].",
+        name: "Kỹ Năng Vũ Khí (E / RMB)",
+        desc: "Thay đổi linh hoạt theo từng Vũ Khí đang trang bị (41 chiêu riêng biệt).",
       },
       ult: {
         name: "Bão Kiếm Ánh Sáng (Q)",
         desc: "Xoay kiếm giải phóng bão cầu vồng [Prism + Quake] diện rộng, đẩy lùi & phá giáp cực mạnh.",
       },
     },
-    previewFx: "pixtel/prism-beam",
+    previewFx: "pixtel/prism-storm",
   },
   {
     id: "chroma_mage",
@@ -100,15 +100,15 @@ export const CLASSES: ClassDef[] = [
         desc: "Tụ lực bắn chùm 3 cầu phép Hỏa - Băng - Gió [Wind] kích hoạt phản ứng kép tức thì.",
       },
       skill: {
-        name: "Xoáy Hư Sắc (E / RMB)",
-        desc: "Tạo xoáy Hư Không [Void] gom quái về tâm, xóa buff địch & liên tục nhảy ấn đa nguyên tố.",
+        name: "Kỹ Năng Vũ Khí (E / RMB)",
+        desc: "Thay đổi linh hoạt theo từng Trượng / Cầu Phép đang trang bị.",
       },
       ult: {
         name: "Mưa Thiên Thạch Thất Sắc (Q)",
         desc: "Giáng mưa thiên thạch Hỏa - Sắc Độ - Lăng Kính tạo chuỗi nổ cầu vồng khôi phục màu.",
       },
     },
-    previewFx: "pixtel/chroma-vortex",
+    previewFx: "arcane/star-fall",
   },
   {
     id: "bit_rogue",
@@ -140,15 +140,15 @@ export const CLASSES: ClassDef[] = [
         desc: "Tụ lực phóng 5 phi tiêu điểm ảnh hệ Gió [Wind] tỏa quạt, chí mạng cao khi đánh sau lưng.",
       },
       skill: {
-        name: "Frame-Skip Hư Không (E / RMB)",
-        desc: "Lướt xuyên quái bất tử, để lại tàn ảnh Hư Không [Void] hút nhẹ và phát nổ xóa buff sau 0.75s.",
+        name: "Kỹ Năng Vũ Khí (E / RMB)",
+        desc: "Thay đổi linh hoạt theo từng Song Đao / Phi Luân / Vuốt đang trang bị.",
       },
       ult: {
         name: "Phân Thân Ảo Ảnh (Q)",
         desc: "Triệu hồi phân thân đồng bộ đòn đánh, +100% tốc đánh & +25% Crit trong 6s.",
       },
     },
-    previewFx: "pixtel/frame-skip",
+    previewFx: "melee/spin-slash",
   },
   {
     id: "pixel_tinker",
@@ -180,15 +180,15 @@ export const CLASSES: ClassDef[] = [
         desc: "Tụ lực bắn tia xuyên giáp hệ Chấn Động [Quake], phá mạnh Bleach Shield & Overclock mọi trụ.",
       },
       skill: {
-        name: "Compile — Trụ Lôi Quang (E / RMB)",
-        desc: "Biên dịch tối đa 2 Trụ Bắn tự động gắn Ấn Lôi [Volt] để phối hợp phản ứng nguyên tố.",
+        name: "Kỹ Năng Vũ Khí (E / RMB)",
+        desc: "Thay đổi linh hoạt theo từng Súng / Pháo / Bệ Tên Lửa đang trang bị.",
       },
       ult: {
         name: "Drone Sắc Độ Quá Tải (Q)",
         desc: "Triệu hồi Drone xả tia Sắc Độ [Chroma] & Lôi, hồi HP/Stamina liên tục cho bản thân và trụ.",
       },
     },
-    previewFx: "pixtel/compile-turret",
+    previewFx: "lightning/zap-hit",
   },
 ];
 

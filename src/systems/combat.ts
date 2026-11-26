@@ -393,6 +393,8 @@ export class CombatSystem {
       return;
     }
 
+    const equippedWpnId = ctx.inv.equipment.weapon?.defId ?? "";
+
     if (player.classId === "prism_knight") {
       const mults = [1.0, 1.18, 1.6];
       const radii = [40, 44, 54];
@@ -402,33 +404,52 @@ export class CombatSystem {
       const pals = [PAL.cyber, PAL.water, PAL.volt];
       const knightElem: ElementType | undefined = isFinisher ? (bonusElem ?? "quake") : bonusElem;
 
-      this._startAttackAnim(player, kinds[step], durations[step], ang);
+      const animKind = this._pickWeaponComboAnim(player.classId, equippedWpnId, step, kinds[step]);
+      const animDur =
+        animKind === "overhead_slam" ? 0.42 :
+        animKind === "halberd_sweep" ? 0.36 :
+        animKind === "iaido_draw" ? 0.34 : durations[step];
+      this._startAttackAnim(player, animKind, animDur, ang);
       const dir = this._toDirectionalVfx(ang, isFinisher ? 0.32 : 0.72);
       const offX = Math.cos(ang) * (isFinisher ? 4 : 5);
       const offY = isFinisher ? 0 : -13 + Math.sin(ang) * 4;
+      const vfxPal =
+        animKind === "iaido_draw" ? PAL.candy :
+        animKind === "overhead_slam" ? PAL.holy :
+        animKind === "halberd_sweep" ? PAL.electric : pals[step];
+      const vfxMod =
+        animKind === "halberd_sweep" && step >= 1 ? "melee/spin-slash" :
+        animKind === "overhead_slam" ? "melee/heavy-cleave" : modIds[step];
 
-      vfx.spawnLive(modIds[step], {
+      vfx.spawnLive(vfxMod, {
         x: player.x + offX,
         y: player.y + offY,
         follow: player,
         offsetX: offX,
         offsetY: offY,
-        angle: dir.angle,
+        angle: vfxMod === "melee/spin-slash" ? 0 : dir.angle,
         flip: dir.flip,
-        startTime: isFinisher ? 0.17 : 0,
+        startTime: vfxMod === "melee/heavy-cleave" ? 0.14 : 0,
         durationScale: 1.45,
         maxLife: isFinisher ? 0.52 : step === 1 ? 0.42 : 0.36,
-        options: { palette: pals[step], radius: radii[step] },
+        options: { palette: vfxPal, radius: radii[step] + (animKind === "halberd_sweep" ? 6 : 0) },
         priority: 3,
       });
+      if (animKind === "overhead_slam") {
+        vfx.spawnPooled("ground-slam", {
+          x: player.x + Math.cos(ang) * 26,
+          y: player.y + Math.sin(ang) * 26,
+          scale: 0.78,
+        });
+      }
       sfx.playSlash(step);
       this._meleeArcHit(
         ctx,
         player.x,
         player.y,
         ang,
-        radii[step],
-        1.45,
+        radii[step] + (animKind === "halberd_sweep" ? 6 : 0),
+        animKind === "halberd_sweep" ? 1.75 : 1.45,
         mults[step],
         knightElem ? ELEMENT_HIT_PRESET[knightElem] : "hit-cyan",
         knightElem,
@@ -442,7 +463,8 @@ export class CombatSystem {
 
     if (player.classId === "chroma_mage") {
       const castKinds: HeroAttackKind[] = ["cast_1", "cast_2", "cast_3"];
-      this._startAttackAnim(player, castKinds[step], isFinisher ? 0.30 : 0.24, ang);
+      const animKind = this._pickWeaponComboAnim(player.classId, equippedWpnId, step, castKinds[step]);
+      this._startAttackAnim(player, animKind, isFinisher ? 0.32 : 0.25, ang);
       const wpPos = this._weaponOrigin(player, ang, 14);
       const elem: ElementType =
         ctx.inv.getWeaponEnhanceLevel() >= 10 && isFinisher
@@ -464,7 +486,7 @@ export class CombatSystem {
       vfx.spawnPooled(ELEMENT_HIT_PRESET[elem], {
         x: wpPos.x,
         y: wpPos.y,
-        scale: 0.58,
+        scale: animKind === "orb_levitate" || animKind === "staff_whirl" ? 0.78 : 0.58,
       });
       this._spawnPlayerProj(ctx, {
         x: wpPos.x,
@@ -488,8 +510,10 @@ export class CombatSystem {
     if (player.classId === "bit_rogue") {
       sfx.playSlash(step);
       const rogueElem: ElementType | undefined = isFinisher ? (bonusElem ?? "wind") : bonusElem;
-      if (isFinisher) {
-        this._startAttackAnim(player, "spin", 0.30, ang);
+      const defaultKind: HeroAttackKind = isFinisher ? "spin" : step === 0 ? "flurry_1" : "flurry_2";
+      const animKind = this._pickWeaponComboAnim(player.classId, equippedWpnId, step, defaultKind);
+      if (isFinisher && animKind !== "chakram_throw") {
+        this._startAttackAnim(player, animKind, 0.30, ang);
         vfx.spawnLive("melee/spin-slash", {
           x: player.x,
           y: player.y - 11,
@@ -500,15 +524,15 @@ export class CombatSystem {
           flip: Math.cos(ang) < 0,
           durationScale: 1.45,
           maxLife: 0.42,
-          options: { palette: PAL.neon },
+          options: { palette: animKind === "dual_cross_slash" ? PAL.cyber : PAL.neon },
           priority: 2,
         });
       } else {
-        this._startAttackAnim(player, step === 0 ? "flurry_1" : "flurry_2", 0.22, ang);
+        this._startAttackAnim(player, animKind, animKind === "dual_cross_slash" ? 0.26 : 0.22, ang);
         const dir = this._toDirectionalVfx(ang, 0.72);
         const offX = Math.cos(ang) * 5;
         const offY = -13 + Math.sin(ang) * 4;
-        vfx.spawnLive("melee/dagger-flurry", {
+        vfx.spawnLive(animKind === "dual_cross_slash" ? "melee/double-slash" : "melee/dagger-flurry", {
           x: player.x + offX,
           y: player.y + offY,
           follow: player,
@@ -519,9 +543,28 @@ export class CombatSystem {
           startTime: step === 1 ? 0.11 : 0,
           durationScale: 1.9,
           maxLife: 0.26,
-          options: { palette: PAL.neon },
+          options: { palette: animKind === "chakram_throw" ? PAL.ice : PAL.neon },
           priority: 2,
         });
+        if (animKind === "chakram_throw") {
+          const wpPos = this._weaponOrigin(player, ang, 14);
+          const { dmg, crit } = this._rollDamage(ctx, isFinisher ? 0.85 : 0.62, 6, true, undefined, true);
+          this._spawnPlayerProj(ctx, {
+            x: wpPos.x,
+            y: wpPos.y,
+            angle: ang,
+            speed: 260,
+            radius: 6,
+            damage: dmg,
+            crit,
+            pierce: 2,
+            maxLife: 0.52,
+            preset: "proj-shuriken",
+            element: rogueElem ?? "wind",
+            hitPreset: ELEMENT_HIT_PRESET[rogueElem ?? "wind"],
+            poiseMult: 0.85,
+          });
+        }
       }
       this._meleeArcHit(
         ctx,
@@ -538,8 +581,35 @@ export class CombatSystem {
       );
 
       if (player.cloneTime > 0) {
+        // Phantom Clone blinks to the opposite flank and executes a synchronized neon-cyan mirror slash!
+        const mirrorX = player.x + Math.cos(ang) * 24;
+        const mirrorY = player.y + Math.sin(ang) * 24;
+        const revAng = ang + Math.PI;
+        const mDir = this._toDirectionalVfx(revAng, 0.72);
+        vfx.spawnLive(isFinisher ? "melee/spin-slash" : "melee/double-slash", {
+          x: mirrorX,
+          y: mirrorY - 12,
+          angle: isFinisher ? 0 : mDir.angle,
+          flip: mDir.flip,
+          durationScale: 1.7,
+          maxLife: isFinisher ? 0.36 : 0.26,
+          options: { palette: PAL.cyber, radius: isFinisher ? 44 : 36 },
+          priority: 3,
+        });
         const echoPos = this._weaponOrigin(player, ang, 16);
-        vfx.spawnPooled("hit-gold", { x: echoPos.x, y: echoPos.y, scale: 0.72 });
+        vfx.spawnPooled("crit-gold", { x: echoPos.x, y: echoPos.y, scale: 0.78 });
+        for (let k = 0; k < 4; k++) {
+          const tFrac = (k + 1) / 5;
+          vfx.spawnPixelDot(
+            player.x + (mirrorX - player.x) * tFrac,
+            player.y - 10 + (mirrorY - player.y) * tFrac,
+            (Math.random() - 0.5) * 28,
+            -18 - Math.random() * 18,
+            k % 2 === 0 ? "#2ef2ff" : "#ff2e63",
+            0.22,
+            2
+          );
+        }
         this._meleeArcHit(
           ctx,
           player.x,
@@ -559,7 +629,9 @@ export class CombatSystem {
     }
 
     if (player.classId === "pixel_tinker") {
-      this._startAttackAnim(player, isFinisher ? "shoot_heavy" : "shoot", isFinisher ? 0.26 : 0.20, ang);
+      const defaultKind: HeroAttackKind = isFinisher ? "shoot_heavy" : "shoot";
+      const animKind = this._pickWeaponComboAnim(player.classId, equippedWpnId, step, defaultKind);
+      this._startAttackAnim(player, animKind, isFinisher || animKind === "recoil_barrage" ? 0.28 : 0.20, ang);
       const wpPos = this._weaponOrigin(player, ang, 14);
       sfx.playShoot(isFinisher ? 880 : 720);
       vfx.spawnPooled("muzzle-pistol", {
@@ -567,6 +639,9 @@ export class CombatSystem {
         y: wpPos.y,
         angle: ang,
       });
+      if (animKind === "recoil_barrage") {
+        ctx.addShake(1.6);
+      }
       const tinkerElem: ElementType | undefined = isFinisher ? (bonusElem ?? "volt") : bonusElem;
       const { dmg, crit } = this._rollDamage(ctx, isFinisher ? 1.25 : 0.95, 0, !!tinkerElem, undefined, true);
       this._spawnPlayerProj(ctx, {
@@ -587,6 +662,70 @@ export class CombatSystem {
       });
       player.chromaCounterTimer = 0;
     }
+  }
+
+  /**
+   * Resolves weapon-family specific normal-attack animations while keeping
+   * starter class weapons on their signature classic combo poses.
+   */
+  private _pickWeaponComboAnim(
+    classId: PlayerEntity["classId"],
+    wpnId: string,
+    step: number,
+    fallback: HeroAttackKind
+  ): HeroAttackKind {
+    if (!wpnId) return fallback;
+    if (classId === "prism_knight") {
+      if (wpnId === "sea_wpn_spring_katana" || wpnId === "hid_craft_prism_blade" || wpnId === "wpn_chroma_sovereign") {
+        return step === 2 ? "iaido_draw" : fallback;
+      }
+      if (
+        wpnId === "wpn_prism_halberd" ||
+        wpnId === "wpn_warden_cleaver" ||
+        wpnId === "exo_wpn_thunder_halberd" ||
+        wpnId === "wpn_void_scythe"
+      ) {
+        return step >= 1 ? "halberd_sweep" : fallback;
+      }
+      if (wpnId === "wpn_quake_maul" || wpnId === "exo_wpn_blood_greatsword" || wpnId === "hid_boss_eraser_edge") {
+        return step === 2 ? "overhead_slam" : fallback;
+      }
+    } else if (classId === "chroma_mage") {
+      if (
+        wpnId === "exo_wpn_blackhole_orb" ||
+        wpnId === "wpn_astral_scepter" ||
+        wpnId === "hid_craft_nebula_staff" ||
+        wpnId === "sea_wpn_winter_staff"
+      ) {
+        return step === 2 ? "orb_levitate" : fallback;
+      }
+      if (wpnId === "exo_wpn_phoenix_rod" || wpnId === "wpn_amber_staff") {
+        return step >= 1 ? "staff_whirl" : fallback;
+      }
+    } else if (classId === "bit_rogue") {
+      if (wpnId === "exo_wpn_phantom_boomerang") {
+        return "chakram_throw";
+      }
+      if (
+        wpnId === "exo_wpn_venom_claws" ||
+        wpnId === "sea_wpn_summer_blades" ||
+        wpnId === "wpn_quantum_blades" ||
+        wpnId === "hid_craft_eclipse_fangs"
+      ) {
+        return step === 1 ? "dual_cross_slash" : fallback;
+      }
+    } else if (classId === "pixel_tinker") {
+      if (
+        wpnId === "exo_wpn_rocket_barrage" ||
+        wpnId === "exo_wpn_tesla_coilgun" ||
+        wpnId === "sea_wpn_eclipse_cannon" ||
+        wpnId === "hid_craft_nova_railgun" ||
+        wpnId === "wpn_singularity_cannon"
+      ) {
+        return step === 2 ? "recoil_barrage" : fallback;
+      }
+    }
+    return fallback;
   }
 
   /**
@@ -669,16 +808,20 @@ export class CombatSystem {
     }
 
     if (player.classId === "prism_knight") {
-      const thrustElem: ElementType = bonusElem ?? "prism";
-      this._startAttackAnim(player, "thrust", 0.34, ang);
-      player.dashing = 0.18;
-      player.invuln = Math.max(player.invuln, 0.26);
-      player.dashVx = Math.cos(ang) * 325;
-      player.dashVy = Math.sin(ang) * 325;
-      const dir = this._toDirectionalVfx(ang, 0.92);
+      const slamElem: ElementType = bonusElem ?? "prism";
+      this._startAttackAnim(player, "overhead_slam", 0.44, ang);
+      player.dashing = 0.14;
+      player.invuln = Math.max(player.invuln, 0.28);
+      player.dashVx = Math.cos(ang) * 215;
+      player.dashVy = Math.sin(ang) * 215;
+      sfx.playExplosion();
+      ctx.addShake(justCharge ? 5.2 : 3.8);
+      const dir = this._toDirectionalVfx(ang, 0.45);
       const offX = Math.cos(ang) * 8;
-      const offY = -13 + Math.sin(ang) * 5;
-      vfx.spawnLive("melee/thrust", {
+      const offY = -10 + Math.sin(ang) * 4;
+      const sx = player.x + Math.cos(ang) * 30;
+      const sy = player.y + Math.sin(ang) * 30;
+      vfx.spawnLive("melee/heavy-cleave", {
         x: player.x + offX,
         y: player.y + offY,
         follow: player,
@@ -686,22 +829,38 @@ export class CombatSystem {
         offsetY: offY,
         angle: dir.angle,
         flip: dir.flip,
+        startTime: 0.06,
         durationScale: 1.35,
-        maxLife: 0.42,
-        options: { palette: justCharge ? PAL.volt : PAL.cyber },
+        maxLife: 0.46,
+        options: { palette: justCharge ? PAL.gold : PAL.holy, radius: 66 },
         priority: 4,
       });
-      this._linePierceHit(
+      vfx.spawnPooled("ground-slam", {
+        x: sx,
+        y: sy,
+        scale: justCharge ? 1.25 : 0.95,
+      });
+      if (justCharge) {
+        vfx.spawnLive("holy/smite", {
+          x: sx,
+          y: sy,
+          priority: 5,
+          maxLife: 0.55,
+          options: { palette: PAL.gold },
+        });
+      }
+      this._meleeArcHit(
         ctx,
         player.x,
         player.y,
         ang,
-        82,
-        19,
-        2.25 * justMult,
-        ELEMENT_HIT_PRESET[thrustElem],
-        thrustElem,
-        poiseMult
+        68,
+        1.85,
+        2.35 * justMult,
+        ELEMENT_HIT_PRESET[slamElem],
+        slamElem,
+        poiseMult * 1.4,
+        true
       );
       player.chromaCounterTimer = 0;
       return;
@@ -977,7 +1136,7 @@ export class CombatSystem {
       }
       case "ws_warden_cleave":
       case "ws_tectonic_slam": {
-        this._startAttackAnim(player, "cleave", 0.4, ang);
+        this._startAttackAnim(player, "overhead_slam", 0.44, ang);
         sfx.playExplosion();
         ctx.addShake(4.0);
         const isQuake = wsId === "ws_tectonic_slam";
@@ -1003,8 +1162,12 @@ export class CombatSystem {
       case "ws_sakura_iaido":
       case "ws_shadow_step":
       case "ws_quantum_cross": {
-        const isShadow = wsId === "ws_shadow_step" || wsId === "ws_sakura_iaido" || wsId === "ws_void_sever";
-        this._startAttackAnim(player, isShadow ? "thrust" : "flurry_2", 0.34, ang);
+        const dashAnim: HeroAttackKind =
+          wsId === "ws_sakura_iaido" ? "iaido_draw" :
+          wsId === "ws_halberd_impale" ? "halberd_sweep" :
+          wsId === "ws_quantum_cross" ? "dual_cross_slash" :
+          wsId === "ws_void_sever" ? "iaido_draw" : "thrust";
+        this._startAttackAnim(player, dashAnim, 0.36, ang);
         sfx.playDash();
         player.dashing = 0.18;
         player.invuln = Math.max(player.invuln, 0.3);
@@ -1046,7 +1209,7 @@ export class CombatSystem {
       }
       case "ws_magma_eruption":
       case "ws_phoenix_sweep": {
-        this._startAttackAnim(player, wsId === "ws_phoenix_sweep" ? "cast_heavy" : "cleave", 0.38, ang);
+        this._startAttackAnim(player, wsId === "ws_phoenix_sweep" ? "staff_whirl" : "overhead_slam", 0.4, ang);
         sfx.playExplosion();
         vfx.spawnLive("melee/heavy-cleave", {
           x: wpPos.x,
@@ -1098,7 +1261,7 @@ export class CombatSystem {
         return;
       }
       case "ws_crimson_reap": {
-        this._startAttackAnim(player, "cleave", 0.38, ang);
+        this._startAttackAnim(player, "overhead_slam", 0.42, ang);
         sfx.playSlash(2);
         vfx.spawnLive("melee/heavy-cleave", {
           x: wpPos.x,
@@ -1138,7 +1301,7 @@ export class CombatSystem {
         return;
       }
       case "ws_thunder_smite": {
-        this._startAttackAnim(player, "cast_heavy", 0.38, ang);
+        this._startAttackAnim(player, "halberd_sweep", 0.4, ang);
         sfx.playExplosion();
         ctx.addShake(3.4);
         for (let k = 1; k <= 3; k++) {
@@ -1158,7 +1321,7 @@ export class CombatSystem {
       }
       case "ws_arcane_nova":
       case "ws_blizzard_spire": {
-        this._startAttackAnim(player, "cast_heavy", 0.34, ang);
+        this._startAttackAnim(player, wsId === "ws_blizzard_spire" ? "orb_levitate" : "staff_whirl", 0.38, ang);
         sfx.playMagic(1);
         const isIce = wsId === "ws_blizzard_spire";
         const cx = isIce ? player.x + Math.cos(ang) * 52 : player.x;
@@ -1228,7 +1391,7 @@ export class CombatSystem {
       case "ws_chroma_vortex":
       case "ws_nebula_collapse":
       case "ws_blackhole_singularity": {
-        this._startAttackAnim(player, "cast_heavy", 0.36, ang);
+        this._startAttackAnim(player, "orb_levitate", 0.4, ang);
         vfx.spawnPooled("crit-gold", { x: wpPos.x, y: wpPos.y, scale: 0.72 });
         const tx = player.x + Math.cos(ang) * 64;
         const ty = player.y + Math.sin(ang) * 64;
@@ -1283,7 +1446,10 @@ export class CombatSystem {
       case "ws_starfall_barrage":
       case "ws_napalm_mortar":
       case "ws_orbital_strike": {
-        this._startAttackAnim(player, "cast_heavy", 0.38, ang);
+        const castAnim: HeroAttackKind =
+          wsId === "ws_orbital_strike" || wsId === "ws_napalm_mortar" ? "recoil_barrage" :
+          wsId === "ws_starfall_barrage" ? "orb_levitate" : "staff_whirl";
+        this._startAttackAnim(player, castAnim, 0.4, ang);
         sfx.playMagic(2);
         const count = wsId === "ws_starfall_barrage" ? 3 : wsId === "ws_solar_flare" ? 1 : 2;
         if (wsId === "ws_orbital_strike") {
@@ -1375,7 +1541,7 @@ export class CombatSystem {
       case "ws_gale_daggers":
       case "ws_boomerang_chakram":
       case "ws_arc_shotgun": {
-        this._startAttackAnim(player, wsId === "ws_arc_shotgun" ? "shoot_heavy" : "flurry_2", 0.3, ang);
+        this._startAttackAnim(player, wsId === "ws_arc_shotgun" ? "recoil_barrage" : "chakram_throw", 0.32, ang);
         sfx.playShoot(wsId === "ws_arc_shotgun" ? 780 : 620);
         const isChakram = wsId === "ws_boomerang_chakram";
         const count = isChakram ? 2 : 5;
@@ -1405,7 +1571,10 @@ export class CombatSystem {
       case "ws_solstice_spin":
       case "ws_reaper_hook":
       case "ws_venom_flurry": {
-        this._startAttackAnim(player, "spin", 0.36, ang);
+        const spinAnim: HeroAttackKind =
+          wsId === "ws_reaper_hook" ? "halberd_sweep" :
+          wsId === "ws_venom_flurry" || wsId === "ws_solstice_spin" ? "dual_cross_slash" : "spin";
+        this._startAttackAnim(player, spinAnim, 0.38, ang);
         sfx.playSlash(2);
         const pal =
           wsId === "ws_venom_flurry" ? PAL.poison :
@@ -1510,7 +1679,7 @@ export class CombatSystem {
         return;
       }
       case "ws_pulse_grenade": {
-        this._startAttackAnim(player, "shoot_heavy", 0.32, ang);
+        this._startAttackAnim(player, "recoil_barrage", 0.34, ang);
         sfx.playExplosion();
         const tx = player.x + Math.cos(ang) * 58;
         const ty = player.y + Math.sin(ang) * 58;
@@ -1527,7 +1696,7 @@ export class CombatSystem {
         return;
       }
       case "ws_homing_rockets": {
-        this._startAttackAnim(player, "shoot_heavy", 0.34, ang);
+        this._startAttackAnim(player, "recoil_barrage", 0.36, ang);
         sfx.playShoot(480);
         for (let k = 0; k < 5; k++) {
           const sa = ang + (k - 2) * 0.24;
@@ -1697,16 +1866,58 @@ export class CombatSystem {
     }
 
     if (player.classId === "bit_rogue") {
-      this._startAttackAnim(player, "cast_ult", 0.32, player.aimAngle);
+      this._startAttackAnim(player, "cast_ult", 0.36, player.aimAngle);
       player.cloneTime = 6.5;
+      player.invuln = Math.max(player.invuln, 0.35);
+      sfx.playDash();
+      sfx.playSlash(2);
+      // Shadow-Clone Split Explosion: smoke poof + sonic ring + twin neon spin-slash + speed aura!
+      vfx.spawnLive("spawn/poof", {
+        x: player.x,
+        y: player.y - 6,
+        options: { palette: PAL.neon, stars: PAL.cyber },
+        priority: 4,
+        maxLife: 0.48,
+      });
+      vfx.spawnLive("pixtel/sonic-wave", {
+        x: player.x,
+        y: player.y - 10,
+        options: { palette: PAL.cyber, radius: 54 },
+        priority: 4,
+        maxLife: 0.55,
+      });
+      vfx.spawnLive("melee/spin-slash", {
+        x: player.x,
+        y: player.y - 12,
+        follow: player,
+        offsetX: 0,
+        offsetY: -12,
+        durationScale: 1.55,
+        maxLife: 0.44,
+        options: { palette: PAL.neon, radius: 52 },
+        priority: 5,
+      });
       vfx.spawnLive("status/haste", {
         x: player.x,
         y: player.y,
         follow: player,
         options: { palette: PAL.cyber },
         priority: 4,
-        maxLife: 1.4,
+        maxLife: 1.6,
       });
+      for (let i = 0; i < 14; i++) {
+        const a = (i / 14) * Math.PI * 2;
+        const sp = 55 + (i % 3) * 28;
+        vfx.spawnPixelDot(
+          player.x,
+          player.y - 10,
+          Math.cos(a) * sp,
+          Math.sin(a) * sp * 0.7 - 16,
+          i % 2 === 0 ? "#2ef2ff" : "#ff2e63",
+          0.38,
+          2
+        );
+      }
       ctx.notify("PHÂN THÂN ẢO ẢNH! (+100% Tốc Đánh & +25% Crit)", "epic");
       return;
     }

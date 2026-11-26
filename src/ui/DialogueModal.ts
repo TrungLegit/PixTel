@@ -59,7 +59,8 @@ export class DialogueModalUI {
     const npc = TOWN_NPCS.find((n) => n.id === this.currentNpcId) ?? TOWN_NPCS[0];
     this.titleEl.innerHTML = `<span style="color:${npc.accent}">${npc.name}</span> <small>— ${npc.role}</small>`;
 
-    let html = `<div class="npc-speech">"${npc.greeting}"</div>`;
+    const heroName = this.game.player.name || this.game.pendingPlayerName || "Chroma-Walker";
+    let html = `<div class="npc-speech">Chào <b style="color:#ffe066">${heroName}</b>! "${npc.greeting}"</div>`;
 
     // Blacksmith Forge launch button
     if (npc.kind === "blacksmith") {

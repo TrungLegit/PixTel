@@ -180,7 +180,8 @@ export class HudUI {
     const biomeCfg = BIOME_CONFIGS[this.game.currentBiome];
 
     const badge = document.getElementById("hud-class-badge")!;
-    badge.textContent = `${cdef.vnName} · LV.${p.level}`;
+    const heroName = p.name || this.game.pendingPlayerName || "Chroma-Walker";
+    badge.textContent = `${heroName} · ${cdef.vnName} · LV.${p.level}`;
     badge.style.color = cdef.accent;
 
     const hpPct = Math.max(0, Math.min(100, (p.hp / p.maxHp) * 100));

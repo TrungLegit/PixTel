@@ -201,8 +201,58 @@
       <button id="btn-rotate-fullscreen" class="px-btn sm primary" type="button">⛶ TOÀN MÀN HÌNH NGANG</button>
     </div>
 
+    <!-- SCREEN: HOME / TITLE & HERO NAMING (STEP 1 OF NEW GAME) -->
+    <div id="screen-home" class="overlay-screen home-screen">
+      <canvas id="home-bg-canvas" class="home-bg-canvas" width="480" height="270"></canvas>
+      <div class="home-card">
+        <div class="title-header">
+          <canvas
+            id="pixtel-home-logo"
+            class="pixel-logo-canvas home-logo-canvas"
+            width="480"
+            height="176"
+            role="img"
+            aria-label="PIXTEL — huy hiệu lăng kính 16-bit"
+          >PIXTEL</canvas>
+          <div class="title-eyebrow">BIÊN NIÊN SỬ AETHEL-16 · 16-BIT OPEN-WORLD ACTION RPG</div>
+          <div class="title-sub">
+            Bước 1/2: Đặt tên cho Chiến Binh Lăng Kính của bạn trước khi chọn Class &amp; khai mở câu chuyện!
+          </div>
+        </div>
+
+        <div id="home-room-invite-banner" class="coop-invite-banner hidden"></div>
+
+        <div class="home-name-panel">
+          <label for="home-name-input" class="home-name-label">✦ TÊN NHÂN VẬT (HIỂN THỊ TRONG GAME, CỐT TRUYỆN &amp; CO-OP)</label>
+          <div class="home-name-row">
+            <input
+              id="home-name-input"
+              class="home-name-input"
+              type="text"
+              maxlength="16"
+              placeholder="Nhập tên chiến binh... (VD: Aetherion)"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button id="btn-home-random-name" class="px-btn" type="button" title="Gợi ý tên 16-bit ngẫu nhiên">🎲 NGẪU NHIÊN</button>
+          </div>
+          <div id="home-name-hint" class="home-name-hint">Nhập tên anh hùng của bạn (1–16 ký tự), rồi chọn Class để bắt đầu!</div>
+        </div>
+
+        <div class="home-actions">
+          <button id="btn-home-continue" class="px-btn good big hidden" type="button">▶ TIẾP TỤC PHIÊU LƯU</button>
+          <button id="btn-home-next-class" class="px-btn primary big home-cta-btn" type="button">⚔ TIẾP TỤC → CHỌN CLASS</button>
+          <div class="home-sub-actions">
+            <button id="btn-home-watch-story" class="px-btn" style="border-color:#c478ff;color:#e0b8ff" type="button">🎬 XEM PHIM CỐT TRUYỆN MỞ ĐẦU</button>
+            <button id="btn-home-coop" class="px-btn" style="border-color:#44ee88;color:#44ee88" type="button">🤝 TỔ ĐỘI CO-OP [P]</button>
+            <button id="btn-home-tutorial" class="px-btn" style="border-color:#ffe066;color:#ffe066" type="button">📖 CẨM NANG TÂN THỦ [H]</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- SCREEN: CLASS SELECT / TITLE / CLASS ALTAR -->
-    <div id="screen-class-select" class="overlay-screen">
+    <div id="screen-class-select" class="overlay-screen hidden">
       <div class="class-select-box">
         <div class="title-header">
           <canvas
@@ -214,6 +264,7 @@
             aria-label="PIXTEL — huy hiệu lăng kính 16-bit"
           >PIXTEL</canvas>
           <div class="title-eyebrow">BIÊN NIÊN SỬ AETHEL-16 · 16-BIT ACTION RPG</div>
+          <div id="class-player-name-banner" class="class-player-banner"></div>
           <div id="class-select-subtitle" class="title-sub">
             BIÊN NIÊN SỬ AETHEL-16 — Giải mã Bia Ký, làm chủ 9 Nguyên Tố & thanh tẩy The Eraser
           </div>
@@ -230,11 +281,50 @@
           </label>
         </div>
         <div class="title-actions">
+          <button id="btn-back-home" class="px-btn big">← ĐỔI TÊN / TRANG CHỦ</button>
           <button id="btn-continue-save" class="px-btn good big hidden">▶ TIẾP TỤC PHIÊU LƯU (SAVE)</button>
           <button id="btn-start-adventure" class="px-btn primary big">BẮT ĐẦU PHIÊU LƯU MỚI</button>
           <button id="btn-open-coop" class="px-btn big" style="border-color:#44ee88;color:#44ee88">🤝 TỔ ĐỘI CO-OP (2–4 NGƯỜI) [P]</button>
           <button id="btn-open-tutorial" class="px-btn big" style="border-color:#ffe066;color:#ffe066">📖 HƯỚNG DẪN TÂN THỦ & COMBO [H]</button>
           <button id="btn-close-class-select" class="px-btn big hidden">ĐÓNG</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: WIDESCREEN 16-BIT STORY CUTSCENE CINEMA -->
+    <div id="modal-cutscene" class="modal-backdrop cutscene-backdrop hidden">
+      <div class="cutscene-shell">
+        <div class="cutscene-topbar">
+          <div class="cutscene-meta">
+            <div id="cutscene-chapter" class="cutscene-chapter">HỒI I · KHỞI NGUYÊN</div>
+            <div id="cutscene-title" class="cutscene-title">THẢM HỌA TẨY TRẮNG</div>
+          </div>
+          <div class="cutscene-progress-col">
+            <div class="cutscene-counter-row">
+              <span id="cutscene-counter" class="cutscene-counter">01 / 16</span>
+              <div class="cutscene-progress-bar">
+                <div id="cutscene-progress-fill" class="cutscene-progress-fill"></div>
+              </div>
+            </div>
+            <div id="cutscene-pips" class="cutscene-pips"></div>
+          </div>
+        </div>
+        <div class="cutscene-stage-wrap">
+          <canvas id="cutscene-canvas" class="cutscene-canvas" width="480" height="200"></canvas>
+          <div id="cutscene-scene-stamp" class="cutscene-scene-stamp hidden">CẢNH 01</div>
+          <div id="cutscene-title-card" class="cutscene-title-card hidden"></div>
+        </div>
+        <div class="cutscene-dialogue-box">
+          <div id="cutscene-speaker" class="cutscene-speaker">BIÊN NIÊN SỬ</div>
+          <div id="cutscene-text" class="cutscene-text"></div>
+          <div class="cutscene-controls">
+            <div class="cutscene-controls-left">
+              <button id="btn-cutscene-skip" class="px-btn sm" type="button">⏩ BỎ QUA [ESC]</button>
+              <button id="btn-cutscene-auto" class="px-btn sm" type="button">⏯ TỰ PHÁT: TẮT</button>
+              <button id="btn-cutscene-prev" class="px-btn sm" type="button">◀ CẢNH TRƯỚC</button>
+            </div>
+            <button id="btn-cutscene-next" class="px-btn primary" type="button">▶ CẢNH TIẾP [SPACE]</button>
+          </div>
         </div>
       </div>
     </div>

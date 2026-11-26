@@ -9,8 +9,8 @@
 
 ## Trạng Thái Hiện Tại (Current Project Stage Snapshot)
 
-- **Giai đoạn / Phiên bản hiện tại:** `PIXTEL v3.1` — Core 16 Items (4×4 Reference Sheet + `cursed` Rarity + 6 Materials), Event-Driven `ItemEffectSystem`, 3 Set Bonuses `(2/3)` & `(3/3)` with Layer-0 Set Auras, 2 Strict Hidden Forge Recipes & Fate Die Reroll, and 3-Column 16-Bit `EQUIP / BAG / INFO` Inventory UI
-- **Commit mới nhất trên `main`:** `6a12963` (`2026-11-26`, đang chuẩn bị push `PIXTEL v3.1`)
+- **Giai đoạn / Phiên bản hiện tại:** `PIXTEL v3.2` — Màn Hình Trang Chủ Đặt Tên Nhân Vật → Chọn Class → Bắt Đầu, 6 Phân Cảnh Phim Cốt Truyện 16-bit (`pixelfx` + `codixel`) có Rạp Chiếu Lại `[J]`, Thiết Kế Lại Hoạt Ảnh Hold Charge Paladin cho `Prism Knight` (*Thánh Kiếm Phá Địa*), và 8 Hoạt Ảnh Đánh Riêng Theo Dòng Vũ Khí!
+- **Commit mới nhất trên `main`:** `6a12963` (`2026-11-26`, working tree có `PIXTEL v3.1` + `PIXTEL v3.2` sẵn sàng commit/push khi người dùng yêu cầu)
 - **Thành viên / AI đóng góp gần đây:** `chu0n6-iot`, `TrungLegit`, `Antigravity`, `Yaros`, `GitHub Copilot`
 - **Các hệ thống chính đã hoàn thiện:**
   - **Web / Mobile PWA & Triển khai GitHub Pages:** Tự động test (`npm test`), build & deploy qua GitHub Actions lên `https://trunglegit.github.io/PixTel/`, kèm `manifest.webmanifest`, `sw.js`, `icon.svg`, chế độ màn hình ngang fullscreen, font Pixelify Sans tiếng Việt tự lưu trữ cục bộ (không phụ thuộc CDN).
@@ -44,6 +44,121 @@
 ---
 
 ## Nhật Ký Cập Nhật (Newest First)
+
+### [2026-11-26 11:28] — Antigravity — Xuất Bản Preview Tổng Hợp `PIXTEL v3.2` Vào `preview for devs/` & Push Lên GitHub
+- **Commit / Branch:** `main` (commit toàn bộ cụm `PIXTEL v3.2` + `preview for devs/`)
+- **Giai đoạn / Version:** `PIXTEL v3.2` — Preview Publication & GitHub Push
+- **Đã làm (Done):**
+  - Tạo báo cáo Preview chuẩn GitHub [2026-11-26-v3.2-home-16scene-story-class-skills-preview.md](preview%20for%20devs/2026-11-26-v3.2-home-16scene-story-class-skills-preview.md) kèm **12 ảnh chụp kiểm duyệt trực tiếp trên Chrome** lưu tại `preview for devs/assets/v3.2-01..12-*.png` (Trang Chủ đặt tên, Chọn Class vừa khít 1 màn hình với 4 sân khấu nhân vật thi triển Skill `[Q]`, cận cảnh Bit Rogue 3-Clone, các cảnh mở đầu 01/06/08/11/16, Tab Phim Cốt Truyện `[J]`, Knight Thánh Kiếm Phá Địa vàng & Bit Rogue `[Q]` thực chiến).
+  - Cập nhật bảng mục lục mới nhất lên đầu tại `preview for devs/README.md`.
+- **File chính đã sửa / thêm:** `preview for devs/2026-11-26-v3.2-home-16scene-story-class-skills-preview.md`, `preview for devs/README.md`, `preview for devs/assets/v3.2-*.png` (12 ảnh).
+- **Kiểm tra (Verified):** `npm run build` (**0 lỗi TS**), `tests/featureTests.ts` (**18/18 suites PASS**), `brain.py lint` (**0 lỗi**), commit & push sạch lên `origin/main`.
+- **Lưu ý / Handoff:** Không có.
+- **Gợi ý bước tiếp theo:** Toàn bộ thành viên có thể mở trực tiếp thư mục `preview for devs/` trên GitHub để xem toàn bộ thành quả `v3.2` và pull `main` để chơi ngay.
+
+### [2026-11-26 11:19] — Antigravity — Sửa Lỗi Đứng Phim Cốt Truyện Từ Cảnh 8 (`pixtel/prism-beam` `palette: undefined`)
+- **Commit / Branch:** `main` (working tree `v3.2`)
+- **Giai đoạn / Version:** `PIXTEL v3.2.5` — Cutscene Crash Fix & All-31-Beat Render Verification
+- **Đã làm (Done):**
+  - **Sửa lỗi treo vòng lặp hoạt ảnh từ Cảnh 08 trở đi (`src/data/cutscenes.ts`, `src/ui/CutsceneModal.ts`):**
+    - Nguyên nhân: `pixtel/prism-beam` ở Cảnh 08 (`scene_intro`) và Cảnh 02 (`scene_boss_eraser`) truyền `options: { palette: undefined }`, làm ghi đè `palette` mặc định của module khiến `fit(o.palette)` báo `TypeError` và dừng `requestAnimationFrame` của rạp phim.
+    - Khắc phục: thay bằng `palette: "bone"` (tia tẩy trắng ma quái cực nét), lọc sạch mọi key `undefined` khỏi `cue.options` + bọc `try/catch` an toàn quanh `createFx` trong `CutsceneModal.ts`.
+  - **Mở rộng Suite 17 (`tests/featureTests.ts`):** Tự động khởi tạo, chạy `update()` và `draw()` cho toàn bộ 31 phân cảnh của cả 6 phim cốt truyện để đảm bảo không còn lỗi runtime ẩn ở bất kỳ cảnh nào.
+- **File chính đã sửa / thêm:** `src/data/cutscenes.ts`, `src/ui/CutsceneModal.ts`, `tests/featureTests.ts`.
+- **Kiểm tra (Verified):** `npm run build` (**0 lỗi TS**), `tests/featureTests.ts` (**18/18 suites PASS**), chạy tuần tự 01 → 16 trên Chrome thật (**0 console/page errors**), kiểm duyệt ảnh Cảnh 08 & Cảnh 09 hiển thị sắc nét.
+- **Lưu ý / Handoff:** Không có breaking change.
+- **Gợi ý bước tiếp theo:** F5 trang `http://127.0.0.1:5173/` để xem trọn vẹn từ Cảnh 01 đến 16!
+
+### [2026-11-26 11:15] — Antigravity — Nâng Cấp Toàn Diện Hoạt Ảnh Tuyệt Kỹ `[Q]` Phân Thân Ảo Ảnh Của `Bit Rogue` (In-Game & Preview)
+- **Commit / Branch:** `main` (working tree `v3.2`)
+- **Giai đoạn / Version:** `PIXTEL v3.2.4` — Bit Rogue `[Q]` Phantom Clone Overhaul (Shadow-Split Burst, Pincer-Blink Mirror Slashes & 3-Clone Class Preview)
+- **Đã làm (Done):**
+  - **Hiệu ứng kích hoạt `[Q]` & Đòn chém đồng bộ trong trận (`src/systems/combat.ts`):**
+    - Khi bấm `[Q]` (*Phân Thân Ảo Ảnh*), Bit Rogue kích nổ bùng khói phân thân `spawn/poof` (`PAL.neon` + `PAL.cyber`), sóng âm `pixtel/sonic-wave`, vòng xoay song đao `melee/spin-slash` (`PAL.neon`), hào quang tốc độ `status/haste`, 0.35s i-frames cùng 14 tia điểm ảnh xanh–hồng nổ tỏa ra.
+    - Mỗi đòn đánh thường khi `cloneTime > 0` kích hoạt **vệt chém gương xanh holographic (`melee/double-slash` / `melee/spin-slash` `PAL.cyber`)** đối ứng từ phía bên kia mục tiêu kèm tia chí mạng vàng `crit-gold` và chuỗi hạt liên kết xanh–hồng.
+  - **Hiển thị Phân Thân Ảo Ảnh động trên bản đồ (`src/game.ts`):**
+    - Thay bóng mờ tĩnh cũ bằng **Phân Thân kẹp sườn thông minh**: nối dây năng lượng xanh–hồng với bản thể, vẽ tàn ảnh tốc độ (`+100% ASPD`) phía sau khi di chuyển/đánh, và **tự động tốc biến sang phía đối diện mục tiêu ngay khi vung đao** để chém đồng bộ 2 hướng (`dual_cross_slash`) cùng tia quỹ đạo xanh–hồng xoay quanh nhân vật.
+  - **Làm lại hoàn toàn `SKILL [Q] PREVIEW` của Bit Rogue trên màn Chọn Class (`src/ui/ClassSelect.ts`):**
+    - Diễn hoạt 3 pha siêu tốc: nổ khói tách thân → bản thể & phân thân xanh tốc biến đổi vị trí liên tục 2 bên tinh thể kèm tàn ảnh thứ 3 lao từ trên xuống, chém chồng `dagger-flurry` + `double-slash` + `spin-slash` xanh/hồng + nổ sao chí mạng `impacts/crit-hit` vàng rực!
+- **File chính đã sửa / thêm:** `src/systems/combat.ts`, `src/game.ts`, `src/ui/ClassSelect.ts`.
+- **Kiểm tra (Verified):** `npm run build` (**0 lỗi TS**), `tests/featureTests.ts` (**18/18 suites PASS**), kiểm duyệt ảnh chụp trực tiếp trên Chrome cả thẻ `Bit Rogue` ở Chọn Class lẫn bấm `[Q]` & đánh đồng bộ trong game (**0 console/page errors**).
+- **Lưu ý / Handoff:** Không có breaking change.
+- **Gợi ý bước tiếp theo:** Làm mới tab `http://127.0.0.1:5173/` để xem trực tiếp hoặc yêu cầu xuất preview / commit & push lên GitHub.
+
+### [2026-11-26 11:10] — Antigravity — Bỏ Bùng Nổ Cầu Vồng Ở Thánh Kiếm Phá Địa & Nâng Cấp Đoạn Mở Đầu Lên 16 Cảnh Sử Thi Điện Ảnh
+- **Commit / Branch:** `main` (working tree `v3.2`)
+- **Giai đoạn / Version:** `PIXTEL v3.2.3` — Golden Paladin Hold Slam & 16-Scene Cinematic Aethel-16 Opening Prologue
+- **Đã làm (Done):**
+  - **Tinh chỉnh hiệu ứng `Thánh Kiếm Phá Địa` của `Prism Knight` (`src/systems/combat.ts`, `tests/featureTests.ts`):**
+    - Gỡ bỏ `pixtel/rainbow-burst` khỏi đòn Hold Charge Just-Charge; thay bằng luồng thánh quang vàng thuần khiết **`holy/smite` (`PAL.gold`)** kết hợp chém bổ **`melee/heavy-cleave` (`PAL.gold`/`PAL.holy`)** và sóng chấn địa **`ground-slam`** (`scale: 1.25`).
+  - **Nâng cấp Động Cơ Phim Cốt Truyện 16-bit (`src/ui/CutsceneModal.ts`, `index.html`, `style.css`):**
+    - Bổ sung chuyển động nhân vật mượt (`moveFromX`/`moveFromY` ease-out cubic), hỗ trợ diễn xuất đồng thời cả 4 Class (`classIdOverride`), 8 bối cảnh tiền cảnh pixel-art thủ công (`origin_town`, `four_pillars`, `ancient_canopy`, `ice_spires`, `magma_fissure`, `sky_rift`, `shattered_prism`, `horizon_biomes`), 5 hiệu ứng thời tiết (`petals`, `ash`, `snow`, `glitch_rain`, `prism_sparks`), trượt camera (`camPanX`), bảng tiêu đề chương JRPG (`titleCard`), nhãn số cảnh, thanh tiến độ `01/16`, 16 chấm chọn cảnh trực tiếp, nút **◀ Cảnh Trước** và chế độ **⏯ Tự Phát**.
+  - **Mở rộng Đoạn Mở Đầu (`scene_intro`) từ 4 lên 16 Phân Cảnh Sử Thi (`src/data/cutscenes.ts`):**
+    - Kể trọn mạch truyện Aethel-16: Kỷ Nguyên 9 Trụ Sắc Màu (C01) → Thị Trấn Khởi Nguyên & Tứ Đại Tiền Bối (C02) → Thảo Nguyên Cổ Thụ (C03) → Đỉnh Thạch Anh & Lò Rèn Nam (C04) → Bầu Trời Nứt Toác (C05) → The Eraser Giáng Lâm từ vết nứt (C06) → Quân Đoàn Hư Vô (C07) → Tia Tẩy Trắng quét ngang vương quốc (C08) → Xing Warden & Blight Prism sa ngã (C09) → Hỏa Ngục Hổ Phách nổi loạn (C10) → Tứ Đại Chiến Binh Quyết Tử hợp kích (C11) → Đại Lăng Kính vỡ thành 8 Bia Ký (C12) → Ngọn Đèn Cuối Cùng tại Quảng Trường (C13) → Lời Hiệu Triệu gửi `{PLAYER_NAME}` (C14) → `{PLAYER_NAME}` chém toạc màn sương Tẩy Trắng (C15) → Bình Minh 4 Quần Xã & Khởi Hành Hồi I (C16).
+- **File chính đã sửa / thêm:** `src/systems/combat.ts`, `src/data/cutscenes.ts`, `src/ui/CutsceneModal.ts`, `index.html`, `style.css`, `tests/featureTests.ts`.
+- **Kiểm tra (Verified):** `npm run build` (**0 lỗi TS**), `tests/featureTests.ts` (**18/18 suites PASS**, xác nhận `scene_intro >= 16` cảnh & `Thánh Kiếm Phá Địa` không còn `rainbow-burst`), kiểm duyệt ảnh chụp Chrome trực tiếp các cảnh C01, C02, C06, C11, C16 & đòn Hold Slam vàng của Knight (**0 console/page errors**).
+- **Lưu ý / Handoff:** Không có breaking change.
+- **Gợi ý bước tiếp theo:** Làm mới tab `http://127.0.0.1:5173/` để thưởng thức 16 cảnh mở đầu (có thể bật **⏯ Tự Phát** xem như phim JRPG); yêu cầu tạo preview / commit & push khi sẵn sàng.
+
+### [2026-11-26 11:01] — Antigravity — Gỡ Bỏ Hình Nhân Giả (`stockActor`) Trên `The Eraser` & Hiệu Ứng `scifi/glitch` / `spawn/disintegrate`
+- **Commit / Branch:** `main` (working tree `v3.2`)
+- **Giai đoạn / Version:** `PIXTEL v3.2.2` — VFX Bugfix (`scifi/glitch` & `spawn/disintegrate` stock dummy removal + The Eraser front-facing cutscene framing)
+- **Đã làm (Done):**
+  - **Sửa triệt để lỗi xuất hiện hình nhân giả trên model Boss `The Eraser` và quái vật (`src/vfx/pixelfx/fx/scifi/glitch.js`, `src/vfx/pixelfx/fx/spawn/disintegrate.js`):**
+    - Nguyên nhân: hai module gốc của `pixelfx` tự động vẽ hình nhân mặc định `stockActor()` đè lên vị trí hiệu ứng mỗi khi kích hoạt `scifi/glitch` hoặc `spawn/disintegrate` (ảnh hưởng cả trong Phim Cốt Truyện lẫn giao tranh Boss/quái trực tiếp).
+    - Khắc phục: thêm tùy chọn `drawActor: false` làm mặc định — `scifi/glitch` chỉ vẽ dải nhiễu RGB, vết xé ngang và dead-pixel thuần túy; `spawn/disintegrate` chỉ vẽ luồng sáng tan rã, vòng nền và hạt pixel bay theo gió, tuyệt đối không vẽ hình nhân mặc định.
+  - **Căn chỉnh hiển thị `The Eraser` trong Phim Cốt Truyện (`src/data/cutscenes.ts`):** Chuyển `boss_the_eraser` sang góc chính diện (xòe đều đôi cánh tinh thể trắng–tím và con mắt hư vô) và căn giữa vòng khiên lục giác `pixtel/hex-shield` đúng lõi pha lê.
+- **File chính đã sửa / thêm:** `src/vfx/pixelfx/fx/scifi/glitch.js`, `src/vfx/pixelfx/fx/spawn/disintegrate.js`, `src/data/cutscenes.ts`.
+- **Kiểm tra (Verified):** `npm run build` (**0 lỗi TS**), `tests/featureTests.ts` (**18/18 suites PASS**), kiểm duyệt ảnh chụp Chrome trực tiếp các cảnh `scene_intro`, `scene_boss_eraser`, `scene_ending` (**0 console/page errors**).
+- **Lưu ý / Handoff:** Không có breaking change.
+- **Gợi ý bước tiếp theo:** Làm mới trang `http://127.0.0.1:5173/` để kiểm chứng trực tiếp; commit/push khi người dùng yêu cầu.
+
+### [2026-11-26 10:53] — Antigravity — Chuẩn Hóa Bộ Kỹ Năng Thẻ Class & Sân Khấu Preview Nhân Vật Dùng Skill Cố Định `[Q]`
+- **Commit / Branch:** `main` (working tree `v3.2`)
+- **Giai đoạn / Version:** `PIXTEL v3.2.1` — Class Select & Handbook Skill Kit Sync + Live Hero `[Q]` Stage Preview
+- **Đã làm (Done):**
+  - **Đồng bộ đúng bộ chiêu hiện hành của 4 Class (`src/data/classes.ts`, `src/ui/ClassSelect.ts`, `src/ui/TutorialModal.ts`):**
+    - Gỡ bỏ các chiêu `[E]` cố định cũ (*Khiên Phản Đòn, Xoáy Hư Sắc, Frame-Skip, Trụ Lôi Quang*) khỏi 4 thẻ Chọn Class và Cẩm Nang Tân Thủ `[H]`.
+    - Mỗi thẻ Class hiển thị chuẩn 3 kỹ năng cố định của nhân vật: **Đánh thường (`LMB`)**, **Giữ (`Hold LMB`)**, **Skill cố định (`[Q]`)**, kèm ghi chú gọn `✦ [E]: Kỹ năng riêng theo từng Vũ Khí`.
+  - **Nâng cấp ô `SKILL [Q] PREVIEW` (`168×80`) có nhân vật 3D trực tiếp thi triển Skill cố định (`src/ui/ClassSelect.ts`, `style.css`):**
+    - **Prism Knight:** Nhân vật đứng giữa đấu trường xoay **Bão Kiếm Ánh Sáng (`[Q]`)** (`cast_ult` → `storm`) giữa lốc `pixtel/prism-storm` & `pixtel/rainbow-burst`.
+    - **Chroma Mage:** Pháp sư lơ lửng giơ trượng (`cast_ult` → `orb_levitate`) triệu hồi **Mưa Thiên Thạch Thất Sắc (`[Q]`)** (`arcane/star-fall` + `explosions/plasma-explosion` `PAL.candy` + `pixtel/rainbow-burst`).
+    - **Bit Rogue:** Sát thủ thật bên trái + **Phân Thân Ảo Ảnh (`[Q]`)** bán trong suốt bên phải cùng lao vào chém song đao đồng bộ (`dual_cross_slash` / `spin`) với `melee/spin-slash` (`PAL.neon`/`PAL.cyber`) quanh mục tiêu tinh thể.
+    - **Pixel Tinker:** Kỹ sư giương súng (`cast_ult` → `recoil_barrage`) điều khiển **Drone Sắc Độ Quá Tải (`[Q]`)** bay xoay trên vai bắn chùm tia laser Lôi-Sắc Độ kèm `lightning/zap-hit` & `pixtel/rainbow-burst`.
+    - Khắc phục hoàn toàn tình trạng khung preview trống đen ở giữa chu kỳ — luôn chạy mượt 60FPS liên tục trên cả 4 thẻ.
+- **File chính đã sửa / thêm:** `src/ui/ClassSelect.ts`, `src/data/classes.ts`, `src/ui/TutorialModal.ts`, `style.css`.
+- **Kiểm tra (Verified):** `npm run build` (**0 lỗi TS**), `tests/featureTests.ts` (**18/18 suites PASS**), kiểm duyệt ảnh chụp Chrome trực tiếp (`1280×720`, **0 console/page errors**).
+- **Lưu ý / Handoff:** Không có breaking change.
+- **Gợi ý bước tiếp theo:** Xem trực tiếp trên `http://127.0.0.1:5173/` hoặc yêu cầu tạo preview & commit/push lên GitHub.
+
+### [2026-11-26 10:45] — Antigravity — Màn Hình Trang Chủ Đặt Tên, 6 Phim Cốt Truyện (`pixelfx`+`codixel`), Sửa Hold Charge Knight & 8 Hoạt Ảnh Vũ Khí Mới
+- **Commit / Branch:** `main` (chưa commit — sẵn sàng commit/push khi yêu cầu)
+- **Giai đoạn / Version:** `PIXTEL v3.2` — Home Screen Naming Flow, 6 Story Cutscenes, Knight Paladin Overhead Slam & 8 Weapon-Family Animations
+- **Đã làm (Done):**
+  - **Màn Hình Trang Chủ & Quy trình Đặt Tên → Chọn Class → Bắt Đầu (`src/ui/HomeScreen.ts`, `src/ui/pixelLogo.ts`, `src/ui/ClassSelect.ts`, `src/ui/HUD.ts`, `src/ui/DialogueModal.ts`, `index.html`, `style.css`):**
+    - Thêm màn hình trang chủ `#screen-home` chạy nền 16-bit sống động 60FPS (bầu trời sao Aethel-16, dãy núi 4 Quần Xã, Trụ Lăng Kính phát xung `pixtel/color-wave` & `pixtel/rainbow-burst`, 4 Class đứng gác hai bên).
+    - Người chơi nhập tên nhân vật (1–16 ký tự tiếng Việt, có nút `🎲 NGẪU NHIÊN`, nhớ tên gần nhất qua `localStorage`, đồng bộ vào HUD, Lời thoại NPC, Phim cốt truyện, Bảng chiến thắng, Co-op & `SaveDataV2.player.name`), sau đó chuyển sang Bước 2 `#screen-class-select` (hiển thị banner tên + nút `← ĐỔI TÊN / TRANG CHỦ`) rồi mới bấm **BẮT ĐẦU PHIÊU LƯU**.
+  - **6 Phân Cảnh Phim Cốt Truyện 16-bit Tận Dụng `pixelfx` & `codixel` (`src/data/cutscenes.ts`, `src/ui/CutsceneModal.ts`, `src/ui/QuestJournalModal.ts`, `src/game.ts`, `src/main.ts`):**
+    - Tạo 6 phim cốt truyện nhiều hồi với sân khấu màn ảnh rộng `480×200`, hiệu ứng `pixelfx` hai bộ đệm (`color` + ánh sáng cộng `light`), quái/Boss HD từ `codixel-enemies.png`, nhân vật 3D `pixelfx`, hiệu ứng quét Tẩy Trắng / Hồi Phục Sắc Màu, rung máy, âm thanh chiptune và chữ đánh máy gọi trực tiếp `{PLAYER_NAME}` & `{CLASS_NAME}`:
+      1. `scene_intro` (*Hồi I — Thảm Họa Tẩy Trắng Aethel-16*, 4 cảnh — tự phát khi Bắt đầu mới & xem được ngay từ Trang Chủ)
+      2. `scene_boss_warden` (*Hồi II — Hộ Vệ Cổ Thụ Xing Warden*, 3 cảnh)
+      3. `scene_boss_blight` (*Hồi III — Rồng Lăng Kính Blight Prism*, 3 cảnh)
+      4. `scene_boss_gilded` (*Hồi IV — Chúa Tể Hổ Phách Gilded Null*, 3 cảnh)
+      5. `scene_boss_eraser` (*Hồi V — Đối Mặt The Eraser*, 3 cảnh)
+      6. `scene_ending` (*Hồi Kết — Bình Minh Trở Lại Aethel-16*, 3 cảnh)
+    - Tự động kích hoạt khi lần đầu chạm trán từng Boss / hạ Boss cuối, lưu tiến độ `seenCutscenes` vào Save, và mở thêm Tab thứ 3 **`🎬 PHIM CỐT TRUYỆN`** trong Sổ Nhiệm Vụ `[J]` để xem lại bất kỳ lúc nào.
+  - **Thiết Kế Lại Hoàn Toàn Hoạt Ảnh Hold Charge cho `Prism Knight` (`src/graphics/pixelfxHeroModels.ts`, `src/systems/combat.ts`, `src/data/classes.ts`, `src/game.ts`, `src/ui/ClassSelect.ts`):**
+    - Sửa triệt để lỗi Hold Charge của Knight giống tia ngang của `Pixel Tinker`: khi giữ LMB (`charge`), Knight giơ kiếm bằng hai tay thẳng lên đỉnh đầu cùng vương miện ánh sáng vàng; khi thả ra, nhảy bổ dọc **Thánh Kiếm Phá Địa (`overhead_slam`)** kèm vệt chém vàng `melee/heavy-cleave` (`PAL.holy`/`PAL.gold`) + sóng chấn địa `impacts/ground-slam` + bùng nổ cầu vồng `pixtel/rainbow-burst` khi Just-Charge!
+    - Cập nhật luôn khung xem trước của Knight ở màn Chọn Class sang `overhead_slam` + `melee/heavy-cleave` (`PAL.holy`).
+  - **Bổ Sung 8 Hoạt Ảnh Đánh Theo Dòng Vũ Khí (`src/graphics/pixelfxHeroModels.ts`, `src/systems/combat.ts`):**
+    - Thêm 8 dáng vung vũ khí 3D mới: `overhead_slam` (Đại kiếm/Búa), `halberd_sweep` (Kích/Lưỡi hái), `iaido_draw` (Katana rút kiếm tốc độ), `dual_cross_slash` (Song đao/Vuốt chữ X), `chakram_throw` (Phi luân boomerang), `orb_levitate` (Cầu Hư Không/Tinh Vân lơ lửng), `staff_whirl` (Xoay trượng phượng hoàng), và `recoil_barrage` (Giật nòng pháo hạng nặng) — nối đồng bộ vào đòn đánh thường vũ khí đặc biệt và chiêu `[E]` riêng từng vũ khí.
+- **File chính đã sửa / thêm:** `src/data/cutscenes.ts` (mới), `src/ui/HomeScreen.ts` (mới), `src/ui/CutsceneModal.ts` (mới), `src/ui/pixelLogo.ts` (mới), `src/graphics/pixelfxHeroModels.ts`, `src/systems/combat.ts`, `src/data/classes.ts`, `src/data/types.ts`, `src/world/entities.ts`, `src/game.ts`, `src/main.ts`, `src/ui/ClassSelect.ts`, `src/ui/HUD.ts`, `src/ui/DialogueModal.ts`, `src/ui/QuestJournalModal.ts`, `index.html`, `style.css`, `tests/featureTests.ts`.
+- **Kiểm tra (Verified):**
+  - `npm run build` (`tsc --noEmit && vite build`): **0 lỗi TS**, build thành công trong `3.67s`.
+  - Bộ test tự động (`tests/featureTests.ts`): **18/18 suites PASS** (thêm Suite 17 kiểm tra Home Screen Naming, Save v3, 6 Story Cutscenes + `PIXELFX_MODS`, Knight `overhead_slam`, và cả 8 hoạt ảnh vũ khí mới).
+  - Kiểm thử trực quan trên Chrome thật (Playwright `1280×720`): chụp & kiểm duyệt ảnh màn Home Screen, Class Select (vừa khít 1 màn hình không cuộn), Phim Cốt Truyện mở đầu & Boss Gilded Null, Tab Phim Cốt Truyện `[J]`, HUD `Quang Khải` & đòn Hold Slam vàng rực của Prism Knight — **0 console/page errors**.
+- **Lưu ý / Handoff (Breaking changes / Đang dở):** Không có breaking change với Save cũ (Save không có `player.name` hoặc `seenCutscenes` tự động fallback về `"Chroma-Walker"` & `["scene_intro"]`).
+- **Gợi ý bước tiếp theo (Next Steps):** Nếu muốn tạo bản Preview kèm ảnh chụp vào `preview for devs/` và commit/push toàn bộ cụm `v3.1 + v3.2` lên GitHub `origin/main`, chỉ cần yêu cầu AI xuất preview & push.
 
 ### [2026-11-26 09:32] — Antigravity — Hệ thống 16 Vật phẩm cốt lõi, Nội tại (`ItemEffectSystem`), 3 Set Bonus `(x/3)`, Lò rèn Ẩn & UI Túi đồ 3 cột 16-bit
 - **Commit / Branch:** `main` (tiếp nối `6a12963`)

@@ -1,4 +1,5 @@
 import { getClassDef } from "./data/classes";
+import { getBossCutsceneId, type StoryCutsceneId } from "./data/cutscenes";
 import { ELEMENT_META, normalizeElement } from "./data/elements";
 import { ENEMIES } from "./data/enemies";
 import { CONSUMABLE_GROUP_LABELS, ITEMS, RARITY_INFO, createItemInstance } from "./data/items";
@@ -75,7 +76,9 @@ import { sfx } from "./audio/chiptuneSynth";
 
 export type ModalId =
   | null
+  | "home"
   | "class_select"
+  | "cutscene"
   | "dialogue"
   | "inventory"
   | "stash"
@@ -139,12 +142,14 @@ export class PixTelOpenWorldGame {
   unlockedHiddenItems = new Set<string>();
   unlockedHiddenRecipes = new Set<string>();
   defeatedBossIds = new Set<string>();
+  seenCutscenes = new Set<string>(["scene_intro"]);
+  pendingPlayerName = "Chroma-Walker";
 
   camX = 0;
   camY = 0;
   time = 0;
   running = false;
-  activeModal: ModalId = "class_select";
+  activeModal: ModalId = "home";
   currentBiome: BiomeId = "town";
   nearestInteractable: InteractableTarget | null = null;
   tutorialActive = false;
@@ -233,10 +238,12 @@ export class PixTelOpenWorldGame {
     this._bindInputs();
   }
 
-  private _initBlankPlayer(classId: ClassId) {
+  private _initBlankPlayer(classId: ClassId, playerName?: string) {
     const cdef = getClassDef(classId);
     const spawnWp = WAYPOINTS[0];
+    const cleanName = (playerName ?? this.pendingPlayerName ?? "Chroma-Walker").trim().slice(0, 16) || "Chroma-Walker";
     this.player = {
+      name: cleanName,
       classId,
       x: spawnWp.tx * TILE_SIZE + 8,
       y: (spawnWp.ty - 1) * TILE_SIZE + 8,
@@ -380,7 +387,12 @@ export class PixTelOpenWorldGame {
     recalculatePlayerStats(this.player, this.inv, preserveHpRatio);
   }
 
-  startNewGame(classId: ClassId, enableTutorial = true) {
+  startNewGame(
+    classId: ClassId,
+    enableTutorial = true,
+    playerName?: string,
+    playIntroCutscene = false
+  ) {
     sfx.unlock();
     this.projectiles.length = 0;
     this.turrets.length = 0;
@@ -397,10 +409,16 @@ export class PixTelOpenWorldGame {
     this.discoveredLore.clear();
     this.unlockedHiddenRecipes.clear();
     this.defeatedBossIds.clear();
+    this.seenCutscenes = new Set(["scene_intro"]);
     this.spawner.reset([]);
     this.stats = { kills: 0, mined: 0, chestsOpened: 0, bossesDefeated: 0, reactionsTriggered: 0 };
 
-    this._initBlankPlayer(classId);
+    const cleanName = (playerName ?? this.pendingPlayerName ?? "Chroma-Walker").trim().slice(0, 16) || "Chroma-Walker";
+    this.pendingPlayerName = cleanName;
+    this._initBlankPlayer(classId, cleanName);
+    if (playerName || !this.coop.playerName || this.coop.playerName === "Chroma-Walker") {
+      this.coop.playerName = cleanName;
+    }
     this.recalcPlayerStats(false);
     this.currentBiome = this.world.getBiomeAtWorld(this.player.x, this.player.y);
     this._snapCamera();
@@ -414,16 +432,38 @@ export class PixTelOpenWorldGame {
     this.tutorialReturnModal = null;
 
     this.running = true;
-    this.setModal(null);
     this.saveGame(false);
     this.vfx.spawnPooled("waypoint-pillar", { x: this.player.x, y: this.player.y });
-    this.ui.onToast(
-      enableTutorial
-        ? `HỒI I: NGỌN ĐÈN CUỐI CÙNG — Làm theo Hướng Dẫn Tân Thủ ở giữa màn hình hoặc bấm [H] mở Cẩm Nang!`
-        : `HỒI I: NGỌN ĐÈN CUỐI CÙNG — Gặp Trưởng Làng Elian [F] hoặc giải mã Bia Ký tại Quảng Trường!`,
-      "epic"
-    );
+    if (playIntroCutscene) {
+      this.playCutscene("scene_intro", null, () => {
+        this.ui.onToast(
+          enableTutorial
+            ? `HỒI I: NGỌN ĐÈN CUỐI CÙNG — Chào mừng ${cleanName}! Làm theo Hướng Dẫn Tân Thủ hoặc bấm [H] mở Cẩm Nang!`
+            : `HỒI I: NGỌN ĐÈN CUỐI CÙNG — Chào mừng ${cleanName}! Gặp Trưởng Làng Elian [F] tại Quảng Trường!`,
+          "epic"
+        );
+      });
+    } else {
+      this.setModal(null);
+      this.ui.onToast(
+        enableTutorial
+          ? `HỒI I: NGỌN ĐÈN CUỐI CÙNG — Làm theo Hướng Dẫn Tân Thủ ở giữa màn hình hoặc bấm [H] mở Cẩm Nang!`
+          : `HỒI I: NGỌN ĐÈN CUỐI CÙNG — Gặp Trưởng Làng Elian [F] hoặc giải mã Bia Ký tại Quảng Trường!`,
+        "epic"
+      );
+    }
     this.ui.onHudUpdate();
+  }
+
+  /** Launches a Story Cutscene modal, records it as unlocked/seen, and invokes `onDone` when finished or skipped. */
+  playCutscene(sceneId: StoryCutsceneId, returnModal: ModalId = null, onDone?: () => void) {
+    this.seenCutscenes.add(sceneId);
+    if (this.running) this.saveGame(false);
+    this.setModal("cutscene", {
+      sceneId,
+      returnModal,
+      onDone,
+    });
   }
 
   loadSavedGame(): boolean {
@@ -450,6 +490,7 @@ export class PixTelOpenWorldGame {
     this.discoveredLore = new Set(data.discoveredLore ?? []);
     this.unlockedHiddenRecipes = new Set(data.unlockedHiddenRecipes ?? []);
     this.defeatedBossIds = new Set(data.defeatedBossIds ?? []);
+    this.seenCutscenes = new Set(["scene_intro", ...(data.seenCutscenes ?? [])]);
     this.itemEffects.reset();
     for (const hid of this.saveSys.loadHiddenUnlocks()) this.unlockedHiddenItems.add(hid);
     for (const hid of data.unlockedHiddenItems ?? []) this.unlockedHiddenItems.add(hid);
@@ -469,7 +510,10 @@ export class PixTelOpenWorldGame {
     this.tutorialComboHits = 0;
     this.tutorialReturnModal = null;
 
-    this._initBlankPlayer(data.classId);
+    const loadedName = (data.player.name ?? this.pendingPlayerName ?? "Chroma-Walker").trim().slice(0, 16) || "Chroma-Walker";
+    this.pendingPlayerName = loadedName;
+    this._initBlankPlayer(data.classId, loadedName);
+    this.coop.playerName = loadedName;
     this.player.x = data.player.x;
     this.player.y = data.player.y;
     this.player.level = data.player.level;
@@ -536,6 +580,7 @@ export class PixTelOpenWorldGame {
       savedAt: Date.now(),
       classId: this.player.classId,
       player: {
+        name: this.player.name || this.pendingPlayerName || "Chroma-Walker",
         x: Math.round(this.player.x),
         y: Math.round(this.player.y),
         hp: Math.round(this.player.hp),
@@ -560,6 +605,7 @@ export class PixTelOpenWorldGame {
       unlockedHiddenItems: Array.from(this.unlockedHiddenItems),
       unlockedHiddenRecipes: Array.from(this.unlockedHiddenRecipes),
       defeatedBossIds: Array.from(this.defeatedBossIds),
+      seenCutscenes: Array.from(this.seenCutscenes),
       tutorialCompleted: this.tutorialCompleted,
       quests: this.quests.exportState(),
       gachaState: this.gacha.exportState(),
@@ -573,15 +619,16 @@ export class PixTelOpenWorldGame {
     return ok;
   }
 
-  openTutorialFromTitle() {
-    this.tutorialReturnModal = "class_select";
+  openTutorialFromTitle(returnTo: ModalId = "home") {
+    this.tutorialReturnModal = returnTo;
     this.setModal("tutorial");
   }
 
   closeTutorialModal() {
-    if (!this.running || this.tutorialReturnModal === "class_select") {
+    if (!this.running || this.tutorialReturnModal === "home" || this.tutorialReturnModal === "class_select") {
+      const target: ModalId = this.tutorialReturnModal === "class_select" ? "class_select" : "home";
       this.tutorialReturnModal = null;
-      this.setModal("class_select", { switching: false });
+      this.setModal(target, target === "class_select" ? { switching: false } : undefined);
       return;
     }
     const ret = this.tutorialReturnModal;
@@ -671,7 +718,7 @@ export class PixTelOpenWorldGame {
       } else {
         sfx.playUiClick();
         this.tutorialReturnModal =
-          this.activeModal === "pause" || this.activeModal === "class_select"
+          this.activeModal === "pause" || this.activeModal === "class_select" || this.activeModal === "home"
             ? this.activeModal
             : null;
         this.setModal("tutorial", payload);
@@ -685,7 +732,7 @@ export class PixTelOpenWorldGame {
       } else {
         sfx.playUiClick();
         this.coopReturnModal =
-          this.activeModal === "pause" || this.activeModal === "class_select"
+          this.activeModal === "pause" || this.activeModal === "class_select" || this.activeModal === "home"
             ? this.activeModal
             : null;
         this.setModal("coop", payload);
@@ -701,15 +748,16 @@ export class PixTelOpenWorldGame {
     }
   }
 
-  openCoopFromTitle(prefillCode?: string) {
-    this.coopReturnModal = "class_select";
+  openCoopFromTitle(prefillCode?: string, returnTo: ModalId = "home") {
+    this.coopReturnModal = returnTo;
     this.setModal("coop", { code: prefillCode });
   }
 
   closeCoopModal() {
-    if (!this.running || this.coopReturnModal === "class_select") {
+    if (!this.running || this.coopReturnModal === "home" || this.coopReturnModal === "class_select") {
+      const target: ModalId = this.coopReturnModal === "class_select" ? "class_select" : "home";
       this.coopReturnModal = null;
-      this.setModal("class_select", { switching: false });
+      this.setModal(target, target === "class_select" ? { switching: false } : undefined);
       return;
     }
     const ret = this.coopReturnModal;
@@ -1970,6 +2018,16 @@ export class PixTelOpenWorldGame {
     sfx.playWaypoint();
     this.shake = Math.max(this.shake, 5.5);
     this.ui.onToast(`⚔ PHONG ẤN LÃNH ĐỊA [${bossName}]! Không thể thoát ra cho tới khi hạ Boss hoặc tử trận!`, "warn");
+    const sceneId = getBossCutsceneId(boss.defId);
+    if (
+      sceneId &&
+      !this.seenCutscenes.has(sceneId) &&
+      !this.coop.isConnected &&
+      typeof document !== "undefined" &&
+      this.activeModal === null
+    ) {
+      this.playCutscene(sceneId, null);
+    }
     this.ui.onHudUpdate();
   }
 
@@ -2092,7 +2150,13 @@ export class PixTelOpenWorldGame {
         if (enemy.isWorldBoss) {
           // Restore the entire world color in celebration!
           this.colorSys.triggerWave(enemy.x, enemy.y, 1800, 480);
-          this.ui.onBossVictory(true, name);
+          if (!this.seenCutscenes.has("scene_ending") && typeof document !== "undefined") {
+            this.playCutscene("scene_ending", null, () => {
+              this.ui.onBossVictory(true, name);
+            });
+          } else {
+            this.ui.onBossVictory(true, name);
+          }
         } else {
           this.ui.onBossVictory(false, name);
         }
@@ -3225,10 +3289,54 @@ export class PixTelOpenWorldGame {
           const frame = Math.floor(p.walkTime) % 4;
 
           if (p.cloneTime > 0) {
+            const attackingNow = p.attackAnimTime > 0;
+            // On attack, Phantom Clone blinks to the opposite flank to pincer-slash in sync!
+            const cloneOffX = attackingNow
+              ? Math.round(Math.cos(activeAimAngle) * 24)
+              : -p.facing * 15;
+            const cloneOffY = attackingNow
+              ? Math.round(Math.sin(activeAimAngle) * 18)
+              : -2 + Math.round(Math.sin(this.time * 10) * 2);
+            const cx = sx + cloneOffX;
+            const cy = sy + cloneOffY;
+            const cloneFacing = attackingNow ? (cloneOffX >= 0 ? -1 : 1) : p.facing;
+
+            // Glowing Cyan-Magenta Shadow Tether linking Real Rogue & Phantom Clone
             ctx.save();
-            ctx.globalAlpha = 0.6;
-            const cx = sx - p.facing * 12;
-            const cy = sy - 2 + Math.round(Math.sin(this.time * 12) * 2);
+            ctx.strokeStyle = attackingNow ? "#2ef2ff" : "rgba(46, 242, 255, 0.55)";
+            ctx.lineWidth = attackingNow ? 1.5 : 1;
+            ctx.beginPath();
+            ctx.moveTo(sx, sy - 11);
+            ctx.lineTo(cx, cy - 11);
+            ctx.stroke();
+
+            // Speed afterimage trail behind Real Rogue (+100% ASPD ghost)
+            if (isMovingNow || attackingNow) {
+              ctx.globalAlpha = 0.28;
+              drawPaperDollHero(ctx, {
+                classId: p.classId,
+                equipment: this.inv.equipment,
+                x: sx - p.facing * 8,
+                y: sy - 1,
+                scale: 1,
+                walkFrame: (frame + 2) % 4,
+                facing: p.facing,
+                facingDir: p.facingDir,
+                animState: heroAnim,
+                attackKind: activeAttackKind,
+                attackProgress: Math.max(0, activeAttackProgress - 0.15),
+                aimAngle: activeAimAngle,
+                bleached: heroBleached,
+                time: this.time,
+              });
+            }
+
+            // Holographic Cyan/Neon Aura Ring under Phantom Clone + Main Mirror Clone
+            ctx.globalAlpha = 0.72;
+            ctx.fillStyle = "#2ef2ff";
+            ctx.fillRect(cx - 7, cy - 1, 14, 2);
+            ctx.fillStyle = "#ff2e63";
+            ctx.fillRect(cx - 5, cy + 1, 10, 1);
             drawPaperDollHero(ctx, {
               classId: p.classId,
               equipment: this.inv.equipment,
@@ -3236,16 +3344,27 @@ export class PixTelOpenWorldGame {
               y: cy,
               scale: 1,
               walkFrame: frame,
-              facing: p.facing,
+              facing: cloneFacing,
               facingDir: p.facingDir,
               animState: heroAnim,
-              attackKind: activeAttackKind,
+              attackKind: attackingNow ? "dual_cross_slash" : activeAttackKind,
               attackProgress: activeAttackProgress,
-              aimAngle: activeAimAngle,
+              aimAngle: attackingNow ? activeAimAngle + Math.PI : activeAimAngle,
               shieldGuard: p.shieldTime > 0,
+              aegisActive: true,
               bleached: heroBleached,
               time: this.time,
             });
+
+            // Orbiting +100% ASPD / +25% CRIT neon sparks around Real Rogue
+            ctx.globalAlpha = 0.9;
+            for (let k = 0; k < 2; k++) {
+              const oa = this.time * 9 + k * Math.PI;
+              const ox = sx + Math.round(Math.cos(oa) * 10);
+              const oy = sy - 8 + Math.round(Math.sin(oa) * 4);
+              ctx.fillStyle = k === 0 ? "#2ef2ff" : "#ff2e63";
+              ctx.fillRect(ox - 1, oy - 1, 2, 2);
+            }
             ctx.restore();
           }
 
@@ -3320,13 +3439,26 @@ export class PixTelOpenWorldGame {
 
           // Charge indicator bar underneath hero (flashes bright white-gold during Just-Charge window!)
           if (p.charging && p.chargeTime > 0.1) {
+            if (p.classId === "prism_knight") {
+              // Paladin Golden Overhead Holy Crown & rising sword sparks (distinct from Tinker railgun!)
+              const crownY = sy - 27 - Math.round(chargePct * 5);
+              ctx.fillStyle = inJustWindow ? "#ffffff" : "#ffe066";
+              ctx.fillRect(sx - 5, crownY, 10, 1);
+              ctx.fillRect(sx - 1, crownY - 3, 2, 7);
+              const spOff = Math.round(Math.sin(this.time * 18) * 5);
+              ctx.fillStyle = "#fff4a8";
+              ctx.fillRect(sx - 6 + spOff, crownY + 2, 2, 2);
+              ctx.fillRect(sx + 5 - spOff, crownY - 1, 2, 2);
+            }
             ctx.fillStyle = "#100c18";
             ctx.fillRect(sx - 8, sy + 3, 16, 3);
             ctx.fillStyle = inJustWindow
               ? "#ffffff"
               : chargePct >= 1
                 ? "#ffe066"
-                : "#4be8ff";
+                : p.classId === "prism_knight"
+                  ? "#ffd24a"
+                  : "#4be8ff";
             ctx.fillRect(sx - 7, sy + 4, Math.round(chargePct * 14), 1);
           }
 
@@ -3482,6 +3614,11 @@ export class PixTelOpenWorldGame {
 
       if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "F1"].includes(e.code)) {
         if (this.activeModal === null || e.code === "F1") e.preventDefault();
+      }
+
+      if (this.activeModal === "cutscene") {
+        // CutsceneModalUI owns Space / Enter / Escape controls while playing cinema
+        return;
       }
 
       if (e.code === "KeyH" || e.code === "F1") {

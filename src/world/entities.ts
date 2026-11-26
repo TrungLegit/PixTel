@@ -13,6 +13,7 @@ import type {
 import type { HeroAttackKind } from "../graphics/paperDoll";
 
 export interface PlayerEntity {
+  name?: string;
   classId: ClassId;
   x: number;
   y: number;

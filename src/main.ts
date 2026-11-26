@@ -1,6 +1,8 @@
 import "@fontsource-variable/pixelify-sans";
 import { PixTelOpenWorldGame, type ModalId } from "./game";
+import { HomeScreenUI } from "./ui/HomeScreen";
 import { ClassSelectUI } from "./ui/ClassSelect";
+import { CutsceneModalUI, type CutscenePlayPayload } from "./ui/CutsceneModal";
 import { HudUI } from "./ui/HUD";
 import { DialogueModalUI } from "./ui/DialogueModal";
 import { InventoryModalUI } from "./ui/InventoryModal";
@@ -23,7 +25,9 @@ function bootstrap() {
   const pauseModal = document.getElementById("modal-pause")!;
   const victoryModal = document.getElementById("modal-victory")!;
 
+  let homeScreen: HomeScreenUI;
   let classSelect: ClassSelectUI;
+  let cutsceneModal: CutsceneModalUI;
   let hud: HudUI;
   let dialogue: DialogueModalUI;
   let inventory: InventoryModalUI;
@@ -48,7 +52,9 @@ function bootstrap() {
     onToast: (msg, tone) => hud?.toast(msg, tone),
     onModalChange: (modal: ModalId, payload?: unknown) => {
       itemTooltip?.hide();
+      homeScreen?.hide();
       classSelect?.hide();
+      cutsceneModal?.hide();
       dialogue?.hide();
       inventory?.hide();
       stashModal?.hide();
@@ -60,12 +66,17 @@ function bootstrap() {
       coopModal?.hide();
       pauseModal.classList.add("hidden");
 
-      hud?.setVisible(game.running && modal !== "class_select");
+      const hideHud = modal === "home" || modal === "class_select" || modal === "cutscene";
+      hud?.setVisible(game.running && !hideHud);
       mobileTouch?.update();
 
-      if (modal === "class_select") {
+      if (modal === "home") {
+        homeScreen.show();
+      } else if (modal === "class_select") {
         const switching = Boolean((payload as { switching?: boolean } | undefined)?.switching);
         classSelect.show(switching);
+      } else if (modal === "cutscene") {
+        cutsceneModal.show(payload as CutscenePlayPayload | undefined);
       } else if (modal === "dialogue") {
         const npcId = (payload as { npcId?: string } | undefined)?.npcId ?? "npc_elder";
         dialogue.show(npcId);
@@ -80,7 +91,7 @@ function bootstrap() {
       } else if (modal === "world_map") {
         worldMap.show();
       } else if (modal === "journal") {
-        journal.show(payload as { tab?: "quests" | "lore"; loreId?: string } | undefined);
+        journal.show(payload as { tab?: "quests" | "lore" | "cutscenes"; loreId?: string } | undefined);
       } else if (modal === "tutorial") {
         const initTab = (payload as { tab?: TutorialTabId } | undefined)?.tab;
         tutorial.show(initTab);
@@ -93,12 +104,13 @@ function bootstrap() {
     },
     onBossVictory: (worldBoss: boolean, bossName: string) => {
       if (worldBoss) {
+        const heroName = game.player.name || game.pendingPlayerName || "Chroma-Walker";
         document.getElementById("victory-title")!.textContent =
-          "BẢN GIAO HƯỞNG THẤT SẮC — THE ERASER ĐÃ ĐƯỢC THANH TẨY!";
+          `BẢN GIAO HƯỞNG THẤT SẮC — ${heroName.toUpperCase()} ĐÃ THANH TẨY THE ERASER!`;
         document.getElementById("victory-desc")!.textContent =
-          `Giao thức xóa sổ của Kiến Trúc Sư Vaelor đã khép lại trong bình yên, trả lại bầu trời 16-bit rực rỡ cho Aethel-16! Bạn có thể tiếp tục khám phá toàn bộ Bia Ký, mở đủ 9 Trụ Sắc Màu và thức tỉnh thần khí +10.`;
+          `Giao thức xóa sổ của Kiến Trúc Sư Vaelor đã khép lại trong bình yên, trả lại bầu trời 16-bit rực rỡ cho Aethel-16! Bạn có thể tiếp tục khám phá toàn bộ Bia Ký, xem lại Phim Cốt Truyện [J], mở đủ 9 Trụ Sắc Màu và thức tỉnh thần khí +10.`;
         document.getElementById("victory-stats")!.textContent =
-          `LV.${game.player.level} · Hạ gục: ${game.stats.kills} · Phản ứng: ${game.stats.reactionsTriggered ?? 0} · Bia Ký: ${game.discoveredLore.size}/8 · Màu khôi phục: ${game.colorSys.getProgressPct()}%`;
+          `${heroName} · LV.${game.player.level} · Hạ gục: ${game.stats.kills} · Phản ứng: ${game.stats.reactionsTriggered ?? 0} · Bia Ký: ${game.discoveredLore.size}/8 · Màu khôi phục: ${game.colorSys.getProgressPct()}%`;
         victoryModal.classList.remove("hidden");
       } else {
         hud.toast(`ĐÃ GIẢI THOÁT THỦ LĨNH ${bossName}! Kiểm tra chiến lợi phẩm & về gặp Trưởng Làng Elian!`, "epic");
@@ -106,7 +118,9 @@ function bootstrap() {
     },
   });
 
+  homeScreen = new HomeScreenUI(game);
   classSelect = new ClassSelectUI(game);
+  cutsceneModal = new CutsceneModalUI(game);
   hud = new HudUI(game);
   dialogue = new DialogueModalUI(game);
   inventory = new InventoryModalUI(game);
@@ -142,6 +156,7 @@ function bootstrap() {
     const cleanCode = normalizeRoomCode(roomParam);
     if (cleanCode) {
       coopModal.setDraftCode(cleanCode);
+      homeScreen.setPendingRoomInvite(cleanCode);
       classSelect.setPendingRoomInvite(cleanCode);
     }
   }
@@ -164,14 +179,14 @@ function bootstrap() {
     sfx.playUiClick();
     game.saveGame(false);
     game.running = false;
-    game.setModal("class_select", { switching: false });
+    game.setModal("home");
   });
   document.getElementById("btn-pause-reset")!.addEventListener("click", () => {
     sfx.playUiClick();
     game.saveSys.clear();
     game.running = false;
-    game.setModal("class_select", { switching: false });
-    hud.toast("Đã xóa file Save cũ. Hãy chọn Class để bắt đầu hành trình mới!", "warn");
+    game.setModal("home");
+    hud.toast("Đã xóa file Save cũ. Hãy đặt tên & chọn Class để bắt đầu hành trình mới!", "warn");
   });
 
   // Victory Modal Continue Exploring Button
@@ -188,7 +203,8 @@ function bootstrap() {
   // Expose light debug handle for Playwright/DevTools inspection if needed
   (window as unknown as { __pixtel?: PixTelOpenWorldGame }).__pixtel = game;
 
-  classSelect.show(false);
+  // Boot into the dedicated Home Screen (Player Name -> Class Select -> Start + Intro Cutscene)
+  game.setModal("home");
   mobileTouch.update();
   game.startLoop();
 }

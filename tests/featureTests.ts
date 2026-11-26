@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { CLASSES } from "../src/data/classes";
+import { STORY_CUTSCENES, getBossCutsceneId, interpolateCutsceneText } from "../src/data/cutscenes";
+import { PIXELFX_MODS } from "../src/vfx/vfxManager";
 import {
   ALL_ELEMENTS,
   ELEMENT_META,
@@ -16,7 +18,7 @@ import { ENEMY_DROP_TABLES } from "../src/data/lootTables";
 import { WEAPON_SKILLS, getWeaponSkillForItem } from "../src/data/weaponSkills";
 import codixelEnemiesMeta from "../src/assets/codixel-enemies.json";
 import codixelIconsMeta from "../src/assets/codixel-icons.json";
-import { posedStyled } from "../src/vfx/pixelfx/core/index.js";
+import { PAL, clearFrame, createFrame, createFx, posedStyled } from "../src/vfx/pixelfx/core/index.js";
 import { GACHA_ALTAR_POS, STORAGE_CHEST_POS, TOWN_BOUNDS } from "../src/data/worldConfig";
 import { STARTER_WEAPON_BY_CLASS } from "../src/data/equipments";
 import {
@@ -1253,7 +1255,7 @@ runTest("Attack Animation & Pixelfx VFX Synchronization Across All Classes & Mod
     pixel_tinker: ["shoot", "shoot", "shoot_heavy"],
   };
   const expectedCharge: Record<ClassId, string> = {
-    prism_knight: "thrust",
+    prism_knight: "overhead_slam",
     chroma_mage: "cast_heavy",
     bit_rogue: "spin",
     pixel_tinker: "beam",
@@ -1854,7 +1856,11 @@ runTest("Phase 1 Mobile Twin-Stick Touch, Outer-Ring Sprint, Smart Auto-Aim & Ho
   for (let i = 0; i < 14; i++) g.step(0.04);
   g.mobileEndAttack();
   g.step(0.02);
-  assert.equal(g.player.attackAnimKind, "thrust", "Releasing mobile hold attack inside Just-Charge window fires Charged Thrust");
+  assert.equal(
+    g.player.attackAnimKind,
+    "overhead_slam",
+    "Releasing mobile hold attack inside Just-Charge window fires Paladin Overhead Slam (distinct from Tinker beam!)"
+  );
 
   g.player.dashCd = 0;
   g.player.stamina = 100;
@@ -2607,6 +2613,142 @@ async function runAsyncSuitesAndPrint() {
     );
   } finally {
     await srv.close();
+  }
+
+  // =========================================================================
+  // SUITE 17: HOME SCREEN NAMING, 6 STORY CUTSCENES, KNIGHT SLAM & 8 WEAPON ANIMS
+  // =========================================================================
+  {
+    // 1. All 6 Story Cutscenes have rich beats (Intro has 16 cinematic scenes!), valid pixelfx modules that instantiate & render cleanly, and dynamic {PLAYER_NAME}/{CLASS_NAME} interpolation
+    assert.equal(STORY_CUTSCENES.length, 6, "6 cinematic Story Cutscenes exist (Intro + 4 Bosses + Ending)");
+    assert.ok(STORY_CUTSCENES[0].beats.length >= 16, "Opening Story Cutscene has 16 epic scenes (>= 15)");
+    const csTestFrame = createFrame(480, 200, 0, 0);
+    for (const sc of STORY_CUTSCENES) {
+      assert.ok(sc.beats.length >= 3, `${sc.id} has at least 3 cinematic beats`);
+      for (let bi = 0; bi < sc.beats.length; bi++) {
+        const beat = sc.beats[bi];
+        assert.ok(beat.actors.length >= 1, `${sc.id} beat ${bi + 1} has stage actors`);
+        assert.ok(beat.fxCues.length >= 1, `${sc.id} beat ${bi + 1} has pixelfx VFX cues`);
+        for (const cue of beat.fxCues) {
+          const mod = PIXELFX_MODS[cue.modId];
+          assert.ok(mod, `${sc.id} beat ${bi + 1} references valid PIXELFX_MODS effect: ${cue.modId}`);
+          const pal = cue.palette ? (PAL as Record<string, string[]>)[cue.palette] : undefined;
+          const fxOpts: Record<string, unknown> = { x: cue.x, y: cue.y, seed: 7, ...(cue.options ?? {}) };
+          if (pal) fxOpts.palette = pal;
+          const inst = createFx(mod, fxOpts);
+          inst.update(0.12);
+          clearFrame(csTestFrame);
+          inst.draw(csTestFrame, "back");
+          inst.draw(csTestFrame, "front");
+        }
+        for (const act of beat.actors) {
+          if (act.kind === "enemy" && act.enemyId) {
+            assert.ok(ENEMIES[act.enemyId], `${sc.id} references valid enemyId: ${act.enemyId}`);
+          }
+        }
+      }
+    }
+    assert.equal(getBossCutsceneId("boss_xing_warden"), "scene_boss_warden");
+    assert.equal(getBossCutsceneId("boss_blight_root"), "scene_boss_blight");
+    assert.equal(getBossCutsceneId("boss_gilded_null"), "scene_boss_gilded");
+    assert.equal(getBossCutsceneId("boss_the_eraser"), "scene_boss_eraser");
+    assert.equal(
+      interpolateCutsceneText("Xin chào {PLAYER_NAME} ({CLASS_NAME})!", "Aetherion", "Vệ Binh Lăng Kính"),
+      "Xin chào Aetherion (Vệ Binh Lăng Kính)!"
+    );
+
+    // 2. Knight Hold Charge uses Paladin Overhead Slam (NOT thrust/beam and NO rainbow-burst) + golden heavy-cleave + ground-slam + golden holy/smite!
+    const kh = makeTestHarness("prism_knight");
+    const kRec = { live: [] as MockVfxCall[], pooled: [] as MockVfxCall[] };
+    kh.ctx.vfx = createMockVfx(kRec);
+    kh.player.stamina = 100;
+    kh.combat.performChargedAttack(kh.ctx, true);
+    assert.equal(kh.player.attackAnimKind, "overhead_slam", "Knight Hold Charge uses Paladin overhead_slam");
+    assert.ok(
+      kRec.live.some((c) => c.modId === "melee/heavy-cleave"),
+      "Knight Hold Charge spawns golden melee/heavy-cleave VFX"
+    );
+    assert.ok(
+      kRec.live.some((c) => c.modId === "holy/smite"),
+      "Knight Just-Charge triggers golden Paladin holy/smite shockwave"
+    );
+    assert.ok(
+      !kRec.live.some((c) => c.modId === "pixtel/rainbow-burst"),
+      "Knight Thánh Kiếm Phá Địa no longer spawns rainbow-burst"
+    );
+    assert.ok(
+      kRec.pooled.some((c) => c.modId === "ground-slam"),
+      "Knight Hold Charge spawns ground-slam impact shockwave"
+    );
+
+    // 3. All 8 new weapon-family animations wire into combat AND bake non-empty 3D pixelfx frames!
+    const weaponAnimCases: { classId: ClassId; weaponId: string; step: number; expected: string }[] = [
+      { classId: "prism_knight", weaponId: "sea_wpn_spring_katana", step: 2, expected: "iaido_draw" },
+      { classId: "prism_knight", weaponId: "exo_wpn_thunder_halberd", step: 1, expected: "halberd_sweep" },
+      { classId: "prism_knight", weaponId: "exo_wpn_blood_greatsword", step: 2, expected: "overhead_slam" },
+      { classId: "chroma_mage", weaponId: "exo_wpn_blackhole_orb", step: 2, expected: "orb_levitate" },
+      { classId: "chroma_mage", weaponId: "exo_wpn_phoenix_rod", step: 1, expected: "staff_whirl" },
+      { classId: "bit_rogue", weaponId: "exo_wpn_venom_claws", step: 1, expected: "dual_cross_slash" },
+      { classId: "bit_rogue", weaponId: "exo_wpn_phantom_boomerang", step: 0, expected: "chakram_throw" },
+      { classId: "pixel_tinker", weaponId: "exo_wpn_rocket_barrage", step: 2, expected: "recoil_barrage" },
+    ];
+    for (const tc of weaponAnimCases) {
+      const wh = makeTestHarness(tc.classId);
+      const inst = createItemInstance(tc.weaponId);
+      wh.inv.equipment.weapon = inst;
+      wh.player.comboStep = tc.step;
+      wh.player.atkCd = 0;
+      wh.combat.performPrimaryAttack(wh.ctx);
+      assert.equal(
+        wh.player.attackAnimKind,
+        tc.expected,
+        `${tc.weaponId} step ${tc.step + 1} triggers bespoke ${tc.expected} animation`
+      );
+      const baked = getOrBakePixelfxHero(
+        tc.classId,
+        wh.inv.equipment,
+        "attack",
+        0,
+        1,
+        "right",
+        1,
+        {
+          attackKind: tc.expected as import("../src/graphics/pixelfxHeroModels").HeroAttackKind,
+          attackProgress: 0.52,
+          aimAngle: 0,
+        }
+      );
+      assert.ok(baked.w > 0 && baked.h > 0, `${tc.expected} bakes crisp non-empty 3D hero bitmap`);
+    }
+
+    // 4. Home Screen -> Custom Player Name -> SaveData v3 persistence & Co-op name sync
+    const homeGame = new PixTelOpenWorldGame(makeMockCanvas() as unknown as HTMLCanvasElement, {
+      onHudUpdate: () => {},
+      onModalChange: () => {},
+      onToast: () => {},
+      onBossVictory: () => {},
+    });
+    assert.equal(homeGame.activeModal, "home", "New game boots into dedicated Home Screen before Class Select");
+    homeGame.startNewGame("chroma_mage", false, "Quang Khải", false);
+    assert.equal(homeGame.player.name, "Quang Khải", "Custom player name applies to PlayerEntity");
+    assert.equal(homeGame.coop.playerName, "Quang Khải", "Custom player name syncs automatically to Co-op client");
+    homeGame.playCutscene("scene_boss_warden", null);
+    assert.ok(homeGame.seenCutscenes.has("scene_boss_warden"), "playCutscene records unlocked cutscene");
+    assert.ok(homeGame.saveGame(false), "Save persists player name and seenCutscenes");
+
+    const reloaded = new PixTelOpenWorldGame(makeMockCanvas() as unknown as HTMLCanvasElement, {
+      onHudUpdate: () => {},
+      onModalChange: () => {},
+      onToast: () => {},
+      onBossVictory: () => {},
+    });
+    assert.ok(reloaded.loadSavedGame(), "Saved game loads cleanly");
+    assert.equal(reloaded.player.name, "Quang Khải", "Saved custom player name restores cleanly");
+    assert.ok(reloaded.seenCutscenes.has("scene_boss_warden"), "Unlocked story cutscenes restore cleanly");
+
+    results.push(
+      "PASS · Home Screen Naming, 6 pixelfx+codixel Story Cutscenes, Knight Overhead Slam & 8 Weapon Animations"
+    );
   }
 
   console.log("\n========================================================");

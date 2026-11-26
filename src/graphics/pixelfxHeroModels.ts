@@ -29,17 +29,25 @@ export type HeroAttackKind =
   | "slash_2"
   | "cleave"
   | "thrust"
+  | "overhead_slam"
+  | "halberd_sweep"
+  | "iaido_draw"
   | "flurry_1"
   | "flurry_2"
   | "spin"
+  | "dual_cross_slash"
+  | "chakram_throw"
   | "cast_1"
   | "cast_2"
   | "cast_3"
   | "cast_heavy"
   | "cast_ult"
+  | "orb_levitate"
+  | "staff_whirl"
   | "shoot"
   | "shoot_heavy"
   | "beam"
+  | "recoil_barrage"
   | "storm";
 
 export interface PixelfxHeroDrawOptions {
@@ -412,6 +420,84 @@ function buildAttackPose(
         [1.0, { ...READY_POSE, crouch: 3, lean: 1, fx: 12, fy: -21, sa: -0.3, bx: 6, by: -20, ffx: 7, fbx: -7 }],
       ];
       break;
+    case "overhead_slam":
+      // Heroic Knight Hold Charge & Heavy Greatsword/Hammer Leap-Slam (100% distinct from Tinker's horizontal beam!)
+      forceTwo = hasWeapon;
+      track = [
+        [0, { ...READY_POSE, two: forceTwo, crouch: 1, y: -3, lean: -3, fx: -1, fy: -42, sa: -2.45, ffx: 7, fbx: -7 }],
+        [0.20, { ...READY_POSE, two: forceTwo, crouch: -2, y: -7, lean: 1, fx: 8, fy: -44, sa: -1.65, ffx: 9, fbx: -5, toeF: true }],
+        [0.36, { ...READY_POSE, two: forceTwo, crouch: 7.5, y: 0, lean: 7, fx: 21, fy: -15, sa: 0.92, ffx: 14, fbx: -11, toeB: true }],
+        [0.72, { ...READY_POSE, two: forceTwo, crouch: 8, y: 0, lean: 6, fx: 20, fy: -14, sa: 0.98, ffx: 14, fbx: -11, toeB: true }],
+        [1.0, { ...READY_POSE, two: forceTwo, crouch: 3, y: 0, lean: 1, fx: 11, fy: -22, sa: -0.45, ffx: 8, fbx: -7 }],
+      ];
+      break;
+    case "halberd_sweep":
+      // Extended two-handed sweeping arc for Halberds, Greataxes & Void Scythe
+      forceTwo = hasWeapon;
+      track = [
+        [0, { ...READY_POSE, two: forceTwo, crouch: 4, lean: -4, yaw: 0.55, fx: -7, fy: -24, sa: -2.55, ffx: 9, fbx: -9 }],
+        [0.24, { ...READY_POSE, two: forceTwo, crouch: 5, lean: 4, yaw: -0.25, fx: 23, fy: -22 + pitch * 5, sa: 0.12 + pitch * 0.4, ffx: 14, fbx: -10, toeB: true }],
+        [0.54, { ...READY_POSE, two: forceTwo, crouch: 6, lean: 6, yaw: -0.78, fx: 16, fy: -17, sa: 1.05, ffx: 14, fbx: -11, toeB: true }],
+        [1.0, { ...READY_POSE, two: forceTwo, crouch: 2, lean: 1, yaw: 0, fx: 11, fy: -21, sa: -0.38, ffx: 8, fbx: -7 }],
+      ];
+      break;
+    case "iaido_draw":
+      // Lightning quickdraw katana cut (crouched draw -> flashing horizontal cut)
+      track = [
+        [0, { ...READY_POSE, crouch: 7, lean: 4, fx: -4, fy: -16, sa: -2.85, bx: 5, by: -17, ffx: 10, fbx: -9 }],
+        [0.18, { ...READY_POSE, crouch: 5, lean: 8, fx: 24, fy: -23 + pitch * 5, sa: -0.05 + pitch * 0.4, bx: -10, by: -22, ffx: 15, fbx: -11, toeB: true }],
+        [0.52, { ...READY_POSE, crouch: 3, lean: 5, fx: 19, fy: -34, sa: -1.15, bx: -8, by: -20, ffx: 13, fbx: -9 }],
+        [1.0, { ...READY_POSE, crouch: 2, lean: 1, fx: 10, fy: -19, sa: -0.55, bx: 4, by: -19, ffx: 8, fbx: -7 }],
+      ];
+      break;
+    case "dual_cross_slash":
+      // Leaping X-scissor twin dagger/claw cross slash
+      track = [
+        [0, { ...READY_POSE, crouch: 6, lean: 2, fx: -4, fy: -26, sa: -2.2, bx: -4, by: -16, sb: 1.8, ffx: 9, fbx: -8, armsFront: true }],
+        [0.24, { ...READY_POSE, crouch: 1, y: -3, lean: 7, fx: 22, fy: -20 + pitch * 5, sa: 0.45 + pitch, bx: 21, by: -30 + pitch * 5, sb: -0.65 + pitch, ffx: 13, fbx: -10, armsFront: true }],
+        [0.62, { ...READY_POSE, crouch: 5, y: 0, lean: 6, fx: 21, fy: -18, sa: 0.65, bx: 19, by: -28, sb: -0.75, ffx: 13, fbx: -10, toeB: true, armsFront: true }],
+        [1.0, { ...READY_POSE, crouch: 3, y: 0, lean: 2, fx: 10, fy: -19, sa: -0.8, bx: 8, by: -21, sb: -0.4, ffx: 9, fbx: -7 }],
+      ];
+      break;
+    case "chakram_throw":
+      // Athletic side-arm spinning chakram/boomerang throw
+      track = [
+        [0, { ...READY_POSE, crouch: 4, lean: -3, yaw: 0.65, fx: -8, fy: -23, sa: -2.6, bx: 10, by: -22, ffx: 9, fbx: -9 }],
+        [0.22, { ...READY_POSE, crouch: 4, lean: 6, yaw: -0.55, fx: 24, fy: -24 + pitch * 6, sa: pitch, bx: -9, by: -21, ffx: 14, fbx: -10, toeB: true }],
+        [0.58, { ...READY_POSE, crouch: 4, lean: 5, yaw: -0.7, fx: 21, fy: -23 + pitch * 6, sa: 0.25 + pitch, bx: -8, by: -21, ffx: 13, fbx: -9 }],
+        [1.0, { ...READY_POSE, crouch: 2, lean: 1, yaw: 0, fx: 10, fy: -19, sa: -0.7, bx: 7, by: -20, ffx: 8, fbx: -7 }],
+      ];
+      break;
+    case "orb_levitate":
+      // Floating arcane orb / celestial staff levitation cast
+      forceTwo = weaponName === "staff" || weaponName === "astral_staff";
+      track = [
+        [0, { ...READY_POSE, two: forceTwo, crouch: 3, y: 0, lean: 0, fx: 8, fy: -24, sa: -1.4, ffx: 8, fbx: -7 }],
+        [0.26, { ...READY_POSE, two: forceTwo, crouch: -1, y: -4.5, lean: -2, fx: 11, fy: -38, sa: -1.58, bx: -4, by: -26, ffx: 6, fbx: -6 }],
+        [0.68, { ...READY_POSE, two: forceTwo, crouch: 0, y: -4, lean: 3, fx: 18, fy: -31 + pitch * 5, sa: -0.35 + pitch * 0.6, bx: -5, by: -24, ffx: 8, fbx: -7 }],
+        [1.0, { ...READY_POSE, two: forceTwo, crouch: 2, y: 0, lean: 1, fx: 9, fy: -19, sa: -1.1, ffx: 7, fbx: -7 }],
+      ];
+      break;
+    case "staff_whirl":
+      // Sweeping fire/phoenix staff baton twirl
+      track = [
+        [0, { ...READY_POSE, crouch: 3, lean: -2, yaw: 0.5, fx: -5, fy: -26, sa: -2.2, bx: 7, by: -21, ffx: 8, fbx: -8 }],
+        [0.26, { ...READY_POSE, crouch: 2, y: -2, lean: 4, yaw: -0.5, fx: 20, fy: -28 + pitch * 5, sa: -0.25 + pitch * 0.5, bx: -7, by: -23, ffx: 12, fbx: -9 }],
+        [0.58, { ...READY_POSE, crouch: 3, y: 0, lean: 6, yaw: -0.95, fx: 18, fy: -21 + pitch * 5, sa: 0.45 + pitch * 0.5, bx: -8, by: -21, ffx: 12, fbx: -9 }],
+        [1.0, { ...READY_POSE, crouch: 2, y: 0, lean: 1, yaw: 0, fx: 9, fy: -18, sa: -1.1, bx: -3, by: -17, ffx: 7, fbx: -7 }],
+      ];
+      break;
+    case "recoil_barrage":
+      // Heavy twin-hand shoulder cannon / rocket / tesla recoil barrage
+      forceTwo = weaponName === "launcher" || weaponName === "rail_cannon";
+      track = [
+        [0, { ...READY_POSE, two: forceTwo, crouch: 5, lean: 3, fx: 16, fy: -25 + pitch * 5, bx: 8, by: -23, sa: pitch, ffx: 11, fbx: -9 }],
+        [0.18, { ...READY_POSE, two: forceTwo, crouch: 6.5, lean: -5, fx: 5, fy: -28 + pitch * 4, bx: 2, by: -24, sa: pitch - 0.52, ffx: 10, fbx: -11, toeF: true }],
+        [0.44, { ...READY_POSE, two: forceTwo, crouch: 5.5, lean: 2, fx: 15, fy: -25 + pitch * 5, bx: 7, by: -23, sa: pitch - 0.08, ffx: 11, fbx: -9 }],
+        [0.64, { ...READY_POSE, two: forceTwo, crouch: 6.5, lean: -4, fx: 6, fy: -27 + pitch * 4, bx: 3, by: -24, sa: pitch - 0.45, ffx: 10, fbx: -10 }],
+        [1.0, { ...READY_POSE, two: forceTwo, crouch: 3, lean: 1, fx: 13, fy: -22 + pitch * 5, bx: 6, by: -21, sa: pitch, ffx: 8, fbx: -7 }],
+      ];
+      break;
     case "flurry_1":
       track = [
         [0, { ...READY_POSE, crouch: 5, lean: 3, fx: 21, fy: -29 + pitch * 5, sa: -0.45 + pitch, bx: 4, by: -23, sb: -1.1, ffx: 11, fbx: -9, armsFront: true }],
@@ -638,17 +724,68 @@ function buildPoseForState(
     const aimedRanged =
       weaponName === "pistol" || weaponName === "launcher" || weaponName === "rail_cannon";
     const isStaff = weaponName === "staff" || weaponName === "astral_staff";
+    // Distinct class-specific charge silhouettes!
+    if (!isBare && classId === "prism_knight") {
+      // Prism Knight: Heroic High Overhead Two-Handed Paladin Raise (totally distinct from Tinker!)
+      return {
+        ...base,
+        two: true,
+        crouch: deep ? 3.5 : 2.2,
+        y: deep ? -1.5 : 0,
+        lean: deep ? -3.5 : -2,
+        fx: deep ? 1 : 3,
+        fy: deep ? -42 : -37,
+        bx: 5,
+        by: deep ? -38 : -34,
+        sa: deep ? -2.35 : -2.05,
+        ffx: deep ? 9 : 7,
+        fbx: deep ? -8 : -6,
+      };
+    }
+    if (!isBare && isStaff) {
+      // Chroma Mage: Floating Skyward Staff Channeling
+      return {
+        ...base,
+        crouch: deep ? 1.5 : 2.5,
+        y: deep ? -2.5 : -1,
+        lean: deep ? -2.5 : -1.5,
+        fx: 10,
+        fy: deep ? -35 : -31,
+        bx: -5,
+        by: deep ? -26 : -23,
+        sa: -1.55 + pitch * 0.35,
+        ffx: 6,
+        fbx: -6,
+      };
+    }
+    if (!isBare && classId === "bit_rogue") {
+      // Bit Rogue: Low Shadow Assassin Crouch with Twin Blades Coiled
+      return {
+        ...base,
+        crouch: deep ? 7.2 : 5.8,
+        lean: deep ? 5.5 : 4,
+        fx: deep ? -8 : -6,
+        fy: -15,
+        bx: deep ? 11 : 9,
+        by: -17,
+        sa: -2.65,
+        sb: 0.45,
+        ffx: 10,
+        fbx: -8,
+      };
+    }
+    // Pixel Tinker (Aimed Railgun Brace) & Bare-handed
     return {
       ...base,
       crouch: deep ? 5.5 : 4,
-      lean: deep ? -4.5 : -3.5,
-      fx: isBare ? (deep ? -8 : -7) : aimedRanged ? 11 : deep ? -9 : -8,
-      fy: aimedRanged ? -21 + pitch * 5 : deep ? -21 : -20,
+      lean: aimedRanged ? (deep ? 2 : 1) : deep ? -4.5 : -3.5,
+      fx: isBare ? (deep ? -8 : -7) : aimedRanged ? 13 : deep ? -9 : -8,
+      fy: aimedRanged ? -22 + pitch * 5 : deep ? -21 : -20,
       bx: deep ? 5 : 6,
       by: -18,
-      sa: aimedRanged ? pitch : isStaff ? -1.6 + pitch * 0.5 : deep ? -2.45 : -2.2,
-      ffx: deep ? 6 : 5,
-      fbx: deep ? -5 : -4,
+      sa: aimedRanged ? pitch : deep ? -2.45 : -2.2,
+      ffx: deep ? 9 : 7,
+      fbx: deep ? -7 : -6,
       armsFront: isBare,
     };
   }
