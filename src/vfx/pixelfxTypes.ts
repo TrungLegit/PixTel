@@ -62,6 +62,11 @@ export interface PixelfxPosedTheme {
     | "assassin_hood"
     | "tinker_goggles"
     | "halo_crown"
+    | "gear_hood"
+    | "gear_visor"
+    | "gear_crest"
+    | "gear_crown"
+    | "gear_halo"
     | "dragon_helm"
     | "royal_crown"
     | "antler_crest";
@@ -73,6 +78,8 @@ export interface PixelfxPosedTheme {
     | "prism_wings"
     | "warden_roots"
     | "amber_thrusters";
+  armorShape?: "tunic" | "mail" | "plate" | "aegis" | "mantle" | "leather";
+  bootsShape?: "greaves" | "treads" | "void_step" | "strider";
   shielded?: boolean;
   shell?: number[];
   core?: number[];
@@ -86,6 +93,8 @@ export interface PixelfxPosedTheme {
   seam?: number;
   mark?: number;
   eye?: number;
+  helmetAccent?: number;
+  armorAccent?: number;
   weaponColors?: Record<string, number>;
 }
 

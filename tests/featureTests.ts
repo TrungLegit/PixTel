@@ -44,6 +44,7 @@ import {
   getClassShowcaseEquipment,
   getOrBakePixelfxHero,
   getPixelfxHeroCompiled,
+  resolveHeroGearShape,
 } from "../src/graphics/pixelfxHeroModels";
 import { CombatSystem, type CombatContext } from "../src/systems/combat";
 import { ELEMENT_DISPLAY, ForgeSystem } from "../src/systems/forgeSystem";
@@ -1092,6 +1093,23 @@ runTest("Hardcore RPG: Bare-Handed Start, Skill Gating, Class Locks, Matrix Forg
 // 8. PIXELFX HERO MODELS, EQUIP BEST, SELECTIVE QUICK SELL, 25 QUESTS & BALANCE
 // ============================================================================
 runTest("Pixelfx Hero Models, Equip Best, Selective Quick Sell, 25 Main+Side Quests & Rebalanced Combat", () => {
+  assert.equal(
+    resolveHeroGearShape("helmet", ITEMS.hlm_quartz_visor.visualStyle?.shape),
+    "visor",
+    "Helmet silhouette follows its visual shape"
+  );
+  assert.equal(
+    resolveHeroGearShape("boots", ITEMS.bts_amber_treads.visualStyle?.shape),
+    "treads",
+    "Boot silhouette follows its visual shape"
+  );
+  assert.equal(
+    resolveHeroGearShape("accessory", ITEMS.acc_wind_feather.visualStyle?.shape),
+    "ring_orb",
+    "Accessory renderer receives its visual shape"
+  );
+  assert.equal(resolveHeroGearShape("helmet", "aegis"), undefined, "Unrelated gear shapes do not leak across slots");
+
   // 1. All 4 pixelfx 3D-rigged class models render crisp non-empty silhouettes & gear diffs
   for (const c of CLASSES) {
     const compiled = getPixelfxHeroCompiled(c.id, 0);

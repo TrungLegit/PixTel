@@ -45,6 +45,28 @@
 
 ## Nhật Ký Cập Nhật (Newest First)
 
+### [2026-11-26 07:35 UTC] — GitHub Copilot — Hợp nhất `main` mới nhất và xử lý xung đột
+- **Commit / Branch:** Merge `origin/main` vào `feat/vietnamese-pixel-game-font`
+- **Giai đoạn / Version:** `PIXTEL v3.2` — Merge & Paper-Doll Visuals
+- **Đã làm (Done):**
+  - Hợp nhất các cập nhật mới nhất từ `main`, giữ lại lịch sử và các mục nhật ký của cả hai nhánh.
+  - Kết hợp animation/weapon/gear mới của `main` với ánh xạ hình dáng trang bị, palette và dư ảnh dash; giữ đúng aim hướng ngược của clone khi tấn công.
+- **File chính đã sửa / thêm:** `DEV_LOG.md`, `.brain/`, `src/game.ts`, `src/graphics/pixelfxHeroModels.ts`, `src/vfx/pixelfx/core/rig.js`, `src/vfx/pixelfxTypes.ts`
+- **Kiểm tra (Verified):** `npm run build` (pass; cảnh báo bundle JS > 500 kB), `npm run test` (18/18 suites pass).
+- **Lưu ý / Handoff (Breaking changes / Đang dở):** Không có; không thay đổi cân bằng hoặc schema lưu.
+- **Gợi ý bước tiếp theo (Next Steps):** Tiếp tục review PR và kiểm tra trực quan các bộ trang bị trong gameplay.
+
+### [2026-11-26 06:54 UTC] — GitHub Copilot — Đồng bộ hình dáng trang bị & dư ảnh Dash
+- **Commit / Branch:** `feat/vietnamese-pixel-game-font`
+- **Giai đoạn / Version:** `PIXTEL v2.6+` — Paper-Doll & Combat VFX Polish
+- **Đã làm (Done):**
+  - Ánh xạ `visualStyle.shape` của mũ, giáp, giày và phụ kiện vào rig/palette nhân vật; thêm các hình mũ, vai giáp, giày và icon phụ kiện pixel có viền rõ. Renderer tiếp tục dùng class và loadout hiện tại của người chơi.
+  - Thêm một bóng dư ảnh nhân vật theo hướng Dash bằng sprite đã cache, giữ Canvas pixel-sharp; tái sử dụng VFX manager và hook combat hiện có, không đổi damage/cooldown/drop/AI.
+- **File chính đã sửa / thêm:** `src/graphics/pixelfxHeroModels.ts`, `src/graphics/paperDoll.ts`, `src/vfx/pixelfx/core/rig.js`, `src/vfx/pixelfxTypes.ts`, `src/game.ts`, `tests/featureTests.ts`
+- **Kiểm tra (Verified):** `npm run build`, `npm run test` (11/11 feature suites after syncing the latest main changes), `git diff --check`.
+- **Lưu ý / Handoff (Breaking changes / Đang dở):** Không có thay đổi schema trang bị hoặc cân bằng. VFX combo/[E]/[Q]/hitstop tiếp tục dùng pipeline hiện có.
+- **Gợi ý bước tiếp theo (Next Steps):** Push nhánh đã đồng bộ và mở draft PR cho phần render/VFX.
+
 ### [2026-11-26 11:28] — Antigravity — Xuất Bản Preview Tổng Hợp `PIXTEL v3.2` Vào `preview for devs/` & Push Lên GitHub
 - **Commit / Branch:** `main` (commit toàn bộ cụm `PIXTEL v3.2` + `preview for devs/`)
 - **Giai đoạn / Version:** `PIXTEL v3.2` — Preview Publication & GitHub Push

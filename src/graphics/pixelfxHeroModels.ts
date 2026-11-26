@@ -1,7 +1,13 @@
 import { CLASSES } from "../data/classes";
 import { ITEMS, RARITY_INFO } from "../data/items";
 import { ELEMENT_META, normalizeElement } from "../data/elements";
-import type { ClassId, EquipSlot, ItemDef, ItemInstance } from "../data/types";
+import type {
+  ClassId,
+  EquipSlot,
+  EquipVisualShape,
+  ItemDef,
+  ItemInstance,
+} from "../data/types";
 import {
   clearFrame,
   createFrame,
@@ -111,6 +117,7 @@ export interface PixelfxHeroDrawOptions {
   attackKind?: HeroAttackKind;
   attackProgress?: number;
   aimAngle?: number;
+  dashAngle?: number;
   shieldGuard?: boolean;
   hitFlash?: boolean;
   bleached?: boolean;
@@ -157,6 +164,67 @@ const INK_DEFAULT = hex("#0e0c18") >>> 0;
 const SEAM_DEFAULT = hex("#222436") >>> 0;
 const SKIN_RAMP = ["#ffe0c4", "#f0b98e", "#c98b63", "#8f5940"].map((c) => hex(c) >>> 0);
 const NOVICE_BOOTS_RAMP = ["#9c7352", "#785338", "#573924", "#362214"].map((c) => hex(c) >>> 0);
+const HERO_HEADGEAR_BY_SHAPE: Partial<
+  Record<EquipVisualShape, NonNullable<PixelfxPosedTheme["headgear"]>>
+> = {
+  hood: "gear_hood",
+  visor: "gear_visor",
+  crest: "gear_crest",
+  crown: "gear_crown",
+  halo: "gear_halo",
+};
+const ACCESSORY_PIXELS: Record<"ring_orb" | "chip_orb" | "halo_orb", string[]> = {
+  ring_orb: ["..xxx..", ".xpppx.", "xp...px", "xp...px", "xp...px", ".xpppx.", "..xxx.."],
+  halo_orb: ["..xxx..", ".xpppx.", "xp...px", "xp.a.px", "xp...px", ".xpppx.", "..xxx.."],
+  chip_orb: ["xxxxxxx", "xpppppx", "xppappx", "xpapapx", "xppappx", "xpppppx", "xxxxxxx"],
+};
+
+type HeroGearShapeBySlot = {
+  weapon: Extract<
+    EquipVisualShape,
+    "blade" | "greatsword" | "halberd" | "staff" | "daggers" | "carbine" | "sovereign"
+  >;
+  helmet: Extract<EquipVisualShape, "hood" | "visor" | "crest" | "crown" | "halo">;
+  armor: Extract<EquipVisualShape, "tunic" | "mail" | "plate" | "aegis" | "mantle" | "leather">;
+  boots: Extract<EquipVisualShape, "greaves" | "treads" | "void_step" | "strider">;
+  accessory: Extract<EquipVisualShape, "ring_orb" | "chip_orb" | "halo_orb">;
+};
+
+const HERO_GEAR_SHAPES: { [K in EquipSlot]: readonly HeroGearShapeBySlot[K][] } = {
+  weapon: ["blade", "greatsword", "halberd", "staff", "daggers", "carbine", "sovereign"],
+  helmet: ["hood", "visor", "crest", "crown", "halo"],
+  armor: ["tunic", "mail", "plate", "aegis", "mantle", "leather"],
+  boots: ["greaves", "treads", "void_step", "strider"],
+  accessory: ["ring_orb", "chip_orb", "halo_orb"],
+};
+
+export function resolveHeroGearShape(
+  slot: "helmet",
+  shape?: EquipVisualShape
+): HeroGearShapeBySlot["helmet"] | undefined;
+export function resolveHeroGearShape(
+  slot: "armor",
+  shape?: EquipVisualShape
+): HeroGearShapeBySlot["armor"] | undefined;
+export function resolveHeroGearShape(
+  slot: "boots",
+  shape?: EquipVisualShape
+): HeroGearShapeBySlot["boots"] | undefined;
+export function resolveHeroGearShape(
+  slot: "accessory",
+  shape?: EquipVisualShape
+): HeroGearShapeBySlot["accessory"] | undefined;
+export function resolveHeroGearShape(
+  slot: "weapon",
+  shape?: EquipVisualShape
+): HeroGearShapeBySlot["weapon"] | undefined;
+export function resolveHeroGearShape<K extends EquipSlot>(
+  slot: K,
+  shape?: EquipVisualShape
+): HeroGearShapeBySlot[K] | undefined {
+  const allowed: readonly EquipVisualShape[] = HERO_GEAR_SHAPES[slot];
+  return shape && allowed.includes(shape) ? (shape as HeroGearShapeBySlot[K]) : undefined;
+}
 
 function rampFromHex(baseHex: string, darkHex = "#111322", hiHex = "#ffffff"): number[] {
   const b = hex(baseHex) >>> 0;
@@ -471,7 +539,6 @@ function buildAttackPose(
       ];
       break;
     case "overhead_slam":
-      // Heroic Knight Hold Charge & Heavy Greatsword/Hammer Leap-Slam (100% distinct from Tinker's horizontal beam!)
       forceTwo = hasWeapon;
       track = [
         [0, { ...READY_POSE, two: forceTwo, crouch: 1, y: -3, lean: -3, fx: -1, fy: -42, sa: -2.45, ffx: 7, fbx: -7 }],
@@ -482,7 +549,6 @@ function buildAttackPose(
       ];
       break;
     case "halberd_sweep":
-      // Extended two-handed sweeping arc for Halberds, Greataxes & Void Scythe
       forceTwo = hasWeapon;
       track = [
         [0, { ...READY_POSE, two: forceTwo, crouch: 4, lean: -4, yaw: 0.55, fx: -7, fy: -24, sa: -2.55, ffx: 9, fbx: -9 }],
@@ -492,7 +558,6 @@ function buildAttackPose(
       ];
       break;
     case "iaido_draw":
-      // Lightning quickdraw katana cut (crouched draw -> flashing horizontal cut)
       track = [
         [0, { ...READY_POSE, crouch: 7, lean: 4, fx: -4, fy: -16, sa: -2.85, bx: 5, by: -17, ffx: 10, fbx: -9 }],
         [0.18, { ...READY_POSE, crouch: 5, lean: 8, fx: 24, fy: -23 + pitch * 5, sa: -0.05 + pitch * 0.4, bx: -10, by: -22, ffx: 15, fbx: -11, toeB: true }],
@@ -501,7 +566,6 @@ function buildAttackPose(
       ];
       break;
     case "dual_cross_slash":
-      // Leaping X-scissor twin dagger/claw cross slash
       track = [
         [0, { ...READY_POSE, crouch: 6, lean: 2, fx: -4, fy: -26, sa: -2.2, bx: -4, by: -16, sb: 1.8, ffx: 9, fbx: -8, armsFront: true }],
         [0.24, { ...READY_POSE, crouch: 1, y: -3, lean: 7, fx: 22, fy: -20 + pitch * 5, sa: 0.45 + pitch, bx: 21, by: -30 + pitch * 5, sb: -0.65 + pitch, ffx: 13, fbx: -10, armsFront: true }],
@@ -510,7 +574,6 @@ function buildAttackPose(
       ];
       break;
     case "chakram_throw":
-      // Athletic side-arm spinning chakram/boomerang throw
       track = [
         [0, { ...READY_POSE, crouch: 4, lean: -3, yaw: 0.65, fx: -8, fy: -23, sa: -2.6, bx: 10, by: -22, ffx: 9, fbx: -9 }],
         [0.22, { ...READY_POSE, crouch: 4, lean: 6, yaw: -0.55, fx: 24, fy: -24 + pitch * 6, sa: pitch, bx: -9, by: -21, ffx: 14, fbx: -10, toeB: true }],
@@ -519,7 +582,6 @@ function buildAttackPose(
       ];
       break;
     case "orb_levitate":
-      // Floating arcane orb / celestial staff levitation cast
       forceTwo = weaponName === "staff" || weaponName === "astral_staff";
       track = [
         [0, { ...READY_POSE, two: forceTwo, crouch: 3, y: 0, lean: 0, fx: 8, fy: -24, sa: -1.4, ffx: 8, fbx: -7 }],
@@ -529,7 +591,6 @@ function buildAttackPose(
       ];
       break;
     case "staff_whirl":
-      // Sweeping fire/phoenix staff baton twirl
       track = [
         [0, { ...READY_POSE, crouch: 3, lean: -2, yaw: 0.5, fx: -5, fy: -26, sa: -2.2, bx: 7, by: -21, ffx: 8, fbx: -8 }],
         [0.26, { ...READY_POSE, crouch: 2, y: -2, lean: 4, yaw: -0.5, fx: 20, fy: -28 + pitch * 5, sa: -0.25 + pitch * 0.5, bx: -7, by: -23, ffx: 12, fbx: -9 }],
@@ -538,7 +599,6 @@ function buildAttackPose(
       ];
       break;
     case "recoil_barrage":
-      // Heavy twin-hand shoulder cannon / rocket / tesla recoil barrage
       forceTwo = weaponName === "launcher" || weaponName === "rail_cannon";
       track = [
         [0, { ...READY_POSE, two: forceTwo, crouch: 5, lean: 3, fx: 16, fy: -25 + pitch * 5, bx: 8, by: -23, sa: pitch, ffx: 11, fbx: -9 }],
@@ -604,7 +664,7 @@ function buildAttackPose(
       break;
     case "cast_3":
     case "cast_heavy":
-      forceTwo = weaponName === "staff";
+      forceTwo = weaponName === "staff" || weaponName === "astral_staff";
       track = [
         [0, { ...READY_POSE, two: forceTwo, crouch: 2, lean: -2, fx: 8, fy: -34, sa: -1.4, ffx: 8, fbx: -7 }],
         [0.28, { ...READY_POSE, two: forceTwo, crouch: 4, lean: 6, fx: 19, fy: -23 + pitch * 6, sa: -0.08 + pitch * 0.7, bx: 10, by: -22, ffx: 11, fbx: -9 }],
@@ -630,7 +690,7 @@ function buildAttackPose(
       break;
     case "shoot_heavy":
     case "beam":
-      forceTwo = weaponName === "launcher";
+      forceTwo = weaponName === "launcher" || weaponName === "rail_cannon";
       track = [
         [0, { ...READY_POSE, two: forceTwo, crouch: 4.5, lean: 2, fx: 16, fy: -23 + pitch * 6, bx: 8, by: -21, sa: pitch, ffx: 10, fbx: -8 }],
         [0.24, { ...READY_POSE, two: forceTwo, crouch: 5.5, lean: -3, fx: 8, fy: -25 + pitch * 4, bx: 4, by: -22, sa: pitch - 0.42, ffx: 10, fbx: -9 }],
@@ -774,9 +834,7 @@ function buildPoseForState(
     const aimedRanged =
       weaponName === "pistol" || weaponName === "launcher" || weaponName === "rail_cannon";
     const isStaff = weaponName === "staff" || weaponName === "astral_staff";
-    // Distinct class-specific charge silhouettes!
     if (!isBare && classId === "prism_knight") {
-      // Prism Knight: Heroic High Overhead Two-Handed Paladin Raise (totally distinct from Tinker!)
       return {
         ...base,
         two: true,
@@ -793,7 +851,6 @@ function buildPoseForState(
       };
     }
     if (!isBare && isStaff) {
-      // Chroma Mage: Floating Skyward Staff Channeling
       return {
         ...base,
         crouch: deep ? 1.5 : 2.5,
@@ -809,7 +866,6 @@ function buildPoseForState(
       };
     }
     if (!isBare && classId === "bit_rogue") {
-      // Bit Rogue: Low Shadow Assassin Crouch with Twin Blades Coiled
       return {
         ...base,
         crouch: deep ? 7.2 : 5.8,
@@ -824,7 +880,6 @@ function buildPoseForState(
         fbx: -8,
       };
     }
-    // Pixel Tinker (Aimed Railgun Brace) & Bare-handed
     return {
       ...base,
       crouch: deep ? 5.5 : 4,
@@ -877,8 +932,13 @@ function buildLoadoutKey(
   const hDef = equipment.helmet ? ITEMS[equipment.helmet.defId] : undefined;
   const aDef = equipment.armor ? ITEMS[equipment.armor.defId] : undefined;
   const bDef = equipment.boots ? ITEMS[equipment.boots.defId] : undefined;
+  const accDef = equipment.accessory ? ITEMS[equipment.accessory.defId] : undefined;
   const wInst = equipment.weapon;
   const wDef = wInst ? ITEMS[wInst.defId] : undefined;
+  const helmetShape = resolveHeroGearShape("helmet", hDef?.visualStyle?.shape);
+  const armorShape = resolveHeroGearShape("armor", aDef?.visualStyle?.shape);
+  const bootsShape = resolveHeroGearShape("boots", bDef?.visualStyle?.shape);
+  const accessoryShape = resolveHeroGearShape("accessory", accDef?.visualStyle?.shape);
 
   const isBareHanded = !wDef;
   const isUnarmored = !aDef;
@@ -887,11 +947,14 @@ function buildLoadoutKey(
   const shellRamp = aDef
     ? rampFromHex(aDef.visualStyle?.primary ?? aDef.visualColor ?? RARITY_INFO[aDef.rarity].color)
     : preset.noviceTunic;
-  const coreRamp = aDef ? preset.armorCore : preset.noviceCore;
+  const coreRamp = aDef
+    ? rampFromHex(aDef.accentColor ?? aDef.visualColor ?? RARITY_INFO[aDef.rarity].color)
+    : preset.noviceCore;
 
   let headgear: PixelfxPosedTheme["headgear"] = "hair";
   let headRamp = preset.hairRamp;
   if (hDef) {
+    const mappedHeadgear = helmetShape ? HERO_HEADGEAR_BY_SHAPE[helmetShape] : undefined;
     if (hDef.id === "hlm_prism_halo" || hDef.id === "sea_hlm_eclipse_halo") {
       headgear = "halo_crown";
       headRamp = preset.hairRamp;
@@ -917,6 +980,11 @@ function buildLoadoutKey(
     } else if (hDef.id === "hlm_meadow_crest" || hDef.id === "sea_hlm_spring_crown") {
       headgear = "antler_crest";
       headRamp = rampFromHex(hDef.visualStyle?.primary ?? hDef.visualColor ?? "#44ee88");
+    } else if (mappedHeadgear) {
+      headgear = mappedHeadgear;
+      headRamp = rampFromHex(
+        hDef.visualStyle?.primary ?? hDef.visualColor ?? RARITY_INFO[hDef.rarity].color
+      );
     } else if (hDef.rarity === "legendary") {
       headgear = "halo_crown";
       headRamp = preset.hairRamp;
@@ -932,8 +1000,7 @@ function buildLoadoutKey(
       aDef.id === "ar_aegis_mantle" ||
       aDef.id === "hid_craft_chroma_aegis" ||
       aDef.id === "arm_prism_mantle" ||
-      aDef.id === "exo_armor_void_shroud" ||
-      aDef.rarity === "legendary"
+      aDef.id === "exo_armor_void_shroud"
     ) {
       backAccessory = "prism_wings";
     } else if (aDef.id === "ar_briar_cloak" || aDef.id === "hid_boss_warden_mantle") {
@@ -942,6 +1009,10 @@ function buildLoadoutKey(
       backAccessory = "cape";
     } else if (aDef.id === "arm_amber_aegis" || aDef.id === "exo_armor_magma_core") {
       backAccessory = "amber_thrusters";
+    } else if (armorShape === "mantle") {
+      backAccessory = "cape";
+    } else if (aDef.rarity === "legendary") {
+      backAccessory = "prism_wings";
     }
   }
   const cloakRamp = aDef
@@ -951,6 +1022,9 @@ function buildLoadoutKey(
   const bootsRamp = bDef
     ? rampFromHex(bDef.visualStyle?.primary ?? bDef.visualColor ?? RARITY_INFO[bDef.rarity].color)
     : NOVICE_BOOTS_RAMP;
+  const armorAccent = aDef
+    ? hex(aDef.accentColor ?? RARITY_INFO[aDef.rarity].color) >>> 0
+    : hex(preset.markHex) >>> 0;
 
   const markCol =
     wInst && wInst.enhanceLevel >= 5 && wInst.infusedElement
@@ -968,6 +1042,8 @@ function buildLoadoutKey(
     bareHands: isBareHanded,
     headgear,
     backAccessory,
+    armorShape,
+    bootsShape,
     shielded,
     shell: shellRamp,
     core: coreRamp,
@@ -981,6 +1057,10 @@ function buildLoadoutKey(
     seam: SEAM_DEFAULT,
     mark: markCol,
     eye: eyeCol,
+    helmetAccent: hDef
+      ? hex(hDef.accentColor ?? RARITY_INFO[hDef.rarity].color) >>> 0
+      : hex(preset.markHex) >>> 0,
+    armorAccent,
     weaponColors: wRig.weaponColors,
   };
 
@@ -1254,6 +1334,7 @@ export function drawPixelfxHero(ctx: CanvasRenderingContext2D, opts: PixelfxHero
     attackKind,
     attackProgress,
     aimAngle,
+    dashAngle,
     chargePct,
     shieldGuard,
     hitFlash = false,
@@ -1280,7 +1361,6 @@ export function drawPixelfxHero(ctx: CanvasRenderingContext2D, opts: PixelfxHero
   const dw = Math.round(baked.w * drawScale);
   const dh = Math.round(baked.h * drawScale);
 
-  // Z-Order Layer 0: Dual-Buffer pixelfx 3-Piece Set Bonus Aura (Back layer behind cloak/body)
   const setAuraTheme = setAuraColor && !hitFlash && !bleached ? resolveSetAuraTheme(setAuraColor) : null;
   if (setAuraTheme) {
     drawSetAuraLayer(ctx, setAuraTheme, "back", x, y, rigScale, drawScale, time);
@@ -1291,6 +1371,15 @@ export function drawPixelfxHero(ctx: CanvasRenderingContext2D, opts: PixelfxHero
     : bleached
       ? baked.bleachedCanvas
       : baked.colorCanvas;
+
+  if (animState === "dash" && dashAngle !== undefined && !hitFlash) {
+    const trailX = Math.round(Math.cos(dashAngle) * 5 * drawScale);
+    const trailY = Math.round(Math.sin(dashAngle) * 5 * drawScale);
+    ctx.save();
+    ctx.globalAlpha = 0.28;
+    ctx.drawImage(baseImg, 0, 0, baked.w, baked.h, dx - trailX, dy - trailY, dw, dh);
+    ctx.restore();
+  }
 
   ctx.drawImage(baseImg, 0, 0, baked.w, baked.h, dx, dy, dw, dh);
 
@@ -1305,50 +1394,52 @@ export function drawPixelfxHero(ctx: CanvasRenderingContext2D, opts: PixelfxHero
     drawSetAuraLayer(ctx, setAuraTheme, "front", x, y, rigScale, drawScale, time);
   }
 
-  // Orbiting Accessory Pixel Relic (Grimoire / Prism Sigil / Spectrum Disc / Ring / Pix-Chip)
+  // Orbiting Accessory Pixel Rune (Ring / Amulet / Grimoire / Pix-Chip)
   const accInst = equipment.accessory;
   const accDef = accInst ? ITEMS[accInst.defId] : undefined;
   if (accDef && !hitFlash) {
-    const orbitR = 11.5 * rigScale * drawScale;
+    const orbitR = 11 * rigScale * drawScale;
     const ox = Math.round(x + Math.cos(time * 3.4) * orbitR);
     const oy = Math.round(y - 18 * rigScale * drawScale + Math.sin(time * 5.2) * (2.5 * drawScale));
-    const col = bleached ? "#b8c0d0" : accDef.accentColor ?? RARITY_INFO[accDef.rarity].color;
-    const pri = bleached ? "#9aa3b2" : accDef.visualColor ?? col;
-    const u = Math.max(1, Math.round(drawScale));
-    if (accDef.iconKind === "book") {
-      // Floating open pixel grimoire
+    const col = bleached
+      ? "#b8c0d0"
+      : accDef.visualStyle?.primary ?? accDef.accentColor ?? RARITY_INFO[accDef.rarity].color;
+    const accent = bleached ? "#e4e9f2" : accDef.visualStyle?.accent ?? "#ffffff";
+    const unit = Math.max(1, Math.round(drawScale));
+    const shape = resolveHeroGearShape("accessory", accDef.visualStyle?.shape);
+    if (!shape && accDef.iconKind === "book") {
       ctx.fillStyle = "#100c18";
-      ctx.fillRect(ox - u * 3, oy - u * 2, u * 6, u * 4);
-      ctx.fillStyle = pri;
-      ctx.fillRect(ox - u * 2, oy - u, u * 4, u * 2);
+      ctx.fillRect(ox - unit * 3, oy - unit * 2, unit * 6, unit * 4);
+      ctx.fillStyle = accDef.visualStyle?.primary ?? col;
+      ctx.fillRect(ox - unit * 2, oy - unit, unit * 4, unit * 2);
       ctx.fillStyle = "#ffffff";
-      ctx.fillRect(ox - u * 2, oy - u, u * 2, u);
+      ctx.fillRect(ox - unit * 2, oy - unit, unit * 2, unit);
       ctx.fillStyle = col;
-      ctx.fillRect(ox + u * 0, oy - u, u * 2, u);
-    } else if (accDef.id === "hid_craft_siphon_sigil" || accDef.iconKind === "disc") {
-      // Rotating diamond prism sigil + twin counter-orbit spark
+      ctx.fillRect(ox, oy - unit, unit * 2, unit);
+    } else if (!shape && (accDef.id === "hid_craft_siphon_sigil" || accDef.iconKind === "disc")) {
       ctx.fillStyle = "#100c18";
-      ctx.fillRect(ox - u * 2, oy - u * 2, u * 5, u * 5);
-      ctx.fillStyle = pri;
-      ctx.fillRect(ox - u, oy - u, u * 3, u * 3);
+      ctx.fillRect(ox - unit * 2, oy - unit * 2, unit * 5, unit * 5);
+      ctx.fillStyle = accDef.visualStyle?.primary ?? col;
+      ctx.fillRect(ox - unit, oy - unit, unit * 3, unit * 3);
       ctx.fillStyle = "#ffffff";
-      ctx.fillRect(ox, oy, u, u);
+      ctx.fillRect(ox, oy, unit, unit);
       const ox2 = Math.round(x - Math.cos(time * 3.4) * orbitR);
       const oy2 = Math.round(y - 16 * rigScale * drawScale - Math.sin(time * 5.2) * (2.5 * drawScale));
       ctx.fillStyle = col;
-      ctx.fillRect(ox2, oy2, u * 2, u * 2);
+      ctx.fillRect(ox2, oy2, unit * 2, unit * 2);
     } else {
-      const sz = Math.max(2, Math.round(3 * drawScale));
-      ctx.fillStyle = "#100c18";
-      ctx.fillRect(ox - 1, oy - 1, sz + 2, sz + 2);
-      ctx.fillStyle = col;
-      ctx.fillRect(ox, oy, sz, sz);
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(ox, oy, u, u);
+      const pattern = ACCESSORY_PIXELS[shape ?? "chip_orb"];
+      for (let py = 0; py < pattern.length; py++) {
+        for (let px = 0; px < pattern[py].length; px++) {
+          const cell = pattern[py][px];
+          if (cell === ".") continue;
+          ctx.fillStyle = cell === "x" ? "#100c18" : cell === "a" ? accent : col;
+          ctx.fillRect(ox + (px - 3) * unit, oy + (py - 3) * unit, unit, unit);
+        }
+      }
     }
   }
 
-  // Special Legendary Boots glowing heel trail (Null Treads / Void Walkers)
   const bootsDef = equipment.boots ? ITEMS[equipment.boots.defId] : undefined;
   if (
     bootsDef &&
@@ -1356,14 +1447,14 @@ export function drawPixelfxHero(ctx: CanvasRenderingContext2D, opts: PixelfxHero
     !hitFlash &&
     !bleached
   ) {
-    const u = Math.max(1, Math.round(drawScale));
+    const unit = Math.max(1, Math.round(drawScale));
     const phase = Math.floor(time * 12) % 3;
     const bx = Math.round(x - facing * (4 + phase * 2) * drawScale);
     const by = Math.round(y - 2 * drawScale);
     ctx.fillStyle = bootsDef.accentColor ?? "#5ef2ff";
-    ctx.fillRect(bx, by, u * 2, u);
+    ctx.fillRect(bx, by, unit * 2, unit);
     ctx.fillStyle = bootsDef.visualColor ?? "#ff9922";
-    ctx.fillRect(bx - facing * u * 2, by - u, u, u);
+    ctx.fillRect(bx - facing * unit * 2, by - unit, unit, unit);
   }
 
   // Active Buff / Aegis Energy Halo

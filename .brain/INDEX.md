@@ -1,89 +1,82 @@
 # Project Brain Index
-*Generated: 2026-11-26T04:33:45.472595+00:00*
+*Generated: 2026-11-26T07:35:49.890767+00:00*
 
 ## Description
 > **Thế giới mở 16-Bit Action RPG trên trình duyệt (PC · Mobile PWA · Co-op 2–4 Người)** — Khởi đầu tay không tại **Thị Trấn Khởi Nguyên**, săn trang bị **khóa chặt theo Class**, luyện **Ma Trận Luyện
 
 ## Main Modules
-- **src/** (184 files)
+- **src/** (188 files)
 - **.agents/** (38 files)
 - **(root)/** (14 files)
 - **preview for devs/** (7 files)
 - **public/** (4 files)
 
 ## Central Nodes
-- `file:src/systems/combat.ts` (file, 52 links): Overhauled Bit Rogue [Q] Phantom Clone cast burst (spawn/poof + sonic-wave + neon spin-slash + haste) and synchronized opposite-flank holographic cyan mirror slashes during cloneTime.
-- `file:src/data/worldConfig.ts` (file, 29 links): Added STORAGE_CHEST_POS ({tx:77, ty:82}) right beside Origin Town Spawn Waypoint.
-- `file:src/ui/ClassSelect.ts` (file, 21 links): Overhauled Bit Rogue SKILL [Q] PREVIEW with shadow-split burst, 3-clone rapid blink-swapping hyper-speed twin slashes (PAL.neon + PAL.cyber), speed lines, and golden crit-hit sparks.
-- `file:src/data/classes.ts` (file, 18 links): Updated previewFx to fixed [Q] skills and updated skills.skill copy to reflect weapon-specific [E] skills.
-- `file:src/world/spawner.ts` (file, 17 links): Boss chests guarantee matching Biome Gacha Key drops; respawned mobs animate in with spawnAnimTime.
-- `file:src/world/interactables.ts` (file, 14 links): Added Town Spawn Personal Stash Chest (stash_chest) [F] interactable at STORAGE_CHEST_POS.
-- `file:src/ui/TutorialModal.ts` (file, 13 links): Updated Class Handbook skill grid to clearly present LMB, Hold LMB, Fixed Skill [Q], and dynamic Weapon Skill [E].
-- `file:src/data/recipes.ts` (file, 13 links): Added core item recipes plus 2 strict isHidden recipes (rec_wp_starfall_blade, rec_ar_aegis_mantle).
-- `file:src/ui/QuestJournalModal.ts` (file, 12 links): Added 3rd Journal tab (Phim Cot Truyen) displaying unlock status and replay buttons for all 6 Story Cutscenes.
-- `file:src/data/quests.ts` (file, 12 links): Updated amber and ruins boss quest rewards to use amber_weapon and ruins_weapon class-specific rewards.
+- `file:src/game.ts` (file, 86 links): Supplies current dash direction to player and clone Paper-Doll render calls and uses reverse clone aim during attacks.
+- `file:src/graphics/pixelfxHeroModels.ts` (file, 27 links): Renders latest combat attack poses and weapon rigs with shape-driven equipment, named visuals, cached dash afterimage, and set-bonus aura.
+- `file:DEV_LOG.md` (file, 15 links): Newest-first development log records latest main merge while preserving the gear-rendering entry and prior history.
+- `file:src/vfx/pixelfxTypes.ts` (file, 15 links): Types Paper-Doll gear shapes and the merged named helmet and back-accessory silhouettes.
+- `file:src/ui/GachaModal.ts` (file, 11 links): const RARITY_RANK: Record<Rarity, number> = {
+- `file:src/ui/CutsceneModal.ts` (file, 10 links): STORY_CUTSCENE_BY_ID,
+- `file:src/systems/ItemEffectSystem.ts` (file, 9 links): export type PassiveDamageFn = (
+- `file:src/ui/HomeScreen.ts` (file, 9 links): const LAST_NAME_KEY = "pixtel_last_player_name";
+- `decision:20261125144603-selfhosted-vietnamese-pixel-ui` (decision, 9 links): Use the OFL-licensed Pixelify Sans variable font from a local npm package as the primary game-wide UI font, removing Google Fonts runtime requests to keep Vietnamese glyph rendering available offline.
+- `file:src/data/weaponSkills.ts` (file, 8 links): export interface WeaponSkillDef {
 
 ## Recent Decisions
-- **v3.2 Home Naming Flow, 6 pixelfx Story Cutscenes & Knight Overhead Slam** (`decision:20261126034634-v32-home-naming-flow`): Replaced Knight horizontal thrust charge (too similar to Tinker beam) with two-handed Paladin overhead raise + overhead_slam + PAL.holy/gold heavy-cleave + ground-slam. Boot now starts on Home Screen (Name -> Class Select -> Start -> Intro Cutscene) with 6 replayable Story Cutsce
-- **16 Core Items, Event-Driven ItemEffectSystem & 3-Column 16-Bit Inventory UI** (`decision:20261126023154-16-core-items-eventdriven`): Separated 16 core items, 6 materials, and 3-piece sets into src/types/item.ts, src/data/sets.ts, and src/data/items.ts; implemented event-driven combat passives and hidden forge unlock rules in ItemEffectSystem; upgraded InventoryModal to 3-column EQUIP/BAG/INFO 16-bit layout wit
-- **Team Rule: Always save, commit & push previews to preview for devs/** (`decision:20261125191722-team-rule-always-save`): Whenever the user requests a visual preview, save GitHub-native Markdown + verified PNGs in preview for devs/ (with ./assets/ relative links and newest-first preview for devs/README.md), update DEV_LOG.md & Project Brain, and automatically commit and push to origin/main so teamma
-- **Inventory QoL: Auto-Sell Low-Rarity Guards, 4-Tier Backpack Upgrades & Spawn Stash Chest** (`decision:20261125185843-inventory-qol-autosell-lowrarity`): Auto-Sell converts eligible unenhanced normal equipment straight to Gold on pickup while strictly protecting Hidden, Exotic dropOnly, Seasonal Gacha and +N enhanced gear; 4 purchasable Backpacks expand bagCapacity from 40 to 80; Personal Stash Chest at Origin Town Spawn ({tx:77,t
-- **PIXTEL v3.0 Weapon-Driven Skills, Exotic Drop-Only Gear & Seasonal Gacha Architecture** (`decision:20261125183922-pixtel-v30-weapondriven-skills`): Separated character combat into 1 Basic/Charge Attack (LMB), 1 Fixed Class Skill ([Q], always unlocked at 100% Overdrive) and 41 dynamic Weapon-Specific [E] skills; gated 16 skill-altering Exotics strictly to mob/boss drops; removed all 25 farm/waypoint chests leaving only 4 Boss
+- **Merge latest main with equipment rendering** (`decision:20261126073152-merge-latest-main-with`): Preserve main's named helmet, back-accessory, and boot visuals alongside shape-driven gear and dash echoes; combine clone reverse aim with the dash-angle render input.
+- **Render gear from equipment shapes and add dash echo** (`decision:20261126065126-render-gear-from-equipment`): Keep the existing selected-class rig, weapon mapping, and VFX manager; extend the Paper-Doll theme with equipment-shape mappings for helmet, armor, boots, and accessory silhouettes, and draw a single low-alpha cached-hero dash afterimage without changing combat timing or damage.
+- **Self-hosted Vietnamese pixel UI font** (`decision:20261125144603-selfhosted-vietnamese-pixel-ui`): Use the OFL-licensed Pixelify Sans variable font from a local npm package as the primary game-wide UI font, removing Google Fonts runtime requests to keep Vietnamese glyph rendering available offline.
+- **Resolve current main conflicts without dropping branch history** (`decision:20261125144411-resolve-current-main-conflicts`): Use a merge commit to retain both histories; preserve both DEV_LOG entries and let project-brain tooling compact the graph and regenerate its digest rather than hand-editing graph files.
+- **Block-pixel logo lettering** (`decision:20261125143734-blockpixel-logo-lettering`): Broaden the PIXTEL canvas wordmark into a chunky 7x7 bitmap alphabet inspired by the user's Vietnamese Minecraft font reference, while keeping custom glyphs and the current chroma crest.
 
 ## Stale Files (Need Re-reading)
-- `file:.brain/INDEX.md` (.brain/INDEX.md)
-- `file:.brain/edges.jsonl` (.brain/edges.jsonl)
-- `file:.brain/nodes.jsonl` (.brain/nodes.jsonl)
-- `file:DEV_LOG.md` (DEV_LOG.md)
-- `file:index.html` (index.html)
-- `file:preview for devs/README.md` (preview for devs/README.md)
-- `file:src/data/items.ts` (src/data/items.ts)
-- `file:src/game.ts` (src/game.ts)
-- `file:src/graphics/codixelAtlas.ts` (src/graphics/codixelAtlas.ts)
-- `file:src/graphics/itemIcons.ts` (src/graphics/itemIcons.ts)
-- `file:src/graphics/pixelfxHeroModels.ts` (src/graphics/pixelfxHeroModels.ts)
-- `file:src/main.ts` (src/main.ts)
-- `file:src/systems/ItemEffectSystem.ts` (src/systems/ItemEffectSystem.ts)
-- `file:src/ui/InventoryModal.ts` (src/ui/InventoryModal.ts)
-- `file:src/ui/ItemReviewTooltip.ts` (src/ui/ItemReviewTooltip.ts)
-- `file:src/vfx/uiRarityFx.ts` (src/vfx/uiRarityFx.ts)
-- `file:src/vfx/vfxManager.ts` (src/vfx/vfxManager.ts)
-- `file:style.css` (style.css)
-- `file:src/data/cutscenes.ts` (src/data/cutscenes.ts)
-- `file:src/ui/CutsceneModal.ts` (src/ui/CutsceneModal.ts)
-- `file:tests/featureTests.ts` (tests/featureTests.ts)
-- `file:src/data/types.ts` (src/data/types.ts)
-- `file:src/ui/DialogueModal.ts` (src/ui/DialogueModal.ts)
-- `file:src/ui/HUD.ts` (src/ui/HUD.ts)
-- `file:src/world/entities.ts` (src/world/entities.ts)
+- `file:.agents/skills/codixel/LICENSE` (.agents/skills/codixel/LICENSE)
+- `file:.agents/skills/codixel/SKILL.md` (.agents/skills/codixel/SKILL.md)
+- `file:.agents/skills/codixel/core/pixel.js` (.agents/skills/codixel/core/pixel.js)
 - `file:.agents/skills/codixel/package.json` (.agents/skills/codixel/package.json)
+- `file:.agents/skills/pixelfx/LICENSE` (.agents/skills/pixelfx/LICENSE)
 - `file:.agents/skills/pixelfx/SKILL.md` (.agents/skills/pixelfx/SKILL.md)
-- `file:.github/workflows/deploy-pages.yml` (.github/workflows/deploy-pages.yml)
+- `file:.agents/skills/pixelfx/references/AUTHORING.md` (.agents/skills/pixelfx/references/AUTHORING.md)
+- `file:.agents/skills/pixelfx/references/CATALOG.md` (.agents/skills/pixelfx/references/CATALOG.md)
+- `file:.agents/skills/pixelfx/scripts/act.mjs` (.agents/skills/pixelfx/scripts/act.mjs)
+- `file:.agents/skills/pixelfx/scripts/check.mjs` (.agents/skills/pixelfx/scripts/check.mjs)
+- `file:.agents/skills/pixelfx/scripts/compare.mjs` (.agents/skills/pixelfx/scripts/compare.mjs)
+- `file:.agents/skills/pixelfx/scripts/lib/fxlib.mjs` (.agents/skills/pixelfx/scripts/lib/fxlib.mjs)
+- `file:.agents/skills/pixelfx/scripts/lib/png.mjs` (.agents/skills/pixelfx/scripts/lib/png.mjs)
+- `file:.agents/skills/pixelfx/scripts/list.mjs` (.agents/skills/pixelfx/scripts/list.mjs)
+- `file:.agents/skills/pixelfx/scripts/new.mjs` (.agents/skills/pixelfx/scripts/new.mjs)
+- `file:.agents/skills/pixelfx/scripts/render.mjs` (.agents/skills/pixelfx/scripts/render.mjs)
+- `file:.agents/skills/pixelfx/scripts/sheets.mjs` (.agents/skills/pixelfx/scripts/sheets.mjs)
+- `file:.agents/skills/project-brain/SKILL.md` (.agents/skills/project-brain/SKILL.md)
+- `file:.agents/skills/project-brain/assets/agent-block.md` (.agents/skills/project-brain/assets/agent-block.md)
+- `file:.agents/skills/project-brain/assets/viewer.html` (.agents/skills/project-brain/assets/viewer.html)
+- `file:.agents/skills/project-brain/scripts/brain.py` (.agents/skills/project-brain/scripts/brain.py)
+- `file:.agents/skills/spritecook-animate-assets/SKILL.md` (.agents/skills/spritecook-animate-assets/SKILL.md)
+- `file:.agents/skills/spritecook-build-ui-kits/SKILL.md` (.agents/skills/spritecook-build-ui-kits/SKILL.md)
+- `file:.agents/skills/spritecook-build-ui-kits/agents/openai.yaml` (.agents/skills/spritecook-build-ui-kits/agents/openai.yaml)
+- `file:.agents/skills/spritecook-generate-sprites/SKILL.md` (.agents/skills/spritecook-generate-sprites/SKILL.md)
+- `file:.agents/skills/spritecook-generate-sprites/references/character-workflows.md` (.agents/skills/spritecook-generate-sprites/references/character-workflows.md)
+- `file:.agents/skills/spritecook-generate-tilesets/SKILL.md` (.agents/skills/spritecook-generate-tilesets/SKILL.md)
+- `file:.agents/skills/spritecook-polish-sprites/.gitignore` (.agents/skills/spritecook-polish-sprites/.gitignore)
+- `file:.agents/skills/spritecook-polish-sprites/SKILL.md` (.agents/skills/spritecook-polish-sprites/SKILL.md)
+- `file:.agents/skills/spritecook-polish-sprites/scripts/compare_alpha.py` (.agents/skills/spritecook-polish-sprites/scripts/compare_alpha.py)
+- `file:.agents/skills/spritecook-polish-sprites/scripts/test_compare_alpha.py` (.agents/skills/spritecook-polish-sprites/scripts/test_compare_alpha.py)
+- `file:.agents/skills/spritecook-upload-assets/SKILL.md` (.agents/skills/spritecook-upload-assets/SKILL.md)
+- `file:.agents/skills/spritecook-use-assets-in-godot/SKILL.md` (.agents/skills/spritecook-use-assets-in-godot/SKILL.md)
+- `file:.agents/skills/spritecook-use-assets-in-godot/agents/openai.yaml` (.agents/skills/spritecook-use-assets-in-godot/agents/openai.yaml)
+- `file:.agents/skills/spritecook-use-dual-grid-tilesets/SKILL.md` (.agents/skills/spritecook-use-dual-grid-tilesets/SKILL.md)
+- `file:.agents/skills/spritecook-use-presets/SKILL.md` (.agents/skills/spritecook-use-presets/SKILL.md)
+- `file:.agents/skills/spritecook-workflow-essentials/LICENSE` (.agents/skills/spritecook-workflow-essentials/LICENSE)
+- `file:.agents/skills/spritecook-workflow-essentials/SKILL.md` (.agents/skills/spritecook-workflow-essentials/SKILL.md)
+- `file:.github/copilot-instructions.md` (.github/copilot-instructions.md)
+- `file:.gitignore` (.gitignore)
+- `file:AGENTS.md` (AGENTS.md)
+- `file:CLAUDE.md` (CLAUDE.md)
+- `file:GEMINI.md` (GEMINI.md)
+- `file:LICENSE` (LICENSE)
 - `file:README.md` (README.md)
-- `file:docs/ITEM_VISUAL_REPORT.md` (docs/ITEM_VISUAL_REPORT.md)
-- `file:preview for devs/2026-11-26-v2.7-all-97-base-items-preview.md` (preview for devs/2026-11-26-v2.7-all-97-base-items-preview.md)
-- `file:preview for devs/2026-11-26-v3.0-gameplay-ui-preview.md` (preview for devs/2026-11-26-v3.0-gameplay-ui-preview.md)
-- `file:preview for devs/2026-11-26-v3.0-new-items-preview.md` (preview for devs/2026-11-26-v3.0-new-items-preview.md)
-- `file:preview for devs/2026-11-26-v3.1-core16-items-inventory-ui-preview.md` (preview for devs/2026-11-26-v3.1-core16-items-inventory-ui-preview.md)
-- `file:scripts/build_digits_font.py` (scripts/build_digits_font.py)
+- `file:index.html` (index.html)
+- `file:package-lock.json` (package-lock.json)
+- `file:package.json` (package.json)
 - `file:scripts/extract_enemy_sprites.py` (scripts/extract_enemy_sprites.py)
-- `file:src/assets/codixel-icons.json` (src/assets/codixel-icons.json)
-- `file:src/data/enemies.ts` (src/data/enemies.ts)
-- `file:src/data/exoticItems.ts` (src/data/exoticItems.ts)
-- `file:src/data/gacha.ts` (src/data/gacha.ts)
-- `file:src/data/sets.ts` (src/data/sets.ts)
-- `file:src/data/weaponSkills.ts` (src/data/weaponSkills.ts)
-- `file:src/graphics/enemyAtlas.ts` (src/graphics/enemyAtlas.ts)
-- `file:src/graphics/heroSprites.ts` (src/graphics/heroSprites.ts)
-- `file:src/graphics/pixelCraft.ts` (src/graphics/pixelCraft.ts)
-- `file:src/graphics/tileRenderer.ts` (src/graphics/tileRenderer.ts)
-- `file:src/graphics/worldSprites.ts` (src/graphics/worldSprites.ts)
-- `file:src/types/item.ts` (src/types/item.ts)
-- `file:src/ui/StorageChestModal.ts` (src/ui/StorageChestModal.ts)
-- `file:src/vfx/pixelfx/fx/pixtel/hex-shield.js` (src/vfx/pixelfx/fx/pixtel/hex-shield.js)
-- `file:src/vfx/pixelfx/fx/pixtel/leaf-storm.js` (src/vfx/pixelfx/fx/pixtel/leaf-storm.js)
-- `file:src/vfx/pixelfx/fx/pixtel/rainbow-burst.js` (src/vfx/pixelfx/fx/pixtel/rainbow-burst.js)
-- `file:src/vfx/pixelfx/fx/pixtel/sonic-wave.js` (src/vfx/pixelfx/fx/pixtel/sonic-wave.js)
-- `file:scripts/generate_codixel_assets.mjs` (scripts/generate_codixel_assets.mjs)
-- `file:src/audio/chiptuneSynth.ts` (src/audio/chiptuneSynth.ts)
-- `file:src/data/equipments.ts` (src/data/equipments.ts)

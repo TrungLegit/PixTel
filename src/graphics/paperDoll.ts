@@ -22,6 +22,7 @@ export interface PaperDollOptions {
   attackKind?: HeroAttackKind;
   attackProgress?: number;
   aimAngle?: number;
+  dashAngle?: number;
   shieldGuard?: boolean;
   hitFlash?: boolean;
   bleached?: boolean;
