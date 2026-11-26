@@ -9,8 +9,8 @@
 
 ## Trạng Thái Hiện Tại (Current Project Stage Snapshot)
 
-- **Giai đoạn / Phiên bản hiện tại:** `PIXTEL v3.1` — Core 16 Items (4×4 Reference Sheet + `cursed` Rarity + 6 Materials), Event-Driven `ItemEffectSystem`, 3 Set Bonuses `(2/3)` & `(3/3)` with Layer-0 Set Auras, 2 Strict Hidden Forge Recipes & Fate Die Reroll, and 3-Column 16-Bit `EQUIP / BAG / INFO` Inventory UI
-- **Commit mới nhất trên `main`:** `6a12963` (`2026-11-26`, đang chuẩn bị push `PIXTEL v3.1`)
+- **Giai đoạn / Phiên bản hiện tại:** `PIXTEL v3.1.1` — HD `48×48` Core-16 Sprites & Material Atlas, 5 Custom Dual-Buffer `pixelfx` VFX (`set-aura`, `cursed-aura`, `eclipse-reap`, `ember-nova`, `bleed-slash`), Ornate 16-Bit Inventory UI (`EQUIP / BAG / INFO` with Golden `PASSIVE` & Crimson `CURSE` Plaques) & Non-Destructive `?demo=v31` Showcase Mode
+- **Commit mới nhất trên `main`:** `50f6d4f` (`2026-11-26`, đang chuẩn bị push `PIXTEL v3.1.1`)
 - **Thành viên / AI đóng góp gần đây:** `chu0n6-iot`, `TrungLegit`, `Antigravity`, `Yaros`, `GitHub Copilot`
 - **Các hệ thống chính đã hoàn thiện:**
   - **Web / Mobile PWA & Triển khai GitHub Pages:** Tự động test (`npm test`), build & deploy qua GitHub Actions lên `https://trunglegit.github.io/PixTel/`, kèm `manifest.webmanifest`, `sw.js`, `icon.svg`, chế độ màn hình ngang fullscreen, font Pixelify Sans tiếng Việt tự lưu trữ cục bộ (không phụ thuộc CDN).
@@ -44,6 +44,25 @@
 ---
 
 ## Nhật Ký Cập Nhật (Newest First)
+
+### [2026-11-26 10:33] — Antigravity — Trùng tu đồ họa HD 48×48, 5 hiệu ứng `pixelfx` dual-buffer mới & UI Túi đồ 16-bit chuẩn Mockup
+- **Commit / Branch:** `main` (tiếp nối `50f6d4f`)
+- **Giai đoạn / Version:** `PIXTEL v3.1.1` — Graphics Overhaul (`core16-items` HD + `pixelfx` VFX + Ornate 16-Bit UI + `?demo=v31` Showcase)
+- **Đã làm (Done):**
+  - **Trích xuất Sprite HD `48×48` (`scripts/extract_core16_sprites.py`, `src/assets/core16-items.png` & `.json`, `src/graphics/codixelAtlas.ts`):**
+    - Trích xuất trực tiếp 16 Vật phẩm Cốt lõi từ Spritesheet 4×4 gốc bằng BFS flood-fill tách nền indigo có chọn lọc (bảo toàn 100% viền `#1a1625`, cán búa và hốc tối `hm_moss_hood`) kèm 6 icon nguyên liệu `48×48` đồng bộ (tổng 22 frames `288×192`), ưu tiên render HD trong `drawCodixelIcon`.
+    - Sửa script xuất poster `preview for devs/assets/v31_core16_items_sheet.png` dùng font hệ thống `Tahoma` để hiển thị trọn vẹn tiếng Việt có dấu.
+  - **5 Hiệu ứng `pixelfx` Dual-Buffer Mới (từ skill `patch-gg/pixelfx` tại `.agents/skills/pixelfx/`):**
+    - Sáng tác, render contact sheet & kiểm duyệt: `pixtel/set-aura.js` (3 chủ đề `forest` / `forge` / `eclipse`), `pixtel/cursed-aura.js`, `pixtel/eclipse-reap.js`, `pixtel/ember-nova.js`, `pixtel/bleed-slash.js` (`check.mjs` **5/5 PASS, 0 lỗi, 0 cảnh báo**).
+    - Nối vào `src/vfx/vfxManager.ts`, `src/vfx/uiRarityFx.ts` (bỏ giới hạn 24px để render nét `44px`/`64px` kèm `cursed-aura`), `src/systems/ItemEffectSystem.ts`, `src/graphics/itemIcons.ts` & `src/graphics/pixelfxHeroModels.ts` (thay hình vuông phẳng bằng Set Aura dual-buffer thật + map model 3D riêng cho từng món Core-16).
+  - **Đại tu UI Túi đồ 3 Cột 16-Bit (`index.html`, `src/ui/InventoryModal.ts`, `style.css`):**
+    - Nâng cấp ruy-băng đuôi én `EQUIP / BAG / INFO`, khung viền đôi bo góc chạm khắc `❖`, sân khấu Paper-Doll `144×168` có spotlight & bệ đá, ô túi đồ `60×60` với icon HD `44×44` + hào quang `pixelfx`, khung `INFO` `72×72` cùng **biển hiệu vàng `✦ PASSIVE`** và **biển hiệu huyết dụ `☠ CURSE`**.
+  - **Chế độ Showcase không ghi đè Save (`src/game.ts`, `src/main.ts`):**
+    - Thêm `?demo=v31&open=inventory|forge` (`startV31DemoShowcase`, `demoMode = true`) giúp thành viên & QA kiểm tra nhanh đủ 16 vật phẩm, 3/3 Set Aura và Lò rèn Ẩn chỉ bằng 1 đường link.
+- **File chính đã sửa / thêm:** `scripts/extract_core16_sprites.py`, `src/assets/core16-items.png`, `src/assets/core16-items.json`, `src/graphics/codixelAtlas.ts`, `src/vfx/pixelfx/fx/pixtel/set-aura.js`, `src/vfx/pixelfx/fx/pixtel/cursed-aura.js`, `src/vfx/pixelfx/fx/pixtel/eclipse-reap.js`, `src/vfx/pixelfx/fx/pixtel/ember-nova.js`, `src/vfx/pixelfx/fx/pixtel/bleed-slash.js`, `src/vfx/vfxManager.ts`, `src/vfx/uiRarityFx.ts`, `src/systems/ItemEffectSystem.ts`, `src/data/items.ts`, `src/graphics/pixelfxHeroModels.ts`, `src/graphics/itemIcons.ts`, `src/ui/InventoryModal.ts`, `index.html`, `style.css`, `src/game.ts`, `src/main.ts`, `preview for devs/2026-11-26-v3.1.1-pixelfx-hd-graphics-overhaul.md`, `preview for devs/assets/*`, `preview for devs/README.md`, `DEV_LOG.md`
+- **Kiểm tra (Verified):** `check.mjs` (`5/5` PASS, `0` warnings), `npm.cmd run build` exit `0`, `tests/featureTests.ts` (**17/17** suites PASS), kiểm duyệt trực quan 6 ảnh PNG (`v31_core16_items_sheet`, `v31_pixelfx_showcase`, `v311_inventory_ornate`, `v311_inventory_cursed`, `v311_forge_fate_die`, `v311_forge_hidden`) qua Chrome & `read_file` (`0` console errors).
+- **Lưu ý / Handoff (Breaking changes / Đang dở):** Không có (tương thích 100% Save cũ).
+- **Gợi ý bước tiếp theo (Next Steps):** Mở [preview for devs/2026-11-26-v3.1.1-pixelfx-hd-graphics-overhaul.md](preview%20for%20devs/2026-11-26-v3.1.1-pixelfx-hd-graphics-overhaul.md) trên GitHub hoặc chạy `npm run dev` và truy cập `/?demo=v31` để trải nghiệm ngay.
 
 ### [2026-11-26 09:32] — Antigravity — Hệ thống 16 Vật phẩm cốt lõi, Nội tại (`ItemEffectSystem`), 3 Set Bonus `(x/3)`, Lò rèn Ẩn & UI Túi đồ 3 cột 16-bit
 - **Commit / Branch:** `main` (tiếp nối `6a12963`)

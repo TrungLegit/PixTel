@@ -1,5 +1,7 @@
 import iconsUrl from "../assets/codixel-icons.png";
 import iconsMeta from "../assets/codixel-icons.json";
+import core16Url from "../assets/core16-items.png";
+import core16Meta from "../assets/core16-items.json";
 import pdUrl from "../assets/codixel-paperdoll.png";
 import pdMeta from "../assets/codixel-paperdoll.json";
 
@@ -11,17 +13,20 @@ export interface AtlasFrame {
 }
 
 const ICON_FRAMES = iconsMeta.frames as Record<string, AtlasFrame>;
+const CORE16_FRAMES = core16Meta.frames as Record<string, AtlasFrame>;
 const PD_FRAMES = pdMeta.frames as Record<string, AtlasFrame>;
 
 let iconsImg: HTMLImageElement | null = null;
+let core16Img: HTMLImageElement | null = null;
 let pdImg: HTMLImageElement | null = null;
 let pdBleachedCanvas: HTMLCanvasElement | null = null;
 let iconsReady = false;
+let core16Ready = false;
 let pdReady = false;
 const readyListeners = new Set<() => void>();
 
 function notifyReady() {
-  if (iconsReady && pdReady) {
+  if (iconsReady && core16Ready && pdReady) {
     for (const cb of readyListeners) cb();
   }
 }
@@ -56,6 +61,13 @@ function ensureInit() {
   };
   iconsImg.src = iconsUrl;
 
+  core16Img = new Image();
+  core16Img.onload = () => {
+    core16Ready = true;
+    notifyReady();
+  };
+  core16Img.src = core16Url;
+
   pdImg = new Image();
   pdImg.onload = () => {
     pdBleachedCanvas = buildBleachedOffscreen(pdImg!);
@@ -69,12 +81,12 @@ ensureInit();
 
 export function isCodixelReady(): boolean {
   ensureInit();
-  return iconsReady && pdReady;
+  return iconsReady && core16Ready && pdReady;
 }
 
 export function onCodixelReady(cb: () => void): () => void {
   ensureInit();
-  if (iconsReady && pdReady) {
+  if (iconsReady && core16Ready && pdReady) {
     cb();
   }
   readyListeners.add(cb);
@@ -83,11 +95,11 @@ export function onCodixelReady(cb: () => void): () => void {
 
 export function hasCodixelIcon(key: string | undefined): boolean {
   if (!key) return false;
-  return Boolean(ICON_FRAMES[key]);
+  return Boolean(CORE16_FRAMES[key] || ICON_FRAMES[key]);
 }
 
 /**
- * Draws a crisp 24x24 codixel item icon centered/fitted into (dx, dy, targetSize).
+ * Draws a crisp HD 48x48 core-16 sprite or 24x24 codixel item icon fitted into (dx, dy, targetSize).
  */
 export function drawCodixelIcon(
   ctx: CanvasRenderingContext2D,
@@ -97,7 +109,26 @@ export function drawCodixelIcon(
   targetSize: number
 ): boolean {
   ensureInit();
-  if (!iconsReady || !iconsImg || !key) return false;
+  if (!key) return false;
+  const hd = CORE16_FRAMES[key];
+  if (hd && core16Ready && core16Img) {
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(
+      core16Img,
+      hd.x,
+      hd.y,
+      hd.w,
+      hd.h,
+      Math.round(dx),
+      Math.round(dy),
+      Math.round(targetSize),
+      Math.round(targetSize)
+    );
+    ctx.restore();
+    return true;
+  }
+  if (!iconsReady || !iconsImg) return false;
   const f = ICON_FRAMES[key];
   if (!f) return false;
   ctx.save();

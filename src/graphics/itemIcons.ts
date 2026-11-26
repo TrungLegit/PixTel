@@ -400,30 +400,44 @@ export function drawEquippedHeroPreview(
   const h = ctx.canvas.height;
   ctx.imageSmoothingEnabled = false;
 
-  ctx.fillStyle = "#100e1c";
+  // Ornate dark obsidian chamber backdrop with radial arcane spotlight
+  ctx.fillStyle = "#0e0b19";
   ctx.fillRect(0, 0, w, h);
-  ctx.fillStyle = "#19162b";
-  for (let gx = 0; gx < w; gx += 12) ctx.fillRect(gx, 0, 1, h);
-  for (let gy = 0; gy < h; gy += 12) ctx.fillRect(0, gy, w, 1);
 
   const centerX = Math.round(w / 2);
-  const footY = Math.round(h - 10);
+  const auraGlow = extra?.setAuraColor ?? "#5b4ca8";
+  const grad = ctx.createRadialGradient(centerX, Math.round(h * 0.48), 8, centerX, Math.round(h * 0.48), Math.round(h * 0.56));
+  grad.addColorStop(0, `${auraGlow}38`);
+  grad.addColorStop(0.55, "#19152e");
+  grad.addColorStop(1, "#0b0916");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
 
-  ctx.fillStyle = "#262242";
-  ctx.fillRect(centerX - 24, footY, 48, 6);
-  ctx.fillStyle = "#3a3561";
-  ctx.fillRect(centerX - 20, footY - 2, 40, 4);
-  ctx.fillStyle = "rgba(0,0,0,0.5)";
-  ctx.fillRect(centerX - 18, footY - 4, 36, 4);
+  // Subtle 16-bit architectural floor/wall lines
+  ctx.fillStyle = "rgba(95, 86, 145, 0.14)";
+  for (let gx = 0; gx < w; gx += 16) ctx.fillRect(gx, 0, 1, h);
+  for (let gy = 0; gy < h; gy += 16) ctx.fillRect(0, gy, w, 1);
+
+  const footY = Math.round(h - 14);
+
+  // Stepped 16-bit stone pedestal
+  ctx.fillStyle = "#171429";
+  ctx.fillRect(centerX - 34, footY + 4, 68, 6);
+  ctx.fillStyle = "#2d284d";
+  ctx.fillRect(centerX - 30, footY, 60, 5);
+  ctx.fillStyle = "#484073";
+  ctx.fillRect(centerX - 28, footY, 56, 2);
+  ctx.fillStyle = "rgba(0,0,0,0.58)";
+  ctx.fillRect(centerX - 22, footY - 3, 44, 4);
 
   const wpnInst = equipment.weapon;
   if (wpnInst && wpnInst.enhanceLevel >= 5) {
     const pulse = (Math.floor(time * 8) & 1) === 0;
     ctx.fillStyle = wpnInst.enhanceLevel >= 8 ? "#ff9922" : "#ffe066";
-    ctx.fillRect(centerX - 20, footY, 40, 2);
+    ctx.fillRect(centerX - 24, footY, 48, 2);
     if (pulse) {
-      ctx.fillRect(centerX - 24, footY - 4, 2, 2);
-      ctx.fillRect(centerX + 22, footY - 4, 2, 2);
+      ctx.fillRect(centerX - 28, footY - 4, 2, 2);
+      ctx.fillRect(centerX + 26, footY - 4, 2, 2);
     }
   }
 
@@ -431,8 +445,8 @@ export function drawEquippedHeroPreview(
     classId,
     equipment,
     x: centerX,
-    y: h - 10,
-    rigScale: 0.68,
+    y: footY,
+    rigScale: 0.78,
     drawScale: 2,
     walkFrame,
     facing,

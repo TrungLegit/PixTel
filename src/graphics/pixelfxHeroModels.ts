@@ -14,9 +14,56 @@ import {
 import type {
   PixelfxActor,
   PixelfxFrame,
+  PixelfxModule,
   PixelfxPosedSprite,
   PixelfxPosedTheme,
 } from "../vfx/pixelfxTypes";
+import { FxAtlas, type BakedAtlas } from "../vfx/fxAtlas";
+import * as setAuraMod from "../vfx/pixelfx/fx/pixtel/set-aura.js";
+
+type SetAuraTheme = "forest" | "forge" | "eclipse";
+const setAuraAtlas = new FxAtlas();
+
+function resolveSetAuraTheme(color: string): SetAuraTheme {
+  const lc = color.toLowerCase();
+  if (lc === "#4ade80" || lc.includes("4ade")) return "forest";
+  if (lc === "#c084fc" || lc.includes("c084")) return "eclipse";
+  return "forge";
+}
+
+function drawSetAuraLayer(
+  ctx: CanvasRenderingContext2D,
+  theme: SetAuraTheme,
+  layer: "back" | "front",
+  x: number,
+  y: number,
+  rigScale: number,
+  drawScale: number,
+  time: number
+) {
+  const atlas: BakedAtlas = setAuraAtlas.get(`hero-set-aura-${theme}-${layer}`, setAuraMod as PixelfxModule, {
+    options: { theme, radius: 22, seed: 17 },
+    fps: 20,
+    downscale: 1,
+    layer,
+  });
+  const rawIdx = Math.floor(time * atlas.fps);
+  const idx = ((rawIdx % atlas.count) + atlas.count) % atlas.count;
+  const gx = (idx % atlas.cols) * atlas.fw;
+  const gy = Math.floor(idx / atlas.cols) * atlas.fh;
+  const s = (rigScale / 0.68) * drawScale;
+  const dw = Math.max(1, Math.round(atlas.fw * s));
+  const dh = Math.max(1, Math.round(atlas.fh * s));
+  const dx = Math.round(x - atlas.pivotX * s);
+  const dy = Math.round(y - atlas.pivotY * s);
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(atlas.colorCanvas, gx, gy, atlas.fw, atlas.fh, dx, dy, dw, dh);
+  ctx.globalCompositeOperation = "lighter";
+  ctx.drawImage(atlas.lightCanvas, gx, gy, atlas.fw, atlas.fh, dx, dy, dw, dh);
+  ctx.restore();
+}
 
 export type PixelfxHeroAnimState = "idle" | "run" | "attack" | "charge" | "dash";
 
@@ -222,18 +269,20 @@ function mapWeaponToRig(
   if (def.id === "hid_boss_eraser_edge" || def.id === "exo_wpn_blood_greatsword") {
     weapon = "null_sever";
   } else if (
+    def.id === "wp_starfall_blade" ||
     def.id === "hid_craft_prism_blade" ||
     def.id === "wpn_chroma_sovereign" ||
     def.id === "sea_wpn_spring_katana"
   ) {
     weapon = "prism_blade";
-  } else if (def.id === "wpn_void_scythe") {
+  } else if (def.id === "wp_eclipse_reaver" || def.id === "wpn_void_scythe") {
     weapon = "scythe";
   } else if (def.id === "wpn_warden_cleaver" || def.id === "exo_wpn_thunder_halberd") {
     weapon = "greataxe";
-  } else if (def.id === "wpn_quake_maul") {
+  } else if (def.id === "wp_forge_hammer" || def.id === "wpn_quake_maul") {
     weapon = "hammer";
   } else if (
+    def.id === "wp_spark_staff" ||
     def.id === "hid_craft_nebula_staff" ||
     def.id === "wpn_astral_scepter" ||
     def.id === "wpn_chroma_scepter" ||
@@ -243,6 +292,7 @@ function mapWeaponToRig(
   ) {
     weapon = "astral_staff";
   } else if (
+    def.id === "wp_briar_dagger" ||
     def.id === "hid_craft_eclipse_fangs" ||
     def.id === "wpn_quantum_blades" ||
     def.id === "wpn_magma_fangs" ||
@@ -250,8 +300,8 @@ function mapWeaponToRig(
     def.id === "exo_wpn_venom_claws" ||
     def.id === "sea_wpn_summer_blades"
   ) {
-    weapon = "twin_quantum";
-    offWeapon = "twin_quantum";
+    weapon = def.id === "wp_briar_dagger" ? "dagger" : "twin_quantum";
+    offWeapon = def.id === "wp_briar_dagger" ? "dagger" : "twin_quantum";
   } else if (
     def.id === "hid_craft_nova_railgun" ||
     def.id === "wpn_singularity_cannon" ||
@@ -708,7 +758,11 @@ function buildLoadoutKey(
     if (hDef.id === "hlm_prism_halo" || hDef.id === "sea_hlm_eclipse_halo") {
       headgear = "halo_crown";
       headRamp = preset.hairRamp;
+    } else if (hDef.id === "hm_moss_hood") {
+      headgear = "assassin_hood";
+      headRamp = rampFromHex(hDef.visualStyle?.primary ?? "#16a34a");
     } else if (
+      hDef.id === "hm_ash_visor" ||
       hDef.id === "hid_boss_prism_visor" ||
       hDef.id === "hlm_quartz_visor" ||
       hDef.id === "exo_helm_frost_gaze"
@@ -716,6 +770,7 @@ function buildLoadoutKey(
       headgear = "dragon_helm";
       headRamp = rampFromHex(hDef.visualStyle?.primary ?? hDef.visualColor ?? "#26c4ff");
     } else if (
+      hDef.id === "hm_eclipse_crown" ||
       hDef.id === "hid_craft_aethel_crown" ||
       hDef.id === "hlm_amber_crown" ||
       hDef.id === "exo_helm_storm_crown"
@@ -737,18 +792,19 @@ function buildLoadoutKey(
   let backAccessory: PixelfxPosedTheme["backAccessory"] = aDef ? preset.backAccessory : "none";
   if (aDef) {
     if (
+      aDef.id === "ar_aegis_mantle" ||
       aDef.id === "hid_craft_chroma_aegis" ||
       aDef.id === "arm_prism_mantle" ||
       aDef.id === "exo_armor_void_shroud" ||
       aDef.rarity === "legendary"
     ) {
       backAccessory = "prism_wings";
-    } else if (aDef.id === "hid_boss_warden_mantle") {
+    } else if (aDef.id === "ar_briar_cloak" || aDef.id === "hid_boss_warden_mantle") {
       backAccessory = "warden_roots";
+    } else if (aDef.id === "ar_bloodstone_plate" || aDef.id === "sea_arm_winter_cloak") {
+      backAccessory = "cape";
     } else if (aDef.id === "arm_amber_aegis" || aDef.id === "exo_armor_magma_core") {
       backAccessory = "amber_thrusters";
-    } else if (aDef.id === "sea_arm_winter_cloak") {
-      backAccessory = "cape";
     }
   }
   const cloakRamp = aDef
@@ -1087,23 +1143,10 @@ export function drawPixelfxHero(ctx: CanvasRenderingContext2D, opts: PixelfxHero
   const dw = Math.round(baked.w * drawScale);
   const dh = Math.round(baked.h * drawScale);
 
-  // Z-Order Layer 0: 3-Piece Set Bonus Aura (drawn strictly behind cloak/body/armor/helm/weapon)
-  if (setAuraColor && !hitFlash && !bleached) {
-    const u = Math.max(1, Math.round(drawScale));
-    const rx = Math.round(11 * rigScale * drawScale);
-    const ry = Math.round(4 * rigScale * drawScale);
-    ctx.save();
-    ctx.fillStyle = setAuraColor;
-    ctx.globalAlpha = 0.24 + 0.1 * Math.sin(time * 5);
-    ctx.fillRect(Math.round(x - rx), Math.round(y - ry), rx * 2, ry + u);
-    ctx.globalAlpha = 0.78;
-    for (let i = 0; i < 6; i++) {
-      const ang = time * 2.6 + (i * Math.PI * 2) / 6;
-      const ax = Math.round(x + Math.cos(ang) * (rx + u));
-      const ay = Math.round(y - 11 * rigScale * drawScale + Math.sin(ang) * (7 * rigScale * drawScale));
-      ctx.fillRect(ax, ay, u * 2, u * 2);
-    }
-    ctx.restore();
+  // Z-Order Layer 0: Dual-Buffer pixelfx 3-Piece Set Bonus Aura (Back layer behind cloak/body)
+  const setAuraTheme = setAuraColor && !hitFlash && !bleached ? resolveSetAuraTheme(setAuraColor) : null;
+  if (setAuraTheme) {
+    drawSetAuraLayer(ctx, setAuraTheme, "back", x, y, rigScale, drawScale, time);
   }
 
   const baseImg = hitFlash
@@ -1119,6 +1162,10 @@ export function drawPixelfxHero(ctx: CanvasRenderingContext2D, opts: PixelfxHero
     ctx.globalCompositeOperation = "lighter";
     ctx.drawImage(baked.lightCanvas, 0, 0, baked.w, baked.h, dx, dy, dw, dh);
     ctx.restore();
+  }
+
+  if (setAuraTheme) {
+    drawSetAuraLayer(ctx, setAuraTheme, "front", x, y, rigScale, drawScale, time);
   }
 
   // Orbiting Accessory Pixel Relic (Grimoire / Prism Sigil / Spectrum Disc / Ring / Pix-Chip)

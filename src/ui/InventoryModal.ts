@@ -166,6 +166,15 @@ export class InventoryModalUI {
     this.root.classList.remove("hidden");
     this.hoveredUid = null;
     this.autoRotate = true;
+    if (!this.selectedUid || !this.game.inv.findByUid(this.selectedUid)) {
+      const firstBag = this.game.inv.bag[0]?.uid;
+      const firstEq =
+        this.game.inv.equipment.weapon?.uid ??
+        this.game.inv.equipment.armor?.uid ??
+        this.game.inv.equipment.helmet?.uid ??
+        this.game.inv.equipment.accessory?.uid;
+      this.selectedUid = firstBag ?? firstEq ?? null;
+    }
     if (opts?.quickSell) {
       this._enterQuickSellMode();
     } else {
@@ -331,7 +340,7 @@ export class InventoryModalUI {
       const sel = this.selectedUid === it.uid ? "selected" : "";
       return `
         <div class="pd-slot rarity-${def.rarity} ${sel}" data-uid="${it.uid}" data-review-uid="${it.uid}" style="border-color:${col}" title="${def.name}">
-          <canvas class="px-item-icon" width="32" height="32" data-icon-def="${def.id}" data-icon-enh="${it.enhanceLevel}"></canvas>
+          <canvas class="px-item-icon" width="44" height="44" data-icon-def="${def.id}" data-icon-enh="${it.enhanceLevel}"></canvas>
           <span class="pd-slot-tag">${SLOT_LABELS[slot]}</span>
           ${it.enhanceLevel > 0 ? `<span class="bag-enh">+${it.enhanceLevel}</span>` : ""}
         </div>
@@ -358,7 +367,7 @@ export class InventoryModalUI {
           const sel = this.selectedUid === qIt.uid ? "selected" : "";
           qHtml += `
             <div class="pd-slot quick-cons rarity-${qDef.rarity} ${sel}" data-uid="${qIt.uid}" data-bag="1" data-quick-use="${qDef.id}" data-review-uid="${qIt.uid}" style="border-color:${col}" title="${qDef.name}">
-              <canvas class="px-item-icon" width="32" height="32" data-icon-def="${qDef.id}" data-icon-enh="0"></canvas>
+              <canvas class="px-item-icon" width="44" height="44" data-icon-def="${qDef.id}" data-icon-enh="0"></canvas>
               <span class="bag-qty">x${qIt.qty}</span>
               <span class="pd-slot-tag">${qDef.name}</span>
             </div>
@@ -417,7 +426,7 @@ export class InventoryModalUI {
         def.requiredClass !== p.classId;
       bagHtml += `
         <div class="bag-cell rarity-${def.rarity} ${sel} ${sellClass}" data-uid="${it.uid}" data-bag="1" data-review-uid="${it.uid}" style="border-color:${col}">
-          <canvas class="px-item-icon" width="32" height="32" data-icon-def="${def.id}" data-icon-enh="${it.enhanceLevel}"></canvas>
+          <canvas class="px-item-icon" width="44" height="44" data-icon-def="${def.id}" data-icon-enh="${it.enhanceLevel}"></canvas>
           <span class="bag-tier" style="color:${tInfo.color}">${tInfo.badge}</span>
           ${it.qty > 1 ? `<span class="bag-qty">x${it.qty}</span>` : ""}
           ${it.enhanceLevel > 0 ? `<span class="bag-enh">+${it.enhanceLevel}</span>` : ""}
@@ -742,19 +751,25 @@ export class InventoryModalUI {
       : "";
 
     const passiveObj = def.passive;
+    const isCurse = Boolean(passiveObj?.isCurse);
     const passiveTitle = passiveObj
-      ? passiveObj.isCurse
-        ? `☠ CURSE · ${passiveObj.name}`
-        : `★ PASSIVE · ${passiveObj.name}`
+      ? isCurse
+        ? `CURSE · ${passiveObj.name}`
+        : `PASSIVE · ${passiveObj.name}`
       : def.passiveDesc
-        ? "★ PASSIVE"
+        ? "PASSIVE"
         : "";
+    const passiveEmblem = isCurse ? "☠" : "✦";
     const passiveCd = passiveObj?.cooldownSec ? `<span class="info-cd-pill">CD ${passiveObj.cooldownSec}s</span>` : "";
     const passiveBody = passiveObj?.description ?? def.passiveDesc ?? "";
     const passiveBox = passiveBody
-      ? `<div class="info-passive-box ${passiveObj?.isCurse ? "is-curse" : ""}">
-           <div class="info-passive-hdr"><span>${passiveTitle}</span>${passiveCd}</div>
-           <div class="info-passive-txt">${passiveBody}</div>
+      ? `<div class="info-passive-box ${isCurse ? "is-curse" : ""}">
+           <div class="info-passive-emblem">${passiveEmblem}</div>
+           <div class="info-passive-content">
+             <div class="info-passive-hdr"><span>${passiveTitle}</span>${passiveCd}</div>
+             <div class="info-passive-txt">${passiveBody}</div>
+           </div>
+           <div class="info-passive-flourish">❖</div>
          </div>`
       : "";
 
@@ -782,7 +797,7 @@ export class InventoryModalUI {
     this.detailEl.innerHTML = `
       <div class="info-hero-card">
         <div class="info-icon-frame rarity-${def.rarity}" style="border-color:${rInfo.color}">
-          <canvas class="px-item-icon" width="40" height="40" data-icon-def="${def.id}" data-icon-enh="${item.enhanceLevel}"></canvas>
+          <canvas class="px-item-icon" width="64" height="64" data-icon-def="${def.id}" data-icon-enh="${item.enhanceLevel}"></canvas>
         </div>
         <div class="info-title" style="color:${rInfo.color}">${def.name}${item.enhanceLevel > 0 ? ` +${item.enhanceLevel}` : ""}</div>
         <div class="info-sub">

@@ -188,7 +188,15 @@ function bootstrap() {
   // Expose light debug handle for Playwright/DevTools inspection if needed
   (window as unknown as { __pixtel?: PixTelOpenWorldGame }).__pixtel = game;
 
-  classSelect.show(false);
+  const demoParam = params.get("demo");
+  if (demoParam === "v31") {
+    const openParam = params.get("open");
+    const openModal: "inventory" | "forge" | null =
+      openParam === "forge" ? "forge" : openParam === "none" ? null : "inventory";
+    game.startV31DemoShowcase(openModal);
+  } else {
+    classSelect.show(false);
+  }
   mobileTouch.update();
   game.startLoop();
 }

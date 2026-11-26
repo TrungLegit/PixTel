@@ -17,6 +17,11 @@ import * as sonicWaveMod from "./pixelfx/fx/pixtel/sonic-wave.js";
 import * as leafStormMod from "./pixelfx/fx/pixtel/leaf-storm.js";
 import * as rainbowBurstMod from "./pixelfx/fx/pixtel/rainbow-burst.js";
 import * as hexShieldMod from "./pixelfx/fx/pixtel/hex-shield.js";
+import * as setAuraMod from "./pixelfx/fx/pixtel/set-aura.js";
+import * as cursedAuraMod from "./pixelfx/fx/pixtel/cursed-aura.js";
+import * as eclipseReapMod from "./pixelfx/fx/pixtel/eclipse-reap.js";
+import * as emberNovaMod from "./pixelfx/fx/pixtel/ember-nova.js";
+import * as bleedSlashMod from "./pixelfx/fx/pixtel/bleed-slash.js";
 
 // Melee & Combat pixelfx
 import * as swordSlashMod from "./pixelfx/fx/melee/sword-slash.js";
@@ -82,6 +87,11 @@ export const PIXELFX_MODS: Record<string, PixelfxModule> = {
   "pixtel/leaf-storm": leafStormMod,
   "pixtel/rainbow-burst": rainbowBurstMod,
   "pixtel/hex-shield": hexShieldMod,
+  "pixtel/set-aura": setAuraMod,
+  "pixtel/cursed-aura": cursedAuraMod,
+  "pixtel/eclipse-reap": eclipseReapMod,
+  "pixtel/ember-nova": emberNovaMod,
+  "pixtel/bleed-slash": bleedSlashMod,
   "melee/sword-slash": swordSlashMod,
   "melee/double-slash": doubleSlashMod,
   "melee/heavy-cleave": heavyCleaveMod,
@@ -197,10 +207,23 @@ export const ATLAS_PRESETS: Record<string, { mod: PixelfxModule; opts: BakeOptio
   "beam-uncommon": { mod: lootBeamMod, opts: { options: { palette: PAL.heal }, fps: 14, downscale: 0.42 } },
   "beam-rare": { mod: lootBeamMod, opts: { options: { palette: PAL.water }, fps: 14, downscale: 0.48 } },
   "beam-epic": { mod: lootBeamMod, opts: { options: { palette: PAL.arcane }, fps: 14, downscale: 0.54 } },
+  "beam-cursed": { mod: lootBeamMod, opts: { options: { palette: PAL.blood }, fps: 16, downscale: 0.56 } },
   "beam-legendary": { mod: lootBeamMod, opts: { options: { palette: PAL.volt }, fps: 16, downscale: 0.62 } },
   "item-aura-rare": { mod: rarityAuraMod, opts: { options: { palette: PAL.water, tier: 3, radius: 13, seed: 31 }, fps: 16, downscale: 0.72 } },
   "item-aura-epic": { mod: rarityAuraMod, opts: { options: { palette: PAL.arcane, tier: 4, radius: 14, seed: 47 }, fps: 18, downscale: 0.78 } },
+  "item-aura-cursed": { mod: cursedAuraMod, opts: { options: { palette: PAL.blood, radius: 15, seed: 66 }, fps: 18, downscale: 0.8 } },
   "item-aura-legendary": { mod: rarityAuraMod, opts: { options: { palette: PAL.volt, tier: 5, radius: 15, seed: 73 }, fps: 20, downscale: 0.85 } },
+
+  // Bespoke v3.1.1 Core-16 Passive VFX Presets
+  "starfall-aoe": { mod: starFallMod, opts: { options: { palette: PAL.volt }, fps: 20, maxDuration: 1.2, downscale: 0.72 } },
+  "eclipse-reap": { mod: eclipseReapMod, opts: { fps: 22, maxDuration: 0.55, downscale: 0.78 } },
+  "ember-nova": { mod: emberNovaMod, opts: { options: { palette: PAL.fire }, fps: 20, maxDuration: 0.65, downscale: 0.82 } },
+  "bleed-slash": { mod: bleedSlashMod, opts: { fps: 22, maxDuration: 0.45, downscale: 0.72 } },
+  "thorns-burst": { mod: thornsMod, opts: { options: { palette: PAL.poison, glow: PAL.heal, count: 6 }, fps: 18, maxDuration: 1.0, downscale: 0.58 } },
+  "eclipse-slow": { mod: frostNovaMod, opts: { options: { palette: PAL.shadow, reach: 64 }, fps: 18, maxDuration: 1.2, downscale: 0.68 } },
+  "blood-shield": { mod: hexShieldMod, opts: { options: { palette: PAL.blood }, fps: 18, maxDuration: 0.9, downscale: 0.64 } },
+  "undying-aegis": { mod: holyPillarMod, opts: { options: { palette: PAL.volt }, fps: 18, maxDuration: 1.3, downscale: 0.7 } },
+  "mirage-smoke": { mod: poofMod, opts: { options: { palette: PAL.arcane, stars: PAL.cyber }, fps: 20, maxDuration: 0.8, downscale: 0.68 } },
 
   // Looping projectiles & pickups
   "proj-fireball": { mod: fireballMod, opts: { options: { palette: PAL.fire, radius: 5 }, fps: 18, downscale: 0.52 } },

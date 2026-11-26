@@ -55,6 +55,8 @@
 {"created": "2026-11-25T19:17:22.523498+00:00", "dst": "file:AGENTS.md", "note": "", "schema_version": 1, "src": "decision:20261125191722-team-rule-always-save", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T19:17:22.523498+00:00", "dst": "file:preview for devs/README.md", "note": "", "schema_version": 1, "src": "decision:20261125191722-team-rule-always-save", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-26T02:31:54.146503+00:00", "dst": "file:src/systems/ItemEffectSystem.ts", "note": "", "schema_version": 1, "src": "decision:20261126023154-16-core-items-eventdriven", "type": "implements", "weight": 1.0}
+{"created": "2026-11-26T03:34:08.413851+00:00", "dst": "file:src/graphics/codixelAtlas.ts", "note": "", "schema_version": 1, "src": "decision:20261126033344-pixtel-v311-hd-sprite", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-26T03:34:08.714710+00:00", "dst": "file:src/ui/InventoryModal.ts", "note": "", "schema_version": 1, "src": "decision:20261126033344-pixtel-v311-hd-sprite", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T13:30:11.378545+00:00", "dst": "file:.agents/skills/codixel/SKILL.md", "note": "", "schema_version": 1, "src": "file:.agents/skills/codixel/package.json", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T13:30:11.809596+00:00", "dst": "file:src/vfx/vfxManager.ts", "note": "", "schema_version": 1, "src": "file:.agents/skills/pixelfx/SKILL.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:.agents/skills/spritecook-polish-sprites/scripts/compare_alpha.py", "note": "", "schema_version": 1, "src": "file:.agents/skills/spritecook-polish-sprites/scripts/test_compare_alpha.py", "type": "imports", "weight": 1.0}
@@ -108,12 +110,14 @@
 {"created": "2026-11-25T19:17:20.661023+00:00", "dst": "file:preview for devs/README.md", "note": "", "schema_version": 1, "src": "file:preview for devs/2026-11-26-v3.0-gameplay-ui-preview.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T19:17:21.016469+00:00", "dst": "file:preview for devs/README.md", "note": "", "schema_version": 1, "src": "file:preview for devs/2026-11-26-v3.0-new-items-preview.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-26T02:45:30.949518+00:00", "dst": "file:preview for devs/README.md", "note": "", "schema_version": 1, "src": "file:preview for devs/2026-11-26-v3.1-core16-items-inventory-ui-preview.md", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-26T03:34:06.618791+00:00", "dst": "file:DEV_LOG.md", "note": "", "schema_version": 1, "src": "file:preview for devs/2026-11-26-v3.1.1-pixelfx-hd-graphics-overhaul.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T19:19:44.743906+00:00", "dst": "file:DEV_LOG.md", "note": "", "schema_version": 1, "src": "file:preview for devs/README.md", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T15:40:20.239066+00:00", "dst": "file:public/manifest.webmanifest", "note": "", "schema_version": 1, "src": "file:public/icon.svg", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:47:12.489449+00:00", "dst": "decision:20261125144603-selfhosted-vietnamese-pixel-ui", "note": "", "schema_version": 1, "src": "file:public/licenses/Pixelify-Sans-OFL.txt", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T15:40:19.796391+00:00", "dst": "file:index.html", "note": "", "schema_version": 1, "src": "file:public/manifest.webmanifest", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T15:40:20.682074+00:00", "dst": "file:src/main.ts", "note": "", "schema_version": 1, "src": "file:public/sw.js", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T19:06:01.358512+00:00", "dst": "file:style.css", "note": "", "schema_version": 1, "src": "file:scripts/build_digits_font.py", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-26T03:34:06.025428+00:00", "dst": "file:src/assets/core16-items.json", "note": "", "schema_version": 1, "src": "file:scripts/extract_core16_sprites.py", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T18:40:29.658653+00:00", "dst": "file:src/assets/codixel-enemies.json", "note": "", "schema_version": 1, "src": "file:scripts/extract_enemy_sprites.py", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T12:37:39.667899+00:00", "dst": "file:src/graphics/enemyAtlas.ts", "note": "", "schema_version": 1, "src": "file:scripts/extract_enemy_sprites.py", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T18:58:41.432254+00:00", "dst": "file:src/assets/codixel-icons.json", "note": "", "schema_version": 1, "src": "file:scripts/generate_codixel_assets.mjs", "type": "relates_to", "weight": 1.0}
@@ -122,6 +126,7 @@
 {"created": "2026-11-25T13:30:10.944897+00:00", "dst": "file:src/graphics/enemyAtlas.ts", "note": "", "schema_version": 1, "src": "file:src/assets/codixel-enemies.json", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T07:19:00.535773+00:00", "dst": "file:src/graphics/codixelAtlas.ts", "note": "", "schema_version": 1, "src": "file:src/assets/codixel-icons.json", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T07:19:01.796190+00:00", "dst": "file:src/graphics/codixelAtlas.ts", "note": "", "schema_version": 1, "src": "file:src/assets/codixel-paperdoll.json", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-26T03:34:06.318202+00:00", "dst": "file:src/graphics/codixelAtlas.ts", "note": "", "schema_version": 1, "src": "file:src/assets/core16-items.json", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T14:30:28.005224+00:00", "dst": "file:src/systems/combat.ts", "note": "", "schema_version": 1, "src": "file:src/audio/chiptuneSynth.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T18:40:21.828980+00:00", "dst": "file:src/ui/GachaModal.ts", "note": "", "schema_version": 1, "src": "file:src/audio/chiptuneSynth.ts", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T05:53:32.316351+00:00", "dst": "file:src/ui/InventoryModal.ts", "note": "", "schema_version": 1, "src": "file:src/audio/chiptuneSynth.ts", "type": "relates_to", "weight": 1.0}
@@ -639,10 +644,14 @@
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/vfx/pixelfx/fx/pickups/_lib.js", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/fx/pickups/potion.js", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/vfx/pixelfx/core/index.js", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/fx/pickups/xp-orb.js", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/vfx/pixelfx/fx/pickups/_lib.js", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/fx/pickups/xp-orb.js", "type": "imports", "weight": 1.0}
+{"created": "2026-11-26T03:34:08.124357+00:00", "dst": "file:src/vfx/vfxManager.ts", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/fx/pixtel/bleed-slash.js", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/vfx/pixelfx/core/index.js", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/fx/pixtel/boss-telegraph.js", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/vfx/pixelfx/core/index.js", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/fx/pixtel/chroma-vortex.js", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/vfx/pixelfx/core/index.js", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/fx/pixtel/color-wave.js", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/vfx/pixelfx/core/index.js", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/fx/pixtel/compile-turret.js", "type": "imports", "weight": 1.0}
+{"created": "2026-11-26T03:34:07.212532+00:00", "dst": "file:src/vfx/uiRarityFx.ts", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/fx/pixtel/cursed-aura.js", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-26T03:34:07.531989+00:00", "dst": "file:src/vfx/vfxManager.ts", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/fx/pixtel/eclipse-reap.js", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-26T03:34:07.830906+00:00", "dst": "file:src/vfx/vfxManager.ts", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/fx/pixtel/ember-nova.js", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/vfx/pixelfx/core/index.js", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/fx/pixtel/frame-skip.js", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T12:37:40.681894+00:00", "dst": "file:src/vfx/vfxManager.ts", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/fx/pixtel/hex-shield.js", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T12:37:40.229477+00:00", "dst": "file:src/vfx/vfxManager.ts", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/fx/pixtel/leaf-storm.js", "type": "relates_to", "weight": 1.0}
@@ -653,6 +662,7 @@
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/vfx/pixelfx/core/index.js", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/fx/pixtel/rarity-aura.js", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T08:04:52.916744+00:00", "dst": "file:src/vfx/uiRarityFx.ts", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/fx/pixtel/rarity-aura.js", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T08:04:52.916744+00:00", "dst": "file:src/vfx/vfxManager.ts", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/fx/pixtel/rarity-aura.js", "type": "relates_to", "weight": 1.0}
+{"created": "2026-11-26T03:34:06.916557+00:00", "dst": "file:src/graphics/pixelfxHeroModels.ts", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/fx/pixtel/set-aura.js", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T12:37:39.902332+00:00", "dst": "file:src/vfx/vfxManager.ts", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/fx/pixtel/sonic-wave.js", "type": "relates_to", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/vfx/pixelfx/core/index.js", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/fx/projectiles/_lib.js", "type": "imports", "weight": 1.0}
 {"created": "2026-11-25T11:32:03.521778+00:00", "dst": "file:src/vfx/pixelfx/core/index.js", "note": "", "schema_version": 1, "src": "file:src/vfx/pixelfx/fx/projectiles/bullet-tracer.js", "type": "imports", "weight": 1.0}
