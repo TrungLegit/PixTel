@@ -1,7 +1,7 @@
 import { getClassDef } from "../data/classes";
 import { ELEMENT_META } from "../data/elements";
 import { ENEMIES } from "../data/enemies";
-import { SET_BONUSES } from "../data/equipments";
+import { ALL_SET_BONUSES } from "../data/sets";
 import {
   CONSUMABLE_GROUP_LABELS,
   ITEMS,
@@ -12,9 +12,11 @@ import {
   getTierBadge,
 } from "../data/items";
 import { EQUIP_SLOTS, type EquipSlot, type ItemDef, type ItemInstance } from "../data/types";
+import { getWeaponSkillForItem } from "../data/weaponSkills";
 import { drawItemIcon } from "../graphics/itemIcons";
 import { clearFrame, createFrame, createFx } from "../vfx/pixelfx/core/index.js";
 import * as rarityAuraMod from "../vfx/pixelfx/fx/pixtel/rarity-aura.js";
+import * as cursedAuraMod from "../vfx/pixelfx/fx/pixtel/cursed-aura.js";
 import type { PixelfxFrame, PixelfxInstance, PixelfxModule } from "../vfx/pixelfxTypes";
 import {
   RARITY_PAL_BY_AURA,
@@ -35,10 +37,11 @@ const CAPE_LABELS: Record<string, string> = {
 /** High-contrast ink colors for item names inside the dark walnut plaque */
 const PLAQUE_NAME_COLORS: Record<string, string> = {
   common: "#f0ede4",
-  uncommon: "#6effa8",
-  rare: "#66d2ff",
-  epic: "#dfa3ff",
-  legendary: "#ffb84d",
+  uncommon: "#4ade80",
+  rare: "#60a5fa",
+  epic: "#c084fc",
+  cursed: "#fb7185",
+  legendary: "#facc15",
 };
 
 interface ResolvedReviewItem {
@@ -113,6 +116,10 @@ export class ItemReviewTooltip {
       ) as HTMLElement | null;
 
       if (!target) return;
+      if (target.closest("#modal-inventory")) {
+        if (this.activeTargetEl) this.hide();
+        return;
+      }
       this.lastMouseX = ev.clientX;
       this.lastMouseY = ev.clientY;
       if (target !== this.activeTargetEl) {
@@ -144,6 +151,26 @@ export class ItemReviewTooltip {
         }
       }
     });
+
+    document.addEventListener(
+      "touchstart",
+      (ev) => {
+        const raw = ev.target as HTMLElement | null;
+        if (raw && this.root.contains(raw)) return;
+        const target = raw?.closest("[data-review-uid], [data-review-def]") as HTMLElement | null;
+        if (!target || target.dataset.reviewSource === "hud" || target.closest("#modal-inventory")) {
+          if (this.activeTargetEl) this.hide();
+          return;
+        }
+        const t = ev.changedTouches[0];
+        if (!t) return;
+        this.lastMouseX = t.clientX;
+        this.lastMouseY = t.clientY;
+        this.activeTargetEl = target;
+        this._showForTarget(target, t.clientX, t.clientY);
+      },
+      { passive: true }
+    );
 
     document.addEventListener("scroll", () => this.hide(), true);
     window.addEventListener("blur", () => this.hide());
@@ -181,6 +208,18 @@ export class ItemReviewTooltip {
           isEquipped: found.location !== "bag",
           equippedSlot: found.location === "bag" ? null : found.location,
           sourceKind,
+        };
+      }
+      const inStash = this.game.inv.findInStash(uid);
+      if (inStash) {
+        const def = ITEMS[inStash.defId];
+        if (!def) return null;
+        return {
+          def,
+          inst: inStash,
+          isEquipped: false,
+          equippedSlot: null,
+          sourceKind: "stash",
         };
       }
     }
@@ -265,10 +304,16 @@ export class ItemReviewTooltip {
       const diff = !isEquipped ? this.game.inv.compareWithEquipped(inst) : null;
       const rows: [string, number, number | undefined, string][] = [
         ["CÔNG (ATK)", st.atk, diff?.atk, ""],
+        ["PHÉP (MAG)", st.mag, diff?.mag, ""],
         ["THỦ (DEF)", st.def, diff?.def, ""],
         ["MÁU (HP)", st.maxHp, diff?.maxHp, ""],
+        ["TỐC ĐÁNH", st.aspdPct, diff?.aspdPct, "%"],
         ["CHÍ MẠNG", st.crit, diff?.crit, "%"],
+        ["ST CHÍ MẠNG", st.critDmgPct, diff?.critDmgPct, "%"],
+        ["HÚT MÁU", st.lifestealPct, diff?.lifestealPct, "%"],
+        ["KHÁNG LỬA", st.fireResPct, diff?.fireResPct, "%"],
         ["TỐC CHẠY", st.spd, diff?.spd, ""],
+        ["TỐC CHẠY %", st.moveSpeedPct, diff?.moveSpeedPct, "%"],
         ["NGUYÊN TỐ", st.elementBonus, diff?.elementBonus, "%"],
         ["THỂ LỰC", st.maxStamina, diff?.maxStamina, ""],
         ["PHÁ GIÁP", st.poiseBreakPct, diff?.poiseBreakPct, "%"],
@@ -278,6 +323,7 @@ export class ItemReviewTooltip {
       const statLines = rows
         .filter(([, val, d]) => val !== 0 || (d !== undefined && d !== 0))
         .map(([lbl, val, d, unit]) => {
+          const valSign = val >= 0 ? `+${val}` : `${val}`;
           let diffHtml = "";
           if (d !== undefined && d !== 0) {
             diffHtml =
@@ -285,7 +331,7 @@ export class ItemReviewTooltip {
                 ? `<span class="review-diff-up">▲ +${d}${unit}</span>`
                 : `<span class="review-diff-down">▼ ${d}${unit}</span>`;
           }
-          return `<div class="review-stat-row"><span>${lbl}</span><b>+${val}${unit}</b>${diffHtml}</div>`;
+          return `<div class="review-stat-row"><span>${lbl}</span><b>${valSign}${unit}</b>${diffHtml}</div>`;
         })
         .join("");
 
@@ -313,9 +359,20 @@ export class ItemReviewTooltip {
         infuseNote += `<div class="review-doll-note" style="border-left-color:#ff88f2">★ Thức Tỉnh [+10]: <b>Khúc Xạ Lăng Kính (Prism)</b></div>`;
       }
 
-      const passiveHtml = def.passiveDesc
-        ? `<div class="review-doll-note" style="border-left-color:#b85a14;color:#4a2308">✦ ${def.passiveDesc}</div>`
+      const weaponSkill = def.slot === "weapon" ? getWeaponSkillForItem(def.id) : null;
+      const weaponSkillHtml = weaponSkill
+        ? `<div class="review-doll-note" style="border-left-color:${weaponSkill.accent};background:#efe4c6;color:#2e170a">⚔ <b>Kỹ Năng Vũ Khí [E]: ${weaponSkill.name}</b> (${weaponSkill.cooldown}s · ${ELEMENT_META[weaponSkill.element].name})<br/>${weaponSkill.detailDesc}</div>`
         : "";
+      const exoticSourceHtml = def.dropOnly
+        ? `<div class="review-doll-note" style="border-left-color:#e03c68;color:#6b0c27">★ TRANG BỊ ĐỘC LẠ · Chỉ rơi khi hạ Quái & Boss (Không bán/không rèn)</div>`
+        : def.seasonalBannerId
+          ? `<div class="review-doll-note" style="border-left-color:#9b3fe0;color:#41126b">✦ ĐỘC QUYỀN RƯƠNG GACHA MÙA [G]</div>`
+          : "";
+      const passiveHtml = def.passive
+        ? `<div class="review-doll-note" style="border-left-color:${def.passive.isCurse ? "#f43f5e" : "#f59e0b"};color:${def.passive.isCurse ? "#881337" : "#4a2308"}">✦ <b>${def.passive.name}</b>${def.passive.cooldownSec ? ` (CD ${def.passive.cooldownSec}s)` : ""}: ${def.passive.description}</div>`
+        : def.passiveDesc
+          ? `<div class="review-doll-note" style="border-left-color:#b85a14;color:#4a2308">✦ ${def.passiveDesc}</div>`
+          : "";
       const hiddenSourceNote = def.isHidden
         ? `<div class="review-doll-note" style="border-left-color:#ff9922;color:#5c2106">✦ CỔ VẬT ẨN · ${
             def.hiddenSource === "craft_only"
@@ -326,18 +383,20 @@ export class ItemReviewTooltip {
 
       // Set bonus block
       let setHtml = "";
-      if (def.setId && SET_BONUSES[def.setId]) {
-        const setDef = SET_BONUSES[def.setId];
+      if (def.setId && ALL_SET_BONUSES[def.setId]) {
+        const setDef = ALL_SET_BONUSES[def.setId];
         let equippedPieces = 0;
         for (const s of EQUIP_SLOTS) {
           const eq = this.game.inv.equipment[s];
           if (eq && ITEMS[eq.defId]?.setId === def.setId) equippedPieces++;
         }
+        const topLine = setDef.maxPieces === 3 ? setDef.threePieceLabel : setDef.fourPieceLabel;
+        const topActive = setDef.maxPieces === 3 ? equippedPieces >= 3 : equippedPieces >= 4;
         setHtml = `
           <div class="review-set-box">
-            <div class="review-set-title">✦ BỘ: ${setDef.name} (${equippedPieces}/4)</div>
+            <div class="review-set-title">✦ BỘ: ${setDef.name} (${equippedPieces}/${setDef.maxPieces})</div>
             <div class="review-set-line ${equippedPieces >= 2 ? "on" : ""}">${setDef.twoPieceLabel}</div>
-            <div class="review-set-line ${equippedPieces >= 4 ? "on" : ""}">${setDef.fourPieceLabel}</div>
+            ${topLine ? `<div class="review-set-line ${topActive ? "on" : ""}">${topLine}</div>` : ""}
           </div>
         `;
       }
@@ -347,6 +406,8 @@ export class ItemReviewTooltip {
 
       bodyHtml = `
         <div class="review-stats-grid">${statLines}</div>
+        ${weaponSkillHtml}
+        ${exoticSourceHtml}
         ${infuseNote}
         ${hiddenSourceNote}
         ${passiveHtml}
@@ -382,11 +443,13 @@ export class ItemReviewTooltip {
       footerLeft = sourceKind === "hud" ? "Click phím để dùng ngay" : `Đang giữ: <b>x${owned}</b>`;
     } else {
       const owned = this.game.inv.countItem(def.id);
+      const isGachaKey = Boolean(def.gachaKeyBiome);
       bodyHtml = `
         <div class="review-tags-row">
-          <span class="review-tag-chip">Khoáng sản & Chế tác</span>
+          <span class="review-tag-chip">${isGachaKey ? "🗝 Chìa Rương Gacha Mùa [G]" : "Khoáng sản & Chế tác"}</span>
           <span class="review-tag-chip">Trong túi: <b>x${owned}</b></span>
         </div>
+        ${isGachaKey ? `<div class="review-doll-note" style="border-left-color:#d266ff;color:#41126b">★ Nhấn phím [G] hoặc lại Đài Gacha Thị Trấn để mở Rương Mùa!</div>` : ""}
       `;
       footerLeft = `Trong túi: <b>x${owned}</b>`;
     }
@@ -423,7 +486,7 @@ export class ItemReviewTooltip {
       </div>
       <div class="rope-divider"></div>
       ${bodyHtml}
-      <div class="review-lore">“${def.desc}”</div>
+      <div class="review-lore">“${def.lore ?? def.desc}”</div>
       <div class="rope-divider"></div>
       <div class="review-foot">
         <span>${footerLeft}</span>
@@ -437,13 +500,14 @@ export class ItemReviewTooltip {
     this.currentAura = aura;
 
     if (aura) {
-      this.liveFx = createFx(rarityAuraMod as PixelfxModule, {
+      const mod = (aura === "cursed" ? cursedAuraMod : rarityAuraMod) as PixelfxModule;
+      this.liveFx = createFx(mod, {
         x: this.fxSize / 2,
         y: this.fxSize / 2,
         palette: RARITY_PAL_BY_AURA[aura],
         tier: RARITY_TIER_BY_AURA[aura],
         radius: 23,
-        seed: aura === "legendary" ? 73 : aura === "epic" ? 47 : 31,
+        seed: aura === "legendary" ? 73 : aura === "cursed" ? 66 : aura === "epic" ? 47 : 31,
       });
     } else {
       this.liveFx = null;

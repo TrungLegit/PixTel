@@ -1,27 +1,17 @@
 import { CLASSES } from "../data/classes";
 import type { ClassId } from "../data/types";
-import { drawPixelfxHero, getClassShowcaseEquipment, getPixelfxHeroCompiled, type HeroAttackKind } from "../graphics/pixelfxHeroModels";
+import { drawPixelfxHero, getClassShowcaseEquipment, type HeroAttackKind } from "../graphics/pixelfxHeroModels";
+import { sprites } from "../graphics/pixelSprites";
 import { createFrame, clearFrame, createFx, PAL } from "../vfx/pixelfx/core/index.js";
 import { PIXELFX_MODS } from "../vfx/vfxManager";
 import type { PixelfxFrame, PixelfxInstance } from "../vfx/pixelfxTypes";
 import type { PixTelOpenWorldGame } from "../game";
 import { sfx } from "../audio/chiptuneSynth";
-
-const LOGO_GLYPHS: Record<string, string[]> = {
-  P: ["1111110", "1100011", "1100011", "1111110", "1100000", "1100000", "1100000"],
-  I: ["1111111", "0001100", "0001100", "0001100", "0001100", "0001100", "1111111"],
-  X: ["1100011", "1100011", "0110110", "0001100", "0110110", "1100011", "1100011"],
-  T: ["1111111", "0001100", "0001100", "0001100", "0001100", "0001100", "0001100"],
-  E: ["1111111", "1100000", "1100000", "1111110", "1100000", "1100000", "1111111"],
-  L: ["1100000", "1100000", "1100000", "1100000", "1100000", "1100000", "1111111"],
-  "1": ["0001100", "0011100", "0001100", "0001100", "0001100", "0001100", "0111110"],
-  "6": ["0011110", "0110000", "1100000", "1111110", "1100011", "1100011", "0111110"],
-  "-": ["0000000", "0000000", "0000000", "1111111", "0000000", "0000000", "0000000"],
-  B: ["1111110", "1100011", "1100011", "1111110", "1100011", "1100011", "1111110"],
-};
+import { renderPixtelLogo } from "./pixelLogo";
 
 interface CardPreview {
   classId: ClassId;
+  accent: string;
   spriteCanvas: HTMLCanvasElement;
   spriteCtx: CanvasRenderingContext2D;
   fxCanvas: HTMLCanvasElement;
@@ -35,9 +25,9 @@ interface CardPreview {
   lightImg: ImageData;
   lightU32: Uint32Array;
   frame: PixelfxFrame;
-  fx: PixelfxInstance | null;
-  modId: string;
-  cooldown: number;
+  fxList: PixelfxInstance[];
+  cycleT: number;
+  firedSteps: Set<number>;
 }
 
 /**
@@ -56,6 +46,7 @@ export class ClassSelectUI {
   private logoBufferCtx: CanvasRenderingContext2D;
   private selectedId: ClassId = "prism_knight";
   private switchingMode = false;
+  private pendingRoomCode = "";
   private previews: CardPreview[] = [];
   private rafId = 0;
   private lastT = 0;
@@ -89,14 +80,27 @@ export class ClassSelectUI {
       } else {
         const chk = document.getElementById("chk-newbie-guide") as HTMLInputElement | null;
         const enableGuide = chk ? chk.checked : true;
-        this.game.startNewGame(this.selectedId, enableGuide);
+        this.game.startNewGame(this.selectedId, enableGuide, this.game.pendingPlayerName, true);
       }
+    });
+
+    document.getElementById("btn-back-home")?.addEventListener("click", () => {
+      sfx.unlock();
+      sfx.playUiClick();
+      this.game.setModal("home");
+    });
+
+    document.getElementById("btn-open-coop")?.addEventListener("click", () => {
+      sfx.unlock();
+      sfx.playUiClick();
+      this.game.player.classId = this.selectedId;
+      this.game.openCoopFromTitle(this.pendingRoomCode || undefined, "class_select");
     });
 
     document.getElementById("btn-open-tutorial")?.addEventListener("click", () => {
       sfx.unlock();
       sfx.playUiClick();
-      this.game.openTutorialFromTitle();
+      this.game.openTutorialFromTitle("class_select");
     });
 
     this.continueBtn.addEventListener("click", () => {
@@ -108,6 +112,55 @@ export class ClassSelectUI {
     this.closeBtn.addEventListener("click", () => {
       sfx.playUiClick();
       this.game.setModal(null);
+    });
+  }
+
+  setPendingRoomInvite(code: string) {
+    this.pendingRoomCode = code.trim().toUpperCase();
+    this._renderInviteBanner();
+  }
+
+  private _renderInviteBanner() {
+    const banner = document.getElementById("title-room-invite-banner");
+    if (!banner) return;
+    if (!this.pendingRoomCode || this.switchingMode) {
+      banner.classList.add("hidden");
+      return;
+    }
+    banner.classList.remove("hidden");
+    const hasSave = this.game.saveSys.hasSave();
+    banner.innerHTML = `
+      <div class="coop-invite-text">
+        🤝 Bạn được mời vào Tổ Đội Co-op <b>[${this.pendingRoomCode}]</b> — Chọn Class phía trên rồi bấm vào phòng ngay!
+      </div>
+      <div class="coop-invite-btns">
+        <button id="btn-quick-join-new" class="px-btn sm good">🚀 VÀO NGAY PHÒNG [${this.pendingRoomCode}]</button>
+        ${hasSave ? `<button id="btn-quick-join-save" class="px-btn sm primary">▶ VÀO BẰNG FILE SAVE</button>` : ""}
+      </div>
+    `;
+    banner.querySelector("#btn-quick-join-new")?.addEventListener("click", async () => {
+      sfx.unlock();
+      sfx.playUiClick();
+      const code = this.pendingRoomCode;
+      this.game.startNewGame(this.selectedId, false);
+      try {
+        await this.game.joinCoopSession(code);
+      } catch {
+        this.game.setModal("coop", { code });
+      }
+    });
+    banner.querySelector("#btn-quick-join-save")?.addEventListener("click", async () => {
+      sfx.unlock();
+      sfx.playUiClick();
+      const code = this.pendingRoomCode;
+      if (!this.game.loadSavedGame()) {
+        this.game.startNewGame(this.selectedId, false);
+      }
+      try {
+        await this.game.joinCoopSession(code);
+      } catch {
+        this.game.setModal("coop", { code });
+      }
     });
   }
 
@@ -129,6 +182,9 @@ export class ClassSelectUI {
         return `<div class="stat-row"><span>${label}</span><div class="stat-pips">${blocks}</div></div>`;
       };
 
+      const chargeName = cls.skills.charge.name.replace(/\s*\(Giữ LMB\)\s*/i, "");
+      const ultName = cls.skills.ult.name.replace(/\s*\(Q\)\s*/i, "");
+
       card.innerHTML = `
         <div class="class-card-head">
           <canvas class="class-sprite-cv" width="84" height="68"></canvas>
@@ -139,8 +195,8 @@ export class ClassSelectUI {
           </div>
         </div>
         <div class="class-fx-box">
-          <canvas class="class-fx-cv" width="144" height="68"></canvas>
-          <span class="fx-tag">PIXELFX PREVIEW</span>
+          <canvas class="class-fx-cv" width="168" height="80"></canvas>
+          <span class="fx-tag" style="color:${cls.accent}">SKILL [Q] PREVIEW</span>
         </div>
         <div class="class-stats">
           ${bars("HP ", cls.uiBars.hp)}
@@ -148,10 +204,10 @@ export class ClassSelectUI {
           ${bars("SPD", cls.uiBars.spd)}
         </div>
         <div class="class-skills">
-          <div><b>LMB:</b> ${cls.skills.lmb.name}</div>
-          <div><b>Giữ LMB:</b> ${cls.skills.charge.name}</div>
-          <div><b>[E]:</b> ${cls.skills.skill.name}</div>
-          <div><b>[Q]:</b> ${cls.skills.ult.name}</div>
+          <div><b>Đánh thường (LMB):</b> ${cls.skills.lmb.name}</div>
+          <div><b>Giữ (Hold LMB):</b> ${chargeName}</div>
+          <div><b>Skill cố định [Q]:</b> ${ultName}</div>
+          <div class="class-weapon-e-note">✦ [E]: Kỹ năng riêng theo từng Vũ Khí</div>
         </div>
       `;
 
@@ -187,6 +243,7 @@ export class ClassSelectUI {
 
       this.previews.push({
         classId: cls.id,
+        accent: cls.accent,
         spriteCanvas,
         spriteCtx,
         fxCanvas,
@@ -200,9 +257,9 @@ export class ClassSelectUI {
         lightImg,
         lightU32: new Uint32Array(lightImg.data.buffer),
         frame: createFrame(w, h, 0, 0),
-        fx: null,
-        modId: cls.previewFx,
-        cooldown: 0.1,
+        fxList: [],
+        cycleT: 0,
+        firedSteps: new Set<number>(),
       });
     }
 
@@ -211,6 +268,9 @@ export class ClassSelectUI {
 
   selectClass(id: ClassId) {
     this.selectedId = id;
+    if (!this.switchingMode && !this.game.running && this.game.player) {
+      this.game.player.classId = id;
+    }
     for (const el of Array.from(this.gridEl.querySelectorAll(".class-card"))) {
       el.classList.toggle("selected", (el as HTMLElement).dataset.classId === id);
     }
@@ -221,21 +281,35 @@ export class ClassSelectUI {
     this.root.classList.remove("hidden");
 
     const startBtn = document.getElementById("btn-start-adventure")!;
+    const backHomeBtn = document.getElementById("btn-back-home");
+    const playerBanner = document.getElementById("class-player-name-banner");
     const guideWrap = document.getElementById("newbie-guide-wrap");
+    const coopBtn = document.getElementById("btn-open-coop");
     if (switching) {
       this.selectClass(this.game.player.classId);
       this.titleSubEl.textContent = "ĐÀI ĐỔI CLASS — Chọn nhân vật mới (giữ nguyên cấp độ, trang bị & nhiệm vụ)";
       startBtn.textContent = "ĐỔI SANG CLASS NÀY";
       this.continueBtn.classList.add("hidden");
       this.closeBtn.classList.remove("hidden");
+      backHomeBtn?.classList.add("hidden");
+      playerBanner?.classList.add("hidden");
       guideWrap?.classList.add("hidden");
+      coopBtn?.classList.add("hidden");
     } else {
-      this.titleSubEl.textContent = "THẾ GIỚI MỞ 16-BIT ACTION RPG — Đánh thức Trụ Sắc Màu & tiêu diệt The Eraser";
-      startBtn.textContent = "BẮT ĐẦU PHIÊU LƯU MỚI";
+      const heroName = this.game.pendingPlayerName || this.game.player.name || "Chroma-Walker";
+      this.titleSubEl.textContent = "BƯỚC 2/2: CHỌN CLASS CHIẾN ĐẤU — Sau đó nhấn BẮT ĐẦU để mở màn Biên Niên Sử!";
+      startBtn.textContent = `⚔ BẮT ĐẦU PHIÊU LƯU (${heroName})`;
       this.continueBtn.classList.toggle("hidden", !this.game.saveSys.hasSave());
       this.closeBtn.classList.add("hidden");
+      backHomeBtn?.classList.remove("hidden");
+      if (playerBanner) {
+        playerBanner.classList.remove("hidden");
+        playerBanner.innerHTML = `✨ CHIẾN BINH: <b style="color:#ffe066">${heroName}</b> <span style="opacity:0.75">· Bước 2/2: Chọn Class khởi đầu</span>`;
+      }
       guideWrap?.classList.remove("hidden");
+      coopBtn?.classList.remove("hidden");
     }
+    this._renderInviteBanner();
 
     if (!this.rafId) {
       this.lastT = performance.now();
@@ -257,49 +331,53 @@ export class ClassSelectUI {
     this.root.classList.add("hidden");
   }
 
-  private _spawnPreviewFx(p: CardPreview) {
-    const mod = PIXELFX_MODS[p.modId];
+  private _spawnStageFx(p: CardPreview, modId: string, opts: Record<string, unknown>) {
+    const mod = PIXELFX_MODS[modId];
     if (!mod) return;
-    if (p.classId === "prism_knight") {
-      p.fx = createFx(mod, { x: 16, y: 34, angle: 0, length: 112, palette: PAL.cyber, seed: 7 });
-    } else if (p.classId === "chroma_mage") {
-      p.fx = createFx(mod, { x: 72, y: 36, radius: 24, seed: 11 });
-    } else if (p.classId === "bit_rogue") {
-      p.fx = createFx(mod, { x: 72, y: 52, actor: getPixelfxHeroCompiled("bit_rogue", 0).actor, seed: 19 });
-    } else {
-      p.fx = createFx(mod, { x: 72, y: 46, seed: 23 });
+    p.fxList.push(createFx(mod, opts));
+  }
+
+  private _blitPreviewLayer(p: CardPreview, layer: "back" | "front") {
+    if (p.fxList.length === 0) return;
+    clearFrame(p.frame);
+    for (const fx of p.fxList) {
+      fx.draw(p.frame, layer);
+    }
+    p.colorU32.set(p.frame.color);
+    p.colorCtx.putImageData(p.colorImg, 0, 0);
+    p.fxCtx.drawImage(p.colorCanvas, 0, 0);
+
+    p.lightU32.set(p.frame.light);
+    p.lightCtx.putImageData(p.lightImg, 0, 0);
+    p.fxCtx.save();
+    p.fxCtx.globalCompositeOperation = "lighter";
+    p.fxCtx.drawImage(p.lightCanvas, 0, 0);
+    p.fxCtx.restore();
+  }
+
+  private _drawCrystalTarget(ctx: CanvasRenderingContext2D, x: number, y: number, t: number, hitPulse: boolean) {
+    const bob = Math.round(Math.sin(t * 4) * 2);
+    ctx.fillStyle = "rgba(0,0,0,0.45)";
+    ctx.fillRect(x - 7, y + 6, 14, 3);
+    const cols = hitPulse ? ["#ffffff", "#ffe066", "#ffffff"] : ["#ff4a7a", "#b866ff", "#4be8ff"];
+    for (let dy = -9; dy <= 7; dy += 2) {
+      const hw = Math.max(1, Math.round((1 - Math.abs(dy + 1) / 10) * 6));
+      const c = cols[Math.abs(dy) % cols.length];
+      ctx.fillStyle = "#080a14";
+      ctx.fillRect(x - hw - 1, y + dy + bob, hw * 2 + 2, 2);
+      ctx.fillStyle = c;
+      ctx.fillRect(x - hw, y + dy + bob, hw * 2, 2);
     }
   }
 
   private _tickPreviews(dt: number) {
     this.animT += dt;
     this._drawLogo();
-    const frameIdx = Math.floor(this.animT * 5) % 4;
-    const previewAttackKind: Record<ClassId, HeroAttackKind> = {
-      prism_knight: "beam",
-      chroma_mage: "cast_heavy",
-      bit_rogue: "spin",
-      pixel_tinker: "shoot_heavy",
-    };
+    const walkFrame = Math.floor(this.animT * 5) % 4;
+    const CYCLE_DUR = 2.4;
 
     for (const p of this.previews) {
-      // Live pixelfx two-buffer preview (ticked first so hero anim locks directly to p.fx.t)
-      if (!p.fx) {
-        p.cooldown -= dt;
-        if (p.cooldown <= 0) this._spawnPreviewFx(p);
-      } else {
-        p.fx.update(dt);
-        if (p.fx.done()) {
-          p.fx = null;
-          p.cooldown = 0.35;
-        }
-      }
-
-      const fxActive = Boolean(p.fx && p.fx.t < 0.62);
-      const animState = fxActive ? "attack" : "run";
-      const attackProgress = p.fx ? Math.min(1, p.fx.t / 0.58) : 0;
-
-      // Animated 3D-rigged pixelfx Class Hero showcase synchronized with p.fx!
+      // 1. Top-left crisp standing/running hero showcase portrait
       p.spriteCtx.clearRect(0, 0, p.spriteCanvas.width, p.spriteCanvas.height);
       p.spriteCtx.fillStyle = "#100e1c";
       p.spriteCtx.fillRect(0, 0, p.spriteCanvas.width, p.spriteCanvas.height);
@@ -314,143 +392,377 @@ export class ClassSelectUI {
         y: 58,
         rigScale: 1.0,
         drawScale: 1,
-        walkFrame: frameIdx,
+        walkFrame,
         facing: 1,
-        animState,
-        attackKind: previewAttackKind[p.classId],
-        attackProgress,
+        animState: "run",
         time: this.animT,
       });
 
-      p.fxCtx.fillStyle = "#100e1c";
-      p.fxCtx.fillRect(0, 0, p.fxCanvas.width, p.fxCanvas.height);
-
-      if (p.fx) {
-        clearFrame(p.frame);
-        p.fx.draw(p.frame, "back");
-        p.fx.draw(p.frame, "front");
-        p.colorU32.set(p.frame.color);
-        p.colorCtx.putImageData(p.colorImg, 0, 0);
-        p.fxCtx.drawImage(p.colorCanvas, 0, 0);
-
-        p.lightU32.set(p.frame.light);
-        p.lightCtx.putImageData(p.lightImg, 0, 0);
-        p.fxCtx.save();
-        p.fxCtx.globalCompositeOperation = "lighter";
-        p.fxCtx.drawImage(p.lightCanvas, 0, 0);
-        p.fxCtx.restore();
+      // 2. Live Fixed-Skill [Q] Stage Preview — ACTUAL HERO performing Fixed Class Skill [Q]!
+      p.cycleT += dt;
+      if (p.cycleT >= CYCLE_DUR) {
+        p.cycleT -= CYCLE_DUR;
+        p.firedSteps.clear();
       }
+      const ct = p.cycleT;
+      const fireStep = (step: number, at: number, fn: () => void) => {
+        if (ct >= at && !p.firedSteps.has(step)) {
+          p.firedSteps.add(step);
+          fn();
+        }
+      };
+
+      // Schedule class-specific Fixed Skill [Q] pixelfx cues continuously
+      if (p.classId === "prism_knight") {
+        // Bão Kiếm Ánh Sáng [Q]: Hero channels & spins inside prism-storm cyclone!
+        fireStep(0, 0.0, () => {
+          this._spawnStageFx(p, "pixtel/overdrive-aura", { x: 84, y: 60, seed: 7 });
+          this._spawnStageFx(p, "pixtel/prism-storm", { x: 84, y: 52, radius: 38, seed: 11 });
+        });
+        fireStep(1, 0.75, () => {
+          this._spawnStageFx(p, "pixtel/rainbow-burst", { x: 84, y: 48, seed: 19 });
+        });
+        fireStep(2, 1.3, () => {
+          this._spawnStageFx(p, "pixtel/prism-storm", { x: 84, y: 52, radius: 38, seed: 29 });
+        });
+      } else if (p.classId === "chroma_mage") {
+        // Mưa Thiên Thạch Thất Sắc [Q]: Mage levitates & summons cascading rainbow meteors!
+        fireStep(0, 0.0, () => {
+          this._spawnStageFx(p, "pixtel/overdrive-aura", { x: 42, y: 60, seed: 13 });
+          this._spawnStageFx(p, "arcane/star-fall", { x: 108, y: 46, palette: PAL.candy, seed: 17 });
+        });
+        fireStep(1, 0.52, () => {
+          this._spawnStageFx(p, "explosions/plasma-explosion", { x: 108, y: 58, palette: PAL.candy, seed: 23 });
+          this._spawnStageFx(p, "arcane/star-fall", { x: 134, y: 44, palette: PAL.fire, seed: 31 });
+        });
+        fireStep(2, 1.05, () => {
+          this._spawnStageFx(p, "pixtel/rainbow-burst", { x: 134, y: 56, seed: 37 });
+          this._spawnStageFx(p, "arcane/star-fall", { x: 118, y: 46, palette: PAL.ice, seed: 41 });
+        });
+        fireStep(3, 1.62, () => {
+          this._spawnStageFx(p, "explosions/plasma-explosion", { x: 118, y: 58, palette: PAL.holy, seed: 43 });
+        });
+      } else if (p.classId === "bit_rogue") {
+        // Phân Thân Ảo Ảnh [Q]: Shadow-Split summon -> Blink-Pincer Hyper-Speed Twin Slashes (+100% ASPD & Crit!)
+        fireStep(0, 0.0, () => {
+          this._spawnStageFx(p, "spawn/poof", { x: 84, y: 58, palette: PAL.neon, stars: PAL.cyber, seed: 51 });
+          this._spawnStageFx(p, "pixtel/sonic-wave", { x: 84, y: 52, palette: PAL.cyber, radius: 44, seed: 53 });
+          this._spawnStageFx(p, "pixtel/overdrive-aura", { x: 54, y: 60, seed: 55 });
+        });
+        fireStep(1, 0.42, () => {
+          this._spawnStageFx(p, "melee/dagger-flurry", { x: 84, y: 50, palette: PAL.neon, seed: 59 });
+          this._spawnStageFx(p, "melee/double-slash", { x: 84, y: 50, palette: PAL.cyber, radius: 36, flip: true, seed: 61 });
+          this._spawnStageFx(p, "impacts/crit-hit", { x: 84, y: 50, palette: PAL.gold, seed: 63 });
+        });
+        fireStep(2, 0.94, () => {
+          this._spawnStageFx(p, "melee/double-slash", { x: 84, y: 50, palette: PAL.neon, radius: 40, seed: 65 });
+          this._spawnStageFx(p, "melee/dagger-flurry", { x: 84, y: 50, palette: PAL.cyber, flip: true, seed: 67 });
+          this._spawnStageFx(p, "impacts/crit-hit", { x: 84, y: 48, palette: PAL.gold, seed: 69 });
+        });
+        fireStep(3, 1.44, () => {
+          this._spawnStageFx(p, "melee/spin-slash", { x: 84, y: 52, palette: PAL.neon, radius: 44, seed: 71 });
+          this._spawnStageFx(p, "melee/spin-slash", { x: 84, y: 52, palette: PAL.cyber, radius: 34, flip: true, seed: 73 });
+          this._spawnStageFx(p, "impacts/crit-hit", { x: 84, y: 50, palette: PAL.gold, seed: 75 });
+        });
+        fireStep(4, 1.94, () => {
+          this._spawnStageFx(p, "pixtel/sonic-wave", { x: 84, y: 52, palette: PAL.neon, radius: 42, seed: 77 });
+          this._spawnStageFx(p, "impacts/crit-hit", { x: 84, y: 50, palette: PAL.gold, seed: 79 });
+        });
+      } else {
+        // Drone Sắc Độ Quá Tải [Q]: Tinker commands orbiting Drone firing Chroma-Volt beams!
+        fireStep(0, 0.0, () => {
+          this._spawnStageFx(p, "pixtel/overdrive-aura", { x: 42, y: 60, seed: 71 });
+          this._spawnStageFx(p, "lightning/zap-hit", { x: 134, y: 52, seed: 73 });
+        });
+        fireStep(1, 0.65, () => {
+          this._spawnStageFx(p, "lightning/zap-hit", { x: 134, y: 52, seed: 79 });
+          this._spawnStageFx(p, "pixtel/rainbow-burst", { x: 134, y: 52, seed: 83 });
+        });
+        fireStep(2, 1.35, () => {
+          this._spawnStageFx(p, "lightning/zap-hit", { x: 134, y: 52, seed: 89 });
+        });
+        fireStep(3, 1.9, () => {
+          this._spawnStageFx(p, "pixtel/rainbow-burst", { x: 134, y: 52, seed: 97 });
+        });
+      }
+
+      for (let i = p.fxList.length - 1; i >= 0; i--) {
+        p.fxList[i].update(dt);
+        if (p.fxList[i].done()) p.fxList.splice(i, 1);
+      }
+
+      // Draw mini arena backdrop
+      const ctx = p.fxCtx;
+      const w = p.fxCanvas.width;
+      const h = p.fxCanvas.height;
+      ctx.fillStyle = "#0e0c1a";
+      ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = "#17142b";
+      ctx.fillRect(0, 56, w, h - 56);
+      ctx.fillStyle = "#2b274c";
+      ctx.fillRect(0, 56, w, 2);
+      // Subtle floor tiles
+      ctx.fillStyle = "#221e3c";
+      for (let gx = 8; gx < w; gx += 20) {
+        ctx.fillRect(gx, 62, 10, 2);
+        ctx.fillRect(gx - 6, 70, 10, 2);
+      }
+
+      // Back VFX layer (behind hero)
+      this._blitPreviewLayer(p, "back");
+
+      // Render ACTUAL Hero performing their Fixed Skill [Q]!
+      const equip = getClassShowcaseEquipment(p.classId);
+      if (p.classId === "prism_knight") {
+        // Glowing storm seal under Knight
+        ctx.fillStyle = "rgba(75, 232, 255, 0.25)";
+        ctx.fillRect(54, 62, 60, 5);
+        ctx.fillStyle = "rgba(0,0,0,0.48)";
+        ctx.fillRect(74, 64, 20, 4);
+        const isWindup = ct < 0.35;
+        drawPixelfxHero(ctx, {
+          classId: "prism_knight",
+          equipment: equip,
+          x: 84,
+          y: 66,
+          rigScale: 0.9,
+          drawScale: 1,
+          walkFrame,
+          facing: 1,
+          animState: "attack",
+          attackKind: isWindup ? "cast_ult" : "storm",
+          attackProgress: isWindup ? ct / 0.35 : ((ct - 0.35) * 2.4) % 1,
+          time: this.animT,
+          buffActive: true,
+        });
+      } else if (p.classId === "chroma_mage") {
+        // Target impact rune pad on right
+        ctx.fillStyle = "rgba(255, 102, 216, 0.22)";
+        ctx.fillRect(92, 61, 56, 6);
+        const lev = Math.round(Math.sin(this.animT * 6) * 2) - 2;
+        ctx.fillStyle = "rgba(0,0,0,0.45)";
+        ctx.fillRect(34, 64, 16, 4);
+        const castKind: HeroAttackKind = ct < 0.45 ? "cast_ult" : "orb_levitate";
+        drawPixelfxHero(ctx, {
+          classId: "chroma_mage",
+          equipment: equip,
+          x: 42,
+          y: 66 + lev,
+          rigScale: 0.9,
+          drawScale: 1,
+          walkFrame,
+          facing: 1,
+          animState: "attack",
+          attackKind: castKind,
+          attackProgress: (ct * 1.15) % 1,
+          time: this.animT,
+          buffActive: true,
+        });
+      } else if (p.classId === "bit_rogue") {
+        // Phân Thân Ảo Ảnh [Q]: Shadow-Split -> Hyper-speed Blink-Pincer Twin Slashes + Afterimages + Crit!
+        const hitPulse = ct > 0.38 && ct < 2.15;
+        this._drawCrystalTarget(ctx, 84, 58, this.animT, hitPulse);
+
+        // Determine dynamic blink phase (swaps Real Rogue & Phantom Clone across the crystal at 2x speed!)
+        const splitU = Math.min(1, ct / 0.36);
+        const swapped = ct >= 0.94 && ct < 1.44;
+        const lunge = ct < 0.38 ? 0 : Math.sin(((ct - 0.38) * 3.8) * Math.PI) * 12;
+        const leftX = Math.round(84 - 30 * splitU + Math.max(0, lunge));
+        const rightX = Math.round(84 + 30 * splitU - Math.max(0, lunge));
+        const heroX = swapped ? rightX : leftX;
+        const cloneX = swapped ? leftX : rightX;
+        const heroFacing: 1 | -1 = swapped ? -1 : 1;
+        const cloneFacing: 1 | -1 = swapped ? 1 : -1;
+
+        const atkKind: HeroAttackKind =
+          ct < 0.36
+            ? "cast_ult"
+            : ct < 0.94
+              ? "dual_cross_slash"
+              : ct < 1.44
+                ? "flurry_2"
+                : "spin";
+        const atkProg = (ct * 2.5) % 1; // +100% rapid attack rhythm!
+
+        // Neon speed-tether & dash streaks linking Real Rogue <-> Phantom Clone across target!
+        if (ct >= 0.22) {
+          ctx.save();
+          ctx.strokeStyle = "#2ef2ff";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(heroX, 50);
+          ctx.lineTo(cloneX, 50);
+          ctx.stroke();
+          ctx.strokeStyle = "#ff2e63";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(heroX, 46);
+          ctx.lineTo(84, 38);
+          ctx.lineTo(cloneX, 46);
+          ctx.stroke();
+          // Rapid horizontal speed lines (+100% ASPD)
+          for (let s = 0; s < 5; s++) {
+            const sy = 36 + s * 6;
+            const sx = 22 + ((Math.floor(this.animT * 190) + s * 29) % 116);
+            ctx.fillStyle = s % 2 === 0 ? "rgba(46, 242, 255, 0.55)" : "rgba(255, 46, 99, 0.55)";
+            ctx.fillRect(sx, sy, 14, 1);
+          }
+          ctx.restore();
+        }
+
+        // 1. Overhead Shadow Echo Clone (3rd phantom striking from above during rapid flurry!)
+        if (ct >= 0.42 && ct < 1.98) {
+          ctx.save();
+          ctx.globalAlpha = 0.42;
+          drawPixelfxHero(ctx, {
+            classId: "bit_rogue",
+            equipment: equip,
+            x: 84 + Math.round(Math.sin(this.animT * 18) * 6),
+            y: 44 + Math.round(Math.cos(this.animT * 14) * 2),
+            rigScale: 0.78,
+            drawScale: 1,
+            walkFrame,
+            facing: heroFacing,
+            animState: "attack",
+            attackKind: "dual_cross_slash",
+            attackProgress: (atkProg + 0.5) % 1,
+            time: this.animT,
+            aegisActive: true,
+          });
+          ctx.restore();
+        }
+
+        // 2. Blink Afterimage Trails (behind both Real Rogue and Main Clone)
+        if (ct >= 0.42) {
+          ctx.save();
+          ctx.globalAlpha = 0.3;
+          drawPixelfxHero(ctx, {
+            classId: "bit_rogue",
+            equipment: equip,
+            x: heroX - heroFacing * 12,
+            y: 66,
+            rigScale: 0.88,
+            drawScale: 1,
+            walkFrame,
+            facing: heroFacing,
+            animState: "attack",
+            attackKind: atkKind,
+            attackProgress: Math.max(0, atkProg - 0.18),
+            time: this.animT,
+          });
+          ctx.restore();
+        }
+
+        // 3. Main Holographic Neon Phantom Clone (pincering opposite side in exact sync!)
+        if (ct >= 0.14) {
+          ctx.save();
+          ctx.fillStyle = "rgba(46, 242, 255, 0.42)";
+          ctx.fillRect(cloneX - 11, 63, 22, 4);
+          ctx.fillStyle = "rgba(255, 46, 99, 0.35)";
+          ctx.fillRect(cloneX - 8, 65, 16, 2);
+          ctx.globalAlpha = 0.76;
+          drawPixelfxHero(ctx, {
+            classId: "bit_rogue",
+            equipment: equip,
+            x: cloneX,
+            y: 66 + Math.round(Math.sin(this.animT * 16) * 1.5),
+            rigScale: 0.9,
+            drawScale: 1,
+            walkFrame,
+            facing: cloneFacing,
+            animState: "attack",
+            attackKind: atkKind,
+            attackProgress: atkProg,
+            time: this.animT,
+            aegisActive: true,
+          });
+          ctx.restore();
+        }
+
+        // 4. Real Bit Rogue
+        ctx.fillStyle = "rgba(0,0,0,0.48)";
+        ctx.fillRect(heroX - 9, 64, 18, 4);
+        drawPixelfxHero(ctx, {
+          classId: "bit_rogue",
+          equipment: equip,
+          x: heroX,
+          y: 66,
+          rigScale: 0.9,
+          drawScale: 1,
+          walkFrame,
+          facing: heroFacing,
+          animState: "attack",
+          attackKind: atkKind,
+          attackProgress: atkProg,
+          time: this.animT,
+          buffActive: true,
+        });
+
+        // 5. Crisp floating "+100% SPD · CRIT!" pixel sparks above crystal on impact beats
+        if (hitPulse && Math.sin(this.animT * 22) > 0) {
+          ctx.fillStyle = "#ffe066";
+          ctx.fillRect(79, 26, 10, 2);
+          ctx.fillRect(83, 22, 2, 10);
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(83, 26, 2, 2);
+        }
+      } else {
+        // Pixel Tinker + Orbiting Overload Drone firing live Chroma-Volt laser to target!
+        const firing = Math.sin(this.animT * 10) > -0.15;
+        this._drawCrystalTarget(ctx, 134, 54, this.animT, firing);
+
+        ctx.fillStyle = "rgba(0,0,0,0.48)";
+        ctx.fillRect(34, 64, 18, 4);
+        const atkKind: HeroAttackKind = ct < 0.4 ? "cast_ult" : "recoil_barrage";
+        drawPixelfxHero(ctx, {
+          classId: "pixel_tinker",
+          equipment: equip,
+          x: 42,
+          y: 66,
+          rigScale: 0.9,
+          drawScale: 1,
+          walkFrame,
+          facing: 1,
+          animState: "attack",
+          attackKind: atkKind,
+          attackProgress: (ct * 1.35) % 1,
+          time: this.animT,
+          buffActive: true,
+        });
+
+        // Orbiting Overload Drone sprite + firing Chroma-Volt laser beam!
+        const droneX = Math.round(68 + Math.cos(this.animT * 4.8) * 14);
+        const droneY = Math.round(30 + Math.sin(this.animT * 4.8) * 6);
+        if (firing) {
+          ctx.save();
+          ctx.strokeStyle = "#44ee88";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(droneX + 4, droneY);
+          ctx.lineTo(134, 52);
+          ctx.stroke();
+          ctx.strokeStyle = "#ffe066";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(droneX + 4, droneY);
+          ctx.lineTo(134, 52);
+          ctx.stroke();
+          ctx.restore();
+        }
+        // Glow halo + actual compiled Overload Drone sprite
+        ctx.fillStyle = "rgba(68, 238, 136, 0.35)";
+        ctx.fillRect(droneX - 8, droneY - 8, 16, 16);
+        if (sprites.summons?.drone?.right) {
+          ctx.drawImage(sprites.summons.drone.right, droneX - 7, droneY - 7);
+        }
+      }
+
+      // Front VFX + Additive Light layer (wraps over hero!)
+      this._blitPreviewLayer(p, "front");
     }
   }
 
   private _drawLogo() {
-    const ctx = this.logoBufferCtx;
-    const width = this.logoBuffer.width;
-    const height = this.logoBuffer.height;
-    const px = (x: number, y: number, w: number, h: number, color: string) => {
-      ctx.fillStyle = color;
-      ctx.fillRect(Math.floor(x), Math.floor(y), Math.ceil(w), Math.ceil(h));
-    };
-
-    px(0, 0, width, height, "#090c16");
-    for (let x = 0; x < width; x += 8) {
-      px(x, 0, 1, height, x % 32 === 0 ? "#202b42" : "#121a2a");
-    }
-    for (let y = 0; y < height; y += 8) {
-      px(0, y, width, 1, y % 32 === 0 ? "#202b42" : "#121a2a");
-    }
-
-    for (let i = 0; i < 28; i++) {
-      const x = (i * 67 + 23) % width;
-      const y = (i * 43 + 11) % height;
-      const shimmer = Math.sin(this.animT * 2.4 + i * 1.7);
-      if (shimmer > -0.15) {
-        px(x, y, i % 7 === 0 ? 2 : 1, 1, i % 3 === 0 ? "#ffe066" : "#63eaff");
-      }
-    }
-
-    const crestRows = [28, 40, 52, 60, 64, 60, 52, 40, 28];
-    crestRows.forEach((rowWidth, row) => {
-      const y = 3 + row * 3;
-      px(120 - rowWidth / 2 + 2, y + 2, rowWidth, 3, "#03050a");
-      px(120 - rowWidth / 2, y, rowWidth, 3, row % 2 === 0 ? "#6d5425" : "#b17e25");
-    });
-
-    const pillars = [
-      { color: "#ff4761", shade: "#a81e40" },
-      { color: "#ffd84d", shade: "#bd7417" },
-      { color: "#42e6a3", shade: "#157b61" },
-      { color: "#49dcff", shade: "#246cb5" },
-      { color: "#b277ff", shade: "#6241bd" },
-    ];
-    pillars.forEach((pillar, index) => {
-      const x = 91 + index * 14;
-      const bob = Math.round(Math.sin(this.animT * 2.2 + index * 0.8));
-      px(x, 9 + bob, 11, 6, pillar.color);
-      px(x, 15 + bob, 11, 9, pillar.shade);
-      px(x + 1, 10 + bob, 2, 3, "#fff4d0");
-    });
-
-    for (let i = 0; i < 14; i++) {
-      const x = 98 + i * 3;
-      const y = 30 - Math.round(i * 1.65);
-      px(x - 2, y - 2, 6, 6, "#080a12");
-      px(x, y, 2, 2, i > 7 ? "#38d9ff" : "#fff8d8");
-    }
-    px(105, 31, 30, 2, "#f7c74d");
-
-    const letters = "PIXTEL";
-    const scale = 4;
-    const glyphWidth = 7 * scale;
-    const gap = 4;
-    const startX = Math.floor((width - (letters.length * glyphWidth + (letters.length - 1) * gap)) / 2);
-    const startY = 37;
-    const colors = [
-      ["#ff6676", "#c72c51"],
-      ["#ffe36b", "#d18b26"],
-      ["#70f0b4", "#1a9c74"],
-      ["#7ceaff", "#287fc4"],
-      ["#c18aff", "#754bd1"],
-      ["#ff93c4", "#d54485"],
-    ];
-
-    letters.split("").forEach((letter, index) => {
-      const glyph = LOGO_GLYPHS[letter];
-      const glyphX = startX + index * (glyphWidth + gap);
-      const glyphY = startY + Math.round(Math.sin(this.animT * 3 + index * 0.8));
-      glyph.forEach((row, rowIndex) => {
-        for (let col = 0; col < row.length; col++) {
-          if (row[col] !== "1") continue;
-          const x = glyphX + col * scale;
-          const y = glyphY + rowIndex * scale;
-          px(x + 2, y + 2, scale, scale, "#03050a");
-          px(x - 1, y, scale + 2, scale, "#080a12");
-          px(x, y - 1, scale, scale + 2, "#080a12");
-          px(x, y, scale, scale, rowIndex < 3 ? colors[index][0] : colors[index][1]);
-          if (rowIndex === 0) px(x, y, scale, 1, "#ffffff");
-        }
-      });
-    });
-
-    const badge = "16-BIT";
-    const badgeWidth = badge.length * 7 + (badge.length - 1);
-    const badgeX = Math.floor((width - badgeWidth) / 2);
-    const badgeY = 74;
-    px(badgeX - 5, badgeY - 2, badgeWidth + 10, 11, "#03050a");
-    px(badgeX - 4, badgeY - 1, badgeWidth + 8, 9, "#171d2d");
-    px(badgeX - 4, badgeY - 1, badgeWidth + 8, 1, "#52def5");
-    badge.split("").forEach((letter, index) => {
-      const glyph = LOGO_GLYPHS[letter];
-      glyph.forEach((row, rowIndex) => {
-        for (let col = 0; col < row.length; col++) {
-          if (row[col] === "1") {
-            px(badgeX + index * 8 + col, badgeY + rowIndex, 1, 1, rowIndex < 3 ? "#ffffff" : "#8cecff");
-          }
-        }
-      });
-    });
-
-    this.logoCtx.clearRect(0, 0, this.logoCanvas.width, this.logoCanvas.height);
-    this.logoCtx.drawImage(this.logoBuffer, 0, 0, width, height, 0, 0, this.logoCanvas.width, this.logoCanvas.height);
+    renderPixtelLogo(this.logoBuffer, this.logoBufferCtx, this.logoCanvas, this.logoCtx, this.animT);
   }
 }

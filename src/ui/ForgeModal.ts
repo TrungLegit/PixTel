@@ -602,13 +602,25 @@ export class ForgeModalUI {
         const bs = item.bonusStats;
         const bsParts: string[] = [];
         if (bs?.atk) bsParts.push(`+${bs.atk} ATK`);
+        if (bs?.mag) bsParts.push(`+${bs.mag} MAG`);
         if (bs?.def) bsParts.push(`+${bs.def} DEF`);
         if (bs?.maxHp) bsParts.push(`+${bs.maxHp} HP`);
         if (bs?.spd) bsParts.push(`+${bs.spd} SPD`);
         if (bs?.crit) bsParts.push(`+${bs.crit}% CRIT`);
+        if (bs?.aspdPct) bsParts.push(`+${bs.aspdPct}% ASPD`);
+        if (bs?.critDmgPct) bsParts.push(`+${bs.critDmgPct}% CRIT DMG`);
+        const fateDieCount = this.game.inv.countItem("cs_fate_die");
+        const fateRow = `
+          <div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <button class="px-btn sm ${fateDieCount > 0 && !busy ? "primary" : "disabled"}" id="btn-fate-reroll" ${fateDieCount <= 0 || busy ? "disabled" : ""} data-review-def="cs_fate_die">
+              🎲 ĐỔI MỆNH (Xúc Xắc: ${fateDieCount})
+            </button>
+            <span style="font-size:11px;color:#cbd5e1">Tung Xúc Xắc Đổi Mệnh để reroll chỉ số phụ!</span>
+          </div>
+        `;
         const bonusBox = bsParts.length
-          ? `<div class="bonus-sub-box">✦ Dòng phụ Ma Trận đã thức tỉnh: <b>${bsParts.join(" · ")}</b></div>`
-          : `<div class="bonus-sub-box" style="color:#9ba4bf;border-color:#353954;background:#100f1e">✧ Luyện +1 thành công sẽ ngẫu nhiên thức tỉnh 1 dòng phụ (ATK / DEF / HP / SPD / CRIT)!</div>`;
+          ? `<div class="bonus-sub-box">✦ Dòng phụ Ma Trận đã thức tỉnh: <b>${bsParts.join(" · ")}</b>${fateRow}</div>`
+          : `<div class="bonus-sub-box" style="color:#9ba4bf;border-color:#353954;background:#100f1e">✧ Luyện +1 thành công sẽ ngẫu nhiên thức tỉnh 1 dòng phụ (hoặc dùng Xúc Xắc Đổi Mệnh)!${fateRow}</div>`;
 
         let infuseHtml = "";
         if (item.enhanceLevel >= 5) {
@@ -742,6 +754,25 @@ export class ForgeModalUI {
       this.render();
     });
 
+    this.contentEl.querySelector("#btn-fate-reroll")?.addEventListener("click", () => {
+      if (!this.selectedUid || this.matrixPhase === "channeling") return;
+      const res = this.game.forge.rerollSubstatsWithFateDie(this.selectedUid, this.game.inv);
+      this.resultMsg = res.message;
+      this.resultOk = res.succeeded;
+      if (res.succeeded) {
+        this.matrixPhase = "success";
+        this.matrixTimer = 1.4;
+        this._burstSparks(true);
+        sfx.playForgeSuccess();
+        this.game.recalcPlayerStats(true);
+        this.game.refreshHud();
+        this.game.saveGame(false);
+      } else {
+        sfx.playForgeFail();
+      }
+      this.render();
+    });
+
     this.contentEl.querySelectorAll("[data-infuse]").forEach((el) => {
       el.addEventListener("click", () => {
         if (!this.selectedUid || this.matrixPhase === "channeling") return;
@@ -772,17 +803,24 @@ export class ForgeModalUI {
 
   private _renderCraft(banner: string) {
     const classId = this.game.player.classId;
-    const hiddenRecipes = FORGE_RECIPES.filter((r) => r.isHiddenRecipe);
+    const hiddenRecipes = FORGE_RECIPES.filter((r) => r.isHiddenRecipe || r.isHidden);
+    const visibleHiddenRecipes = hiddenRecipes.filter(
+      (r) => !r.isHidden || this.game.canRevealHiddenRecipe(r)
+    );
     const unlockedHiddenCount = hiddenRecipes.filter((r) =>
-      this.game.isHiddenItemUnlocked(r.resultDefId)
+      this.game.canRevealHiddenRecipe(r) || this.game.isHiddenItemUnlocked(r.resultDefId)
     ).length;
+
+    const visibleAllRecipes = FORGE_RECIPES.filter(
+      (r) => !r.isHidden || this.game.canRevealHiddenRecipe(r)
+    );
 
     const filtered =
       this.craftFilter === "hidden"
-        ? hiddenRecipes
+        ? visibleHiddenRecipes
         : this.craftFilter === "class"
-          ? FORGE_RECIPES.filter((r) => canClassEquip(ITEMS[r.resultDefId], classId))
-          : FORGE_RECIPES;
+          ? visibleAllRecipes.filter((r) => canClassEquip(ITEMS[r.resultDefId], classId))
+          : visibleAllRecipes;
 
     const filterBar = `
       <div class="craft-filter-bar">
@@ -790,7 +828,7 @@ export class ForgeModalUI {
           Lọc: ${CLASS_DISPLAY_NAMES[classId]}
         </button>
         <button id="btn-craft-all" class="px-btn sm ${this.craftFilter === "all" ? "primary" : ""}">
-          Tất cả (${FORGE_RECIPES.length})
+          Tất cả (${visibleAllRecipes.length})
         </button>
         <button id="btn-craft-hidden" class="px-btn sm ${this.craftFilter === "hidden" ? "primary" : ""}" style="border-color:#ff9922;color:#ffe066">
           ✦ Bản Vẽ Ẩn (${unlockedHiddenCount}/${hiddenRecipes.length})
@@ -803,7 +841,12 @@ export class ForgeModalUI {
         const def = ITEMS[rec.resultDefId];
         if (!def) return "";
 
-        // Mask unrevealed secret blueprints so names, stats & materials stay hidden!
+        // Strict secrecy for `isHidden: true`: never shown before unlock
+        if (rec.isHidden && !this.game.canRevealHiddenRecipe(rec)) {
+          return "";
+        }
+
+        // Mask unrevealed legacy secret blueprints so names, stats & materials stay hidden!
         if (rec.isHiddenRecipe && !this.game.canRevealHiddenRecipe(rec)) {
           const reqLv = rec.requiredLevel ?? 1;
           const lvOk = this.game.player.level >= reqLv;
@@ -826,7 +869,8 @@ export class ForgeModalUI {
 
         const rInfo = RARITY_INFO[def.rarity];
         const tInfo = getTierBadge(def);
-        const check = this.game.forge.canCraft(rec, this.game.inv, this.game.player.level);
+        const isUnlocked = this.game.canRevealHiddenRecipe(rec);
+        const check = this.game.forge.canCraft(rec, this.game.inv, this.game.player.level, isUnlocked);
         const usable = canClassEquip(def, classId);
         const clsTag =
           def.requiredClass && def.requiredClass !== "all"
@@ -895,7 +939,9 @@ export class ForgeModalUI {
     this.contentEl.querySelectorAll("[data-craft]").forEach((el) => {
       el.addEventListener("click", () => {
         const recId = (el as HTMLElement).dataset.craft!;
-        const res = this.game.forge.craftRecipe(recId, this.game.inv, this.game.player.level);
+        const targetRec = FORGE_RECIPES.find((r) => r.id === recId);
+        const isUnlocked = targetRec ? this.game.canRevealHiddenRecipe(targetRec) : false;
+        const res = this.game.forge.craftRecipe(recId, this.game.inv, this.game.player.level, isUnlocked);
         this.resultMsg = res.message;
         this.resultOk = res.succeeded;
         if (res.succeeded) {

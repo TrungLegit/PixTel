@@ -20,9 +20,56 @@ import {
 import type {
   PixelfxActor,
   PixelfxFrame,
+  PixelfxModule,
   PixelfxPosedSprite,
   PixelfxPosedTheme,
 } from "../vfx/pixelfxTypes";
+import { FxAtlas, type BakedAtlas } from "../vfx/fxAtlas";
+import * as setAuraMod from "../vfx/pixelfx/fx/pixtel/set-aura.js";
+
+type SetAuraTheme = "forest" | "forge" | "eclipse";
+const setAuraAtlas = new FxAtlas();
+
+function resolveSetAuraTheme(color: string): SetAuraTheme {
+  const lc = color.toLowerCase();
+  if (lc === "#4ade80" || lc.includes("4ade")) return "forest";
+  if (lc === "#c084fc" || lc.includes("c084")) return "eclipse";
+  return "forge";
+}
+
+function drawSetAuraLayer(
+  ctx: CanvasRenderingContext2D,
+  theme: SetAuraTheme,
+  layer: "back" | "front",
+  x: number,
+  y: number,
+  rigScale: number,
+  drawScale: number,
+  time: number
+) {
+  const atlas: BakedAtlas = setAuraAtlas.get(`hero-set-aura-${theme}-${layer}`, setAuraMod as PixelfxModule, {
+    options: { theme, radius: 22, seed: 17 },
+    fps: 20,
+    downscale: 1,
+    layer,
+  });
+  const rawIdx = Math.floor(time * atlas.fps);
+  const idx = ((rawIdx % atlas.count) + atlas.count) % atlas.count;
+  const gx = (idx % atlas.cols) * atlas.fw;
+  const gy = Math.floor(idx / atlas.cols) * atlas.fh;
+  const s = (rigScale / 0.68) * drawScale;
+  const dw = Math.max(1, Math.round(atlas.fw * s));
+  const dh = Math.max(1, Math.round(atlas.fh * s));
+  const dx = Math.round(x - atlas.pivotX * s);
+  const dy = Math.round(y - atlas.pivotY * s);
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(atlas.colorCanvas, gx, gy, atlas.fw, atlas.fh, dx, dy, dw, dh);
+  ctx.globalCompositeOperation = "lighter";
+  ctx.drawImage(atlas.lightCanvas, gx, gy, atlas.fw, atlas.fh, dx, dy, dw, dh);
+  ctx.restore();
+}
 
 export type PixelfxHeroAnimState = "idle" | "run" | "attack" | "charge" | "dash";
 
@@ -35,17 +82,25 @@ export type HeroAttackKind =
   | "slash_2"
   | "cleave"
   | "thrust"
+  | "overhead_slam"
+  | "halberd_sweep"
+  | "iaido_draw"
   | "flurry_1"
   | "flurry_2"
   | "spin"
+  | "dual_cross_slash"
+  | "chakram_throw"
   | "cast_1"
   | "cast_2"
   | "cast_3"
   | "cast_heavy"
   | "cast_ult"
+  | "orb_levitate"
+  | "staff_whirl"
   | "shoot"
   | "shoot_heavy"
   | "beam"
+  | "recoil_barrage"
   | "storm";
 
 export interface PixelfxHeroDrawOptions {
@@ -70,6 +125,7 @@ export interface PixelfxHeroDrawOptions {
   chargePct?: number;
   aegisActive?: boolean;
   buffActive?: boolean;
+  setAuraColor?: string | null;
 }
 
 export interface BakedPixelfxHero {
@@ -286,7 +342,52 @@ function mapWeaponToRig(
   let weapon = "sword";
   let offWeapon: string | undefined;
 
-  if (kind === "dagger" || shape === "daggers") {
+  if (def.id === "hid_boss_eraser_edge" || def.id === "exo_wpn_blood_greatsword") {
+    weapon = "null_sever";
+  } else if (
+    def.id === "wp_starfall_blade" ||
+    def.id === "hid_craft_prism_blade" ||
+    def.id === "wpn_chroma_sovereign" ||
+    def.id === "sea_wpn_spring_katana"
+  ) {
+    weapon = "prism_blade";
+  } else if (def.id === "wp_eclipse_reaver" || def.id === "wpn_void_scythe") {
+    weapon = "scythe";
+  } else if (def.id === "wpn_warden_cleaver" || def.id === "exo_wpn_thunder_halberd") {
+    weapon = "greataxe";
+  } else if (def.id === "wp_forge_hammer" || def.id === "wpn_quake_maul") {
+    weapon = "hammer";
+  } else if (
+    def.id === "wp_spark_staff" ||
+    def.id === "hid_craft_nebula_staff" ||
+    def.id === "wpn_astral_scepter" ||
+    def.id === "wpn_chroma_scepter" ||
+    def.id === "exo_wpn_blackhole_orb" ||
+    def.id === "exo_wpn_phoenix_rod" ||
+    def.id === "sea_wpn_winter_staff"
+  ) {
+    weapon = "astral_staff";
+  } else if (
+    def.id === "wp_briar_dagger" ||
+    def.id === "hid_craft_eclipse_fangs" ||
+    def.id === "wpn_quantum_blades" ||
+    def.id === "wpn_magma_fangs" ||
+    def.id === "exo_wpn_phantom_boomerang" ||
+    def.id === "exo_wpn_venom_claws" ||
+    def.id === "sea_wpn_summer_blades"
+  ) {
+    weapon = def.id === "wp_briar_dagger" ? "dagger" : "twin_quantum";
+    offWeapon = def.id === "wp_briar_dagger" ? "dagger" : "twin_quantum";
+  } else if (
+    def.id === "hid_craft_nova_railgun" ||
+    def.id === "wpn_singularity_cannon" ||
+    def.id === "wpn_thermal_repeater" ||
+    def.id === "exo_wpn_tesla_coilgun" ||
+    def.id === "exo_wpn_rocket_barrage" ||
+    def.id === "sea_wpn_eclipse_cannon"
+  ) {
+    weapon = "rail_cannon";
+  } else if (kind === "dagger" || shape === "daggers") {
     weapon = "dagger";
     offWeapon = "dagger";
   } else if (kind === "staff" || shape === "staff") {
@@ -296,9 +397,7 @@ function mapWeaponToRig(
   } else if (shape === "halberd") {
     weapon = "spear";
   } else if (kind === "axe") {
-    weapon = def.id === "wpn_quake_maul" ? "hammer" : "greatsword";
-  } else if (def.id === "wpn_void_scythe") {
-    weapon = "scythe";
+    weapon = "greataxe";
   } else if (shape === "greatsword" || shape === "sovereign" || tier >= 3) {
     weapon = "greatsword";
   }
@@ -322,10 +421,10 @@ function mapWeaponToRig(
     goldD: mix(eU, hex("#2a1b10") >>> 0, 0.45) >>> 0,
   };
 
-  if (weapon === "staff") {
+  if (weapon === "staff" || weapon === "astral_staff") {
     weaponColors.wood = mix(bU, hex("#5e3c24") >>> 0, 0.4) >>> 0;
     weaponColors.woodD = mix(weaponColors.wood, hex("#180e08") >>> 0, 0.55) >>> 0;
-  } else if (weapon === "launcher") {
+  } else if (weapon === "launcher" || weapon === "rail_cannon") {
     weaponColors.olive = bU;
     weaponColors.oliveA = mix(bU, wU, 0.35) >>> 0;
     weaponColors.oliveD = mix(bU, hex("#101418") >>> 0, 0.5) >>> 0;
@@ -357,7 +456,13 @@ function buildAttackPose(
       by: -23,
       ffx: 11,
       fbx: -11,
-      two: hasWeapon && (weaponName === "greatsword" || weaponName === "spear"),
+      two:
+        hasWeapon &&
+        (weaponName === "greatsword" ||
+          weaponName === "prism_blade" ||
+          weaponName === "null_sever" ||
+          weaponName === "greataxe" ||
+          weaponName === "spear"),
     };
   }
 
@@ -433,6 +538,76 @@ function buildAttackPose(
         [1.0, { ...READY_POSE, crouch: 3, lean: 1, fx: 12, fy: -21, sa: -0.3, bx: 6, by: -20, ffx: 7, fbx: -7 }],
       ];
       break;
+    case "overhead_slam":
+      forceTwo = hasWeapon;
+      track = [
+        [0, { ...READY_POSE, two: forceTwo, crouch: 1, y: -3, lean: -3, fx: -1, fy: -42, sa: -2.45, ffx: 7, fbx: -7 }],
+        [0.20, { ...READY_POSE, two: forceTwo, crouch: -2, y: -7, lean: 1, fx: 8, fy: -44, sa: -1.65, ffx: 9, fbx: -5, toeF: true }],
+        [0.36, { ...READY_POSE, two: forceTwo, crouch: 7.5, y: 0, lean: 7, fx: 21, fy: -15, sa: 0.92, ffx: 14, fbx: -11, toeB: true }],
+        [0.72, { ...READY_POSE, two: forceTwo, crouch: 8, y: 0, lean: 6, fx: 20, fy: -14, sa: 0.98, ffx: 14, fbx: -11, toeB: true }],
+        [1.0, { ...READY_POSE, two: forceTwo, crouch: 3, y: 0, lean: 1, fx: 11, fy: -22, sa: -0.45, ffx: 8, fbx: -7 }],
+      ];
+      break;
+    case "halberd_sweep":
+      forceTwo = hasWeapon;
+      track = [
+        [0, { ...READY_POSE, two: forceTwo, crouch: 4, lean: -4, yaw: 0.55, fx: -7, fy: -24, sa: -2.55, ffx: 9, fbx: -9 }],
+        [0.24, { ...READY_POSE, two: forceTwo, crouch: 5, lean: 4, yaw: -0.25, fx: 23, fy: -22 + pitch * 5, sa: 0.12 + pitch * 0.4, ffx: 14, fbx: -10, toeB: true }],
+        [0.54, { ...READY_POSE, two: forceTwo, crouch: 6, lean: 6, yaw: -0.78, fx: 16, fy: -17, sa: 1.05, ffx: 14, fbx: -11, toeB: true }],
+        [1.0, { ...READY_POSE, two: forceTwo, crouch: 2, lean: 1, yaw: 0, fx: 11, fy: -21, sa: -0.38, ffx: 8, fbx: -7 }],
+      ];
+      break;
+    case "iaido_draw":
+      track = [
+        [0, { ...READY_POSE, crouch: 7, lean: 4, fx: -4, fy: -16, sa: -2.85, bx: 5, by: -17, ffx: 10, fbx: -9 }],
+        [0.18, { ...READY_POSE, crouch: 5, lean: 8, fx: 24, fy: -23 + pitch * 5, sa: -0.05 + pitch * 0.4, bx: -10, by: -22, ffx: 15, fbx: -11, toeB: true }],
+        [0.52, { ...READY_POSE, crouch: 3, lean: 5, fx: 19, fy: -34, sa: -1.15, bx: -8, by: -20, ffx: 13, fbx: -9 }],
+        [1.0, { ...READY_POSE, crouch: 2, lean: 1, fx: 10, fy: -19, sa: -0.55, bx: 4, by: -19, ffx: 8, fbx: -7 }],
+      ];
+      break;
+    case "dual_cross_slash":
+      track = [
+        [0, { ...READY_POSE, crouch: 6, lean: 2, fx: -4, fy: -26, sa: -2.2, bx: -4, by: -16, sb: 1.8, ffx: 9, fbx: -8, armsFront: true }],
+        [0.24, { ...READY_POSE, crouch: 1, y: -3, lean: 7, fx: 22, fy: -20 + pitch * 5, sa: 0.45 + pitch, bx: 21, by: -30 + pitch * 5, sb: -0.65 + pitch, ffx: 13, fbx: -10, armsFront: true }],
+        [0.62, { ...READY_POSE, crouch: 5, y: 0, lean: 6, fx: 21, fy: -18, sa: 0.65, bx: 19, by: -28, sb: -0.75, ffx: 13, fbx: -10, toeB: true, armsFront: true }],
+        [1.0, { ...READY_POSE, crouch: 3, y: 0, lean: 2, fx: 10, fy: -19, sa: -0.8, bx: 8, by: -21, sb: -0.4, ffx: 9, fbx: -7 }],
+      ];
+      break;
+    case "chakram_throw":
+      track = [
+        [0, { ...READY_POSE, crouch: 4, lean: -3, yaw: 0.65, fx: -8, fy: -23, sa: -2.6, bx: 10, by: -22, ffx: 9, fbx: -9 }],
+        [0.22, { ...READY_POSE, crouch: 4, lean: 6, yaw: -0.55, fx: 24, fy: -24 + pitch * 6, sa: pitch, bx: -9, by: -21, ffx: 14, fbx: -10, toeB: true }],
+        [0.58, { ...READY_POSE, crouch: 4, lean: 5, yaw: -0.7, fx: 21, fy: -23 + pitch * 6, sa: 0.25 + pitch, bx: -8, by: -21, ffx: 13, fbx: -9 }],
+        [1.0, { ...READY_POSE, crouch: 2, lean: 1, yaw: 0, fx: 10, fy: -19, sa: -0.7, bx: 7, by: -20, ffx: 8, fbx: -7 }],
+      ];
+      break;
+    case "orb_levitate":
+      forceTwo = weaponName === "staff" || weaponName === "astral_staff";
+      track = [
+        [0, { ...READY_POSE, two: forceTwo, crouch: 3, y: 0, lean: 0, fx: 8, fy: -24, sa: -1.4, ffx: 8, fbx: -7 }],
+        [0.26, { ...READY_POSE, two: forceTwo, crouch: -1, y: -4.5, lean: -2, fx: 11, fy: -38, sa: -1.58, bx: -4, by: -26, ffx: 6, fbx: -6 }],
+        [0.68, { ...READY_POSE, two: forceTwo, crouch: 0, y: -4, lean: 3, fx: 18, fy: -31 + pitch * 5, sa: -0.35 + pitch * 0.6, bx: -5, by: -24, ffx: 8, fbx: -7 }],
+        [1.0, { ...READY_POSE, two: forceTwo, crouch: 2, y: 0, lean: 1, fx: 9, fy: -19, sa: -1.1, ffx: 7, fbx: -7 }],
+      ];
+      break;
+    case "staff_whirl":
+      track = [
+        [0, { ...READY_POSE, crouch: 3, lean: -2, yaw: 0.5, fx: -5, fy: -26, sa: -2.2, bx: 7, by: -21, ffx: 8, fbx: -8 }],
+        [0.26, { ...READY_POSE, crouch: 2, y: -2, lean: 4, yaw: -0.5, fx: 20, fy: -28 + pitch * 5, sa: -0.25 + pitch * 0.5, bx: -7, by: -23, ffx: 12, fbx: -9 }],
+        [0.58, { ...READY_POSE, crouch: 3, y: 0, lean: 6, yaw: -0.95, fx: 18, fy: -21 + pitch * 5, sa: 0.45 + pitch * 0.5, bx: -8, by: -21, ffx: 12, fbx: -9 }],
+        [1.0, { ...READY_POSE, crouch: 2, y: 0, lean: 1, yaw: 0, fx: 9, fy: -18, sa: -1.1, bx: -3, by: -17, ffx: 7, fbx: -7 }],
+      ];
+      break;
+    case "recoil_barrage":
+      forceTwo = weaponName === "launcher" || weaponName === "rail_cannon";
+      track = [
+        [0, { ...READY_POSE, two: forceTwo, crouch: 5, lean: 3, fx: 16, fy: -25 + pitch * 5, bx: 8, by: -23, sa: pitch, ffx: 11, fbx: -9 }],
+        [0.18, { ...READY_POSE, two: forceTwo, crouch: 6.5, lean: -5, fx: 5, fy: -28 + pitch * 4, bx: 2, by: -24, sa: pitch - 0.52, ffx: 10, fbx: -11, toeF: true }],
+        [0.44, { ...READY_POSE, two: forceTwo, crouch: 5.5, lean: 2, fx: 15, fy: -25 + pitch * 5, bx: 7, by: -23, sa: pitch - 0.08, ffx: 11, fbx: -9 }],
+        [0.64, { ...READY_POSE, two: forceTwo, crouch: 6.5, lean: -4, fx: 6, fy: -27 + pitch * 4, bx: 3, by: -24, sa: pitch - 0.45, ffx: 10, fbx: -10 }],
+        [1.0, { ...READY_POSE, two: forceTwo, crouch: 3, lean: 1, fx: 13, fy: -22 + pitch * 5, bx: 6, by: -21, sa: pitch, ffx: 8, fbx: -7 }],
+      ];
+      break;
     case "flurry_1":
       track = [
         [0, { ...READY_POSE, crouch: 5, lean: 3, fx: 21, fy: -29 + pitch * 5, sa: -0.45 + pitch, bx: 4, by: -23, sb: -1.1, ffx: 11, fbx: -9, armsFront: true }],
@@ -489,7 +664,7 @@ function buildAttackPose(
       break;
     case "cast_3":
     case "cast_heavy":
-      forceTwo = weaponName === "staff";
+      forceTwo = weaponName === "staff" || weaponName === "astral_staff";
       track = [
         [0, { ...READY_POSE, two: forceTwo, crouch: 2, lean: -2, fx: 8, fy: -34, sa: -1.4, ffx: 8, fbx: -7 }],
         [0.28, { ...READY_POSE, two: forceTwo, crouch: 4, lean: 6, fx: 19, fy: -23 + pitch * 6, sa: -0.08 + pitch * 0.7, bx: 10, by: -22, ffx: 11, fbx: -9 }],
@@ -515,7 +690,7 @@ function buildAttackPose(
       break;
     case "shoot_heavy":
     case "beam":
-      forceTwo = weaponName === "launcher";
+      forceTwo = weaponName === "launcher" || weaponName === "rail_cannon";
       track = [
         [0, { ...READY_POSE, two: forceTwo, crouch: 4.5, lean: 2, fx: 16, fy: -23 + pitch * 6, bx: 8, by: -21, sa: pitch, ffx: 10, fbx: -8 }],
         [0.24, { ...READY_POSE, two: forceTwo, crouch: 5.5, lean: -3, fx: 8, fy: -25 + pitch * 4, bx: 4, by: -22, sa: pitch - 0.42, ffx: 10, fbx: -9 }],
@@ -567,18 +742,25 @@ function buildPoseForState(
 
   if (weaponName) {
     base.weapon = weaponName;
-    if (weaponName === "greatsword" || weaponName === "hammer" || weaponName === "scythe") {
+    if (
+      weaponName === "greatsword" ||
+      weaponName === "prism_blade" ||
+      weaponName === "null_sever" ||
+      weaponName === "greataxe" ||
+      weaponName === "hammer" ||
+      weaponName === "scythe"
+    ) {
       base.two = true;
       base.sa = 0.28;
-    } else if (weaponName === "staff") {
+    } else if (weaponName === "staff" || weaponName === "astral_staff") {
       base.sa = -1.15;
-    } else if (weaponName === "pistol" || weaponName === "launcher") {
+    } else if (weaponName === "pistol" || weaponName === "launcher" || weaponName === "rail_cannon") {
       base.sa = 0.0;
-      if (weaponName === "launcher") base.two = true;
+      if (weaponName === "launcher" || weaponName === "rail_cannon") base.two = true;
     }
   }
-  if (hasOffDagger && weaponName === "dagger") {
-    base.offWeapon = "dagger";
+  if (hasOffDagger && (weaponName === "dagger" || weaponName === "twin_quantum")) {
+    base.offWeapon = weaponName;
     base.sb = -0.3;
   }
 
@@ -649,18 +831,66 @@ function buildPoseForState(
 
   if (animState === "charge") {
     const deep = chargeBucket === 1;
-    const aimedRanged = weaponName === "pistol" || weaponName === "launcher";
+    const aimedRanged =
+      weaponName === "pistol" || weaponName === "launcher" || weaponName === "rail_cannon";
+    const isStaff = weaponName === "staff" || weaponName === "astral_staff";
+    if (!isBare && classId === "prism_knight") {
+      return {
+        ...base,
+        two: true,
+        crouch: deep ? 3.5 : 2.2,
+        y: deep ? -1.5 : 0,
+        lean: deep ? -3.5 : -2,
+        fx: deep ? 1 : 3,
+        fy: deep ? -42 : -37,
+        bx: 5,
+        by: deep ? -38 : -34,
+        sa: deep ? -2.35 : -2.05,
+        ffx: deep ? 9 : 7,
+        fbx: deep ? -8 : -6,
+      };
+    }
+    if (!isBare && isStaff) {
+      return {
+        ...base,
+        crouch: deep ? 1.5 : 2.5,
+        y: deep ? -2.5 : -1,
+        lean: deep ? -2.5 : -1.5,
+        fx: 10,
+        fy: deep ? -35 : -31,
+        bx: -5,
+        by: deep ? -26 : -23,
+        sa: -1.55 + pitch * 0.35,
+        ffx: 6,
+        fbx: -6,
+      };
+    }
+    if (!isBare && classId === "bit_rogue") {
+      return {
+        ...base,
+        crouch: deep ? 7.2 : 5.8,
+        lean: deep ? 5.5 : 4,
+        fx: deep ? -8 : -6,
+        fy: -15,
+        bx: deep ? 11 : 9,
+        by: -17,
+        sa: -2.65,
+        sb: 0.45,
+        ffx: 10,
+        fbx: -8,
+      };
+    }
     return {
       ...base,
       crouch: deep ? 5.5 : 4,
-      lean: deep ? -4.5 : -3.5,
-      fx: isBare ? (deep ? -8 : -7) : aimedRanged ? 11 : deep ? -9 : -8,
-      fy: aimedRanged ? -21 + pitch * 5 : deep ? -21 : -20,
+      lean: aimedRanged ? (deep ? 2 : 1) : deep ? -4.5 : -3.5,
+      fx: isBare ? (deep ? -8 : -7) : aimedRanged ? 13 : deep ? -9 : -8,
+      fy: aimedRanged ? -22 + pitch * 5 : deep ? -21 : -20,
       bx: deep ? 5 : 6,
       by: -18,
-      sa: aimedRanged ? pitch : weaponName === "staff" ? -1.6 + pitch * 0.5 : deep ? -2.45 : -2.2,
-      ffx: deep ? 6 : 5,
-      fbx: deep ? -5 : -4,
+      sa: aimedRanged ? pitch : deep ? -2.45 : -2.2,
+      ffx: deep ? 9 : 7,
+      fbx: deep ? -7 : -6,
       armsFront: isBare,
     };
   }
@@ -725,12 +955,37 @@ function buildLoadoutKey(
   let headRamp = preset.hairRamp;
   if (hDef) {
     const mappedHeadgear = helmetShape ? HERO_HEADGEAR_BY_SHAPE[helmetShape] : undefined;
-    if (mappedHeadgear) {
+    if (hDef.id === "hlm_prism_halo" || hDef.id === "sea_hlm_eclipse_halo") {
+      headgear = "halo_crown";
+      headRamp = preset.hairRamp;
+    } else if (hDef.id === "hm_moss_hood") {
+      headgear = "assassin_hood";
+      headRamp = rampFromHex(hDef.visualStyle?.primary ?? "#16a34a");
+    } else if (
+      hDef.id === "hm_ash_visor" ||
+      hDef.id === "hid_boss_prism_visor" ||
+      hDef.id === "hlm_quartz_visor" ||
+      hDef.id === "exo_helm_frost_gaze"
+    ) {
+      headgear = "dragon_helm";
+      headRamp = rampFromHex(hDef.visualStyle?.primary ?? hDef.visualColor ?? "#26c4ff");
+    } else if (
+      hDef.id === "hm_eclipse_crown" ||
+      hDef.id === "hid_craft_aethel_crown" ||
+      hDef.id === "hlm_amber_crown" ||
+      hDef.id === "exo_helm_storm_crown"
+    ) {
+      headgear = "royal_crown";
+      headRamp = rampFromHex(hDef.accentColor ?? hDef.visualStyle?.primary ?? "#ffe066");
+    } else if (hDef.id === "hlm_meadow_crest" || hDef.id === "sea_hlm_spring_crown") {
+      headgear = "antler_crest";
+      headRamp = rampFromHex(hDef.visualStyle?.primary ?? hDef.visualColor ?? "#44ee88");
+    } else if (mappedHeadgear) {
       headgear = mappedHeadgear;
       headRamp = rampFromHex(
         hDef.visualStyle?.primary ?? hDef.visualColor ?? RARITY_INFO[hDef.rarity].color
       );
-    } else if (hDef.id === "hlm_prism_halo" || hDef.rarity === "legendary") {
+    } else if (hDef.rarity === "legendary") {
       headgear = "halo_crown";
       headRamp = preset.hairRamp;
     } else {
@@ -739,11 +994,27 @@ function buildLoadoutKey(
     }
   }
 
-  const backAccessory: PixelfxPosedTheme["backAccessory"] = aDef
-    ? armorShape === "mantle"
-      ? "cape"
-      : preset.backAccessory
-    : "none";
+  let backAccessory: PixelfxPosedTheme["backAccessory"] = aDef ? preset.backAccessory : "none";
+  if (aDef) {
+    if (
+      aDef.id === "ar_aegis_mantle" ||
+      aDef.id === "hid_craft_chroma_aegis" ||
+      aDef.id === "arm_prism_mantle" ||
+      aDef.id === "exo_armor_void_shroud"
+    ) {
+      backAccessory = "prism_wings";
+    } else if (aDef.id === "ar_briar_cloak" || aDef.id === "hid_boss_warden_mantle") {
+      backAccessory = "warden_roots";
+    } else if (aDef.id === "ar_bloodstone_plate" || aDef.id === "sea_arm_winter_cloak") {
+      backAccessory = "cape";
+    } else if (aDef.id === "arm_amber_aegis" || aDef.id === "exo_armor_magma_core") {
+      backAccessory = "amber_thrusters";
+    } else if (armorShape === "mantle") {
+      backAccessory = "cape";
+    } else if (aDef.rarity === "legendary") {
+      backAccessory = "prism_wings";
+    }
+  }
   const cloakRamp = aDef
     ? rampFromHex(aDef.accentColor ?? aDef.visualColor ?? RARITY_INFO[aDef.rarity].color, "#0e0a1a", "#ffffff")
     : preset.cloakRamp;
@@ -795,11 +1066,11 @@ function buildLoadoutKey(
 
   const defaultAttackKind: HeroAttackKind = isBareHanded
     ? "punch_1"
-    : wRig.weapon === "staff"
+    : wRig.weapon === "staff" || wRig.weapon === "astral_staff"
       ? "cast_1"
-      : wRig.weapon === "pistol" || wRig.weapon === "launcher"
+      : wRig.weapon === "pistol" || wRig.weapon === "launcher" || wRig.weapon === "rail_cannon"
         ? "shoot"
-        : wRig.weapon === "dagger"
+        : wRig.weapon === "dagger" || wRig.weapon === "twin_quantum"
           ? "flurry_1"
           : "slash_1";
   const attackKind = extra?.attackKind ?? defaultAttackKind;
@@ -1071,6 +1342,7 @@ export function drawPixelfxHero(ctx: CanvasRenderingContext2D, opts: PixelfxHero
     time = 0,
     aegisActive = false,
     buffActive = false,
+    setAuraColor = null,
   } = opts;
 
   ctx.imageSmoothingEnabled = false;
@@ -1088,6 +1360,11 @@ export function drawPixelfxHero(ctx: CanvasRenderingContext2D, opts: PixelfxHero
   const dy = Math.round(y - baked.anchorY * drawScale + bobY);
   const dw = Math.round(baked.w * drawScale);
   const dh = Math.round(baked.h * drawScale);
+
+  const setAuraTheme = setAuraColor && !hitFlash && !bleached ? resolveSetAuraTheme(setAuraColor) : null;
+  if (setAuraTheme) {
+    drawSetAuraLayer(ctx, setAuraTheme, "back", x, y, rigScale, drawScale, time);
+  }
 
   const baseImg = hitFlash
     ? baked.whiteCanvas
@@ -1113,6 +1390,10 @@ export function drawPixelfxHero(ctx: CanvasRenderingContext2D, opts: PixelfxHero
     ctx.restore();
   }
 
+  if (setAuraTheme) {
+    drawSetAuraLayer(ctx, setAuraTheme, "front", x, y, rigScale, drawScale, time);
+  }
+
   // Orbiting Accessory Pixel Rune (Ring / Amulet / Grimoire / Pix-Chip)
   const accInst = equipment.accessory;
   const accDef = accInst ? ITEMS[accInst.defId] : undefined;
@@ -1125,16 +1406,55 @@ export function drawPixelfxHero(ctx: CanvasRenderingContext2D, opts: PixelfxHero
       : accDef.visualStyle?.primary ?? accDef.accentColor ?? RARITY_INFO[accDef.rarity].color;
     const accent = bleached ? "#e4e9f2" : accDef.visualStyle?.accent ?? "#ffffff";
     const unit = Math.max(1, Math.round(drawScale));
-    const shape = resolveHeroGearShape("accessory", accDef.visualStyle?.shape) ?? "chip_orb";
-    const pattern = ACCESSORY_PIXELS[shape];
-    for (let py = 0; py < pattern.length; py++) {
-      for (let px = 0; px < pattern[py].length; px++) {
-        const cell = pattern[py][px];
-        if (cell === ".") continue;
-        ctx.fillStyle = cell === "x" ? "#100c18" : cell === "a" ? accent : col;
-        ctx.fillRect(ox + (px - 3) * unit, oy + (py - 3) * unit, unit, unit);
+    const shape = resolveHeroGearShape("accessory", accDef.visualStyle?.shape);
+    if (!shape && accDef.iconKind === "book") {
+      ctx.fillStyle = "#100c18";
+      ctx.fillRect(ox - unit * 3, oy - unit * 2, unit * 6, unit * 4);
+      ctx.fillStyle = accDef.visualStyle?.primary ?? col;
+      ctx.fillRect(ox - unit * 2, oy - unit, unit * 4, unit * 2);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(ox - unit * 2, oy - unit, unit * 2, unit);
+      ctx.fillStyle = col;
+      ctx.fillRect(ox, oy - unit, unit * 2, unit);
+    } else if (!shape && (accDef.id === "hid_craft_siphon_sigil" || accDef.iconKind === "disc")) {
+      ctx.fillStyle = "#100c18";
+      ctx.fillRect(ox - unit * 2, oy - unit * 2, unit * 5, unit * 5);
+      ctx.fillStyle = accDef.visualStyle?.primary ?? col;
+      ctx.fillRect(ox - unit, oy - unit, unit * 3, unit * 3);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(ox, oy, unit, unit);
+      const ox2 = Math.round(x - Math.cos(time * 3.4) * orbitR);
+      const oy2 = Math.round(y - 16 * rigScale * drawScale - Math.sin(time * 5.2) * (2.5 * drawScale));
+      ctx.fillStyle = col;
+      ctx.fillRect(ox2, oy2, unit * 2, unit * 2);
+    } else {
+      const pattern = ACCESSORY_PIXELS[shape ?? "chip_orb"];
+      for (let py = 0; py < pattern.length; py++) {
+        for (let px = 0; px < pattern[py].length; px++) {
+          const cell = pattern[py][px];
+          if (cell === ".") continue;
+          ctx.fillStyle = cell === "x" ? "#100c18" : cell === "a" ? accent : col;
+          ctx.fillRect(ox + (px - 3) * unit, oy + (py - 3) * unit, unit, unit);
+        }
       }
     }
+  }
+
+  const bootsDef = equipment.boots ? ITEMS[equipment.boots.defId] : undefined;
+  if (
+    bootsDef &&
+    (bootsDef.id === "hid_boss_null_treads" || bootsDef.id === "bts_void_walkers") &&
+    !hitFlash &&
+    !bleached
+  ) {
+    const unit = Math.max(1, Math.round(drawScale));
+    const phase = Math.floor(time * 12) % 3;
+    const bx = Math.round(x - facing * (4 + phase * 2) * drawScale);
+    const by = Math.round(y - 2 * drawScale);
+    ctx.fillStyle = bootsDef.accentColor ?? "#5ef2ff";
+    ctx.fillRect(bx, by, unit * 2, unit);
+    ctx.fillStyle = bootsDef.visualColor ?? "#ff9922";
+    ctx.fillRect(bx - facing * unit * 2, by - unit, unit, unit);
   }
 
   // Active Buff / Aegis Energy Halo

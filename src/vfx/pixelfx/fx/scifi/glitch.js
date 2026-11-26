@@ -11,7 +11,7 @@ export const meta = {
   fps: 30,
   bg: "ground",
   actor: 2,
-  options: { palette: ["#14101f", "#3b1f5c", "#ff2e63", "#ff7aa8", "#2ef2ff", "#b4fbff", "#ffffff"], seed: 7 },
+  options: { palette: ["#14101f", "#3b1f5c", "#ff2e63", "#ff7aa8", "#2ef2ff", "#b4fbff", "#ffffff"], seed: 7, drawActor: false },
 };
 
 const TWITCH_A = { turn: 0.3, lean: 3, crouch: 1, fx: 13, fy: -31, bx: 6, by: -14, hx: 1 };
@@ -61,48 +61,67 @@ export function draw(p, t, o) {
   const bar = A.y + ((t / meta.duration) * 2 * (A.h + 12)) % (A.h + 12) - 6;
 
   const px = (x, y, c) => p.px(x, y, c);
-  // the split: the red and cyan ghosts first, offset either side
-  if (split)
-    for (let my = 0; my < A.h; my++)
+  if (o.drawActor) {
+    // the split: the red and cyan ghosts first, offset either side
+    if (split)
+      for (let my = 0; my < A.h; my++)
+        for (let mx = 0; mx < A.w; mx++) {
+          if (!A.mask.data[my * A.w + mx]) continue;
+          const y = A.y + my + roll, tr = tearAt(A.y + my), dx = tr ? tr[0] : 0;
+          px(A.x + mx + dx - split, y, RED);
+          px(A.x + mx + dx + split, y, CYAN);
+        }
+    // the body itself, row by row: torn, interlaced, rolled, posterised, tinted where the bar passes
+    for (let my = 0; my < A.h; my++) {
+      const ry = A.y + my, y = ry + roll;
+      if (interlace && (my & 1)) continue;
+      const tr = tearAt(ry), dx = tr ? tr[0] : 0, tint = tr && tr[1] < 0.35 ? (tr[1] < 0.18 ? RED : CYAN) : 0, near = Math.abs(ry - bar);
       for (let mx = 0; mx < A.w; mx++) {
-        if (!A.mask.data[my * A.w + mx]) continue;
-        const y = A.y + my + roll, tr = tearAt(A.y + my), dx = tr ? tr[0] : 0;
-        px(A.x + mx + dx - split, y, RED);
-        px(A.x + mx + dx + split, y, CYAN);
+        const c = A.pixels[my * A.w + mx];
+        if (!c) continue;
+        let col = c;
+        if (poster) col = luma(c) > 0.32 ? C[5] : C[1];
+        else if (tint) col = mix(c, tint, 0.6);
+        else if (near < 1) col = mix(c, C[5], 0.35);
+        px(A.x + mx + dx, y, col);
       }
-  // the body itself, row by row: torn, interlaced, rolled, posterised, tinted where the bar passes
-  for (let my = 0; my < A.h; my++) {
-    const ry = A.y + my, y = ry + roll;
-    if (interlace && (my & 1)) continue;
-    const tr = tearAt(ry), dx = tr ? tr[0] : 0, tint = tr && tr[1] < 0.35 ? (tr[1] < 0.18 ? RED : CYAN) : 0, near = Math.abs(ry - bar);
-    for (let mx = 0; mx < A.w; mx++) {
-      const c = A.pixels[my * A.w + mx];
-      if (!c) continue;
-      let col = c;
-      if (poster) col = luma(c) > 0.32 ? C[5] : C[1];
-      else if (tint) col = mix(c, tint, 0.6);
-      else if (near < 1) col = mix(c, C[5], 0.35);
-      px(A.x + mx + dx, y, col);
+      // a torn row smears its edge pixel out sideways, fading
+      if (tr && Math.abs(dx) > 2 && rand(S, f, ry) < 0.6) {
+        const right = dx > 0, mx = right ? A.w - 1 - [...Array(A.w)].findIndex((_, i) => A.mask.data[my * A.w + A.w - 1 - i]) : [...Array(A.w)].findIndex((_, i) => A.mask.data[my * A.w + i]);
+        if (mx >= 0 && mx < A.w) {
+          const c = A.pixels[my * A.w + mx], L = 4 + Math.floor(rand(S, f, ry, 1) * 10);
+          for (let i = 1; i <= L; i++) p.dot(A.x + mx + dx + (right ? i : -i), y, c, 1 - i / (L + 1));
+        }
+      }
     }
-    // a torn row smears its edge pixel out sideways, fading
-    if (tr && Math.abs(dx) > 2 && rand(S, f, ry) < 0.6) {
-      const right = dx > 0, mx = right ? A.w - 1 - [...Array(A.w)].findIndex((_, i) => A.mask.data[my * A.w + A.w - 1 - i]) : [...Array(A.w)].findIndex((_, i) => A.mask.data[my * A.w + i]);
-      if (mx >= 0 && mx < A.w) {
-        const c = A.pixels[my * A.w + mx], L = 4 + Math.floor(rand(S, f, ry, 1) * 10);
-        for (let i = 1; i <= L; i++) p.dot(A.x + mx + dx + (right ? i : -i), y, c, 1 - i / (L + 1));
+    // a roll leaves the top slice repeated at the bottom
+    if (roll)
+      for (let my = 0; my < -roll; my++)
+        for (let mx = 0; mx < A.w; mx++) {
+          const c = A.pixels[my * A.w + mx];
+          if (c && ((mx + my) & 1)) px(A.x + mx, A.y + A.h + roll + my, mix(c, C[1], 0.5));
+        }
+  } else {
+    // Pure abstract digital corruption bars & chromatic tear-slices (no humanoid stock dummy!)
+    for (const [y0, h, dx, tint] of tears) {
+      const stripW = 10 + Math.floor(Math.abs(dx) * 2.2);
+      const sx = Math.round(A.x + A.w * 0.5 - stripW * 0.5 + dx);
+      const col = tint < 0.35 ? RED : tint < 0.7 ? CYAN : WHITE;
+      p.rect(sx - 1, y0, stripW, Math.max(1, Math.min(2, h)), col);
+      p.rect(sx + 2, y0, Math.max(4, stripW - 4), 1, C[5]);
+    }
+    // Rolling horizontal scan shimmer
+    if (Math.abs(bar - (A.y + A.h / 2)) < A.h / 2 + 2) {
+      const bx = Math.round(A.x - 4);
+      const bw = Math.round(A.w + 8);
+      for (let xx = 0; xx < bw; xx += 2) {
+        if (rand(S, f, xx) < 0.55) px(bx + xx, Math.round(bar), xx % 4 === 0 ? WHITE : CYAN);
       }
     }
   }
-  // a roll leaves the top slice repeated at the bottom
-  if (roll)
-    for (let my = 0; my < -roll; my++)
-      for (let mx = 0; mx < A.w; mx++) {
-        const c = A.pixels[my * A.w + mx];
-        if (c && ((mx + my) & 1)) px(A.x + mx, A.y + A.h + roll + my, mix(c, C[1], 0.5));
-      }
-  // junk blocks round the body
+  // junk blocks round the zone
   if (burst)
-    for (let i = 0; i < 2 + Math.floor(r(20) * 5 * k); i++) {
+    for (let i = 0; i < 3 + Math.floor(r(20) * 6 * k); i++) {
       const w = 2 + Math.floor(r(21, i) * 9), h = 1 + Math.floor(r(22, i) * 3), x = A.x - 6 + Math.floor(r(23, i) * (A.w + 12)), y = A.y + Math.floor(r(24, i) * A.h);
       const c = [WHITE, RED, CYAN, C[5], C[3]][Math.floor(r(25, i) * 5)];
       if (r(26, i) < 0.4) for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) p.px(x + xx, y + yy, (xx + yy) & 1 ? c : C[0]);

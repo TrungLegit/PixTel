@@ -292,11 +292,21 @@ export class ForgeSystem {
     };
   }
 
-  canCraft(recipe: RecipeDef, inv: InventorySystem, playerLevel = 1): { ok: boolean; reason?: string } {
+  canCraft(
+    recipe: RecipeDef,
+    inv: InventorySystem,
+    playerLevel = 1,
+    isHiddenUnlocked = true
+  ): { ok: boolean; reason?: string } {
+    if ((recipe.isHidden || recipe.isHiddenRecipe) && !isHiddenUnlocked) {
+      return { ok: false, reason: recipe.unlockHint ?? "Công thức ẩn chưa được mở khóa!" };
+    }
     if (recipe.requiredLevel && playerLevel < recipe.requiredLevel) {
       return { ok: false, reason: `Cần đạt cấp LV.${recipe.requiredLevel} để rèn cổ vật này.` };
     }
-    if (inv.bag.length >= 40) return { ok: false, reason: "Túi đồ đã đầy (40/40)." };
+    if (inv.bag.length >= inv.bagCapacity) {
+      return { ok: false, reason: `Túi đồ đã đầy (${inv.bag.length}/${inv.bagCapacity}).` };
+    }
     if (inv.gold < recipe.goldCost) return { ok: false, reason: "Không đủ Vàng." };
     for (const m of recipe.materials) {
       if (inv.countItem(m.defId) < m.qty) {
@@ -306,10 +316,15 @@ export class ForgeSystem {
     return { ok: true };
   }
 
-  craftRecipe(recipeId: string, inv: InventorySystem, playerLevel = 1): ForgeActionResult {
+  craftRecipe(
+    recipeId: string,
+    inv: InventorySystem,
+    playerLevel = 1,
+    isHiddenUnlocked = true
+  ): ForgeActionResult {
     const recipe = FORGE_RECIPES.find((r) => r.id === recipeId);
     if (!recipe) return { ok: false, succeeded: false, message: "Công thức không tồn tại." };
-    const check = this.canCraft(recipe, inv, playerLevel);
+    const check = this.canCraft(recipe, inv, playerLevel, isHiddenUnlocked);
     if (!check.ok) return { ok: false, succeeded: false, message: check.reason ?? "Không đủ nguyên liệu." };
 
     inv.gold -= recipe.goldCost;
@@ -320,6 +335,55 @@ export class ForgeSystem {
       ok: true,
       succeeded: true,
       message: `Chế tạo thành công [${def?.name ?? recipe.resultDefId}]! Đã thêm vào Túi đồ.`,
+    };
+  }
+
+  /** Xúc Xắc Đổi Mệnh: rerolls random bonus substats (`bonusStats`) on an equipment instance. */
+  rerollSubstatsWithFateDie(uid: string, inv: InventorySystem): ForgeActionResult {
+    const found = inv.findByUid(uid);
+    if (!found) return { ok: false, succeeded: false, message: "Không tìm thấy trang bị." };
+    const item = found.item;
+    const def = ITEMS[item.defId];
+    if (!def || def.category !== "equipment") {
+      return { ok: false, succeeded: false, message: "Chỉ có thể Đổi Mệnh cho trang bị." };
+    }
+    if (!inv.consumeItem("cs_fate_die", 1)) {
+      return { ok: false, succeeded: false, message: "Cần ít nhất 1 Xúc Xắc Đổi Mệnh trong túi!" };
+    }
+
+    const beforeStats = getItemEffectiveStats(item);
+    const tierScale = def.rarity === "legendary" ? 2.2 : def.rarity === "epic" || def.rarity === "cursed" ? 1.7 : def.rarity === "rare" ? 1.35 : 1.0;
+    const rollCount = def.rarity === "legendary" || def.rarity === "epic" || def.rarity === "cursed" ? 3 : 2;
+    const pool: { key: keyof StatBonus; min: number; max: number; label: string }[] = [
+      { key: "atk", min: 3, max: 7, label: "ATK" },
+      { key: "mag", min: 3, max: 7, label: "MAG" },
+      { key: "def", min: 2, max: 5, label: "DEF" },
+      { key: "maxHp", min: 15, max: 35, label: "HP" },
+      { key: "spd", min: 3, max: 7, label: "SPD" },
+      { key: "crit", min: 2, max: 5, label: "CRIT%" },
+      { key: "aspdPct", min: 3, max: 8, label: "ASPD%" },
+      { key: "critDmgPct", min: 6, max: 14, label: "CRIT DMG%" },
+    ];
+
+    const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, rollCount);
+    const fresh: StatBonus = {};
+    const rolledBits: string[] = [];
+    for (const pick of shuffled) {
+      const val = Math.max(1, Math.round((pick.min + Math.random() * (pick.max - pick.min)) * tierScale));
+      fresh[pick.key] = val;
+      rolledBits.push(`+${val} ${pick.label}`);
+    }
+    item.bonusStats = fresh;
+    const afterStats = getItemEffectiveStats(item);
+    const rolledBonusText = rolledBits.join(" · ");
+    return {
+      ok: true,
+      succeeded: true,
+      item,
+      beforeStats,
+      afterStats,
+      rolledBonusText,
+      message: `🎲 Tung Xúc Xắc Đổi Mệnh thành công cho ${def.name}: ${rolledBonusText}!`,
     };
   }
 }

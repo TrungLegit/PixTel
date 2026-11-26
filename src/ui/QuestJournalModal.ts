@@ -1,4 +1,5 @@
 import { ITEMS, resolveClassReward } from "../data/items";
+import { STORY_CUTSCENES, type StoryCutsceneId } from "../data/cutscenes";
 import { BOSS_CODEX, LORE_TABLETS, WORLD_PROLOGUE } from "../data/lore";
 import { QUESTS } from "../data/quests";
 import { BIOME_CONFIGS, TOWN_NPCS } from "../data/worldConfig";
@@ -9,12 +10,13 @@ import { sfx } from "../audio/chiptuneSynth";
  * RPG Quest Journal & Lore Codex Modal [J]:
  * - Tab 1: Active, Available & Completed Story Quests (with Act chapters & lore quotes)
  * - Tab 2: Biên Niên Sử Aethel-16 (World Prologue, 8 Ancient Lore Tablets & 4 Boss Codex Profiles)
+ * - Tab 3: Phim Cốt Truyện (Replay any unlocked pixelfx + codixel Story Cutscene)
  */
 export class QuestJournalModalUI {
   private game: PixTelOpenWorldGame;
   private root: HTMLElement;
   private bodyEl: HTMLElement;
-  private tab: "quests" | "lore" = "quests";
+  private tab: "quests" | "lore" | "cutscenes" = "quests";
   private questFilter: "all" | "main" | "side" | "bounty" = "all";
   private focusedLoreId: string | null = null;
 
@@ -29,7 +31,7 @@ export class QuestJournalModalUI {
     });
   }
 
-  show(payload?: { tab?: "quests" | "lore"; loreId?: string }) {
+  show(payload?: { tab?: "quests" | "lore" | "cutscenes"; loreId?: string }) {
     if (payload?.tab) this.tab = payload.tab;
     this.focusedLoreId = payload?.loreId ?? null;
     this.root.classList.remove("hidden");
@@ -42,18 +44,29 @@ export class QuestJournalModalUI {
 
   render() {
     const loreCount = this.game.discoveredLore.size;
+    const seenCount = STORY_CUTSCENES.filter(
+      (s) => s.alwaysUnlocked || this.game.seenCutscenes.has(s.id)
+    ).length;
     const navHtml = `
-      <div style="display:flex;gap:8px;margin-bottom:10px;border-bottom:2px solid #353954;padding-bottom:8px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;border-bottom:2px solid #353954;padding-bottom:8px">
         <button class="px-btn ${this.tab === "quests" ? "active" : ""}" id="j-tab-quests">
           📜 NHIỆM VỤ & HỒI TRUYỆN
         </button>
         <button class="px-btn ${this.tab === "lore" ? "active" : ""}" id="j-tab-lore">
-          📖 BIÊN NIÊN SỬ & THỦ LĨNH (${loreCount}/${LORE_TABLETS.length} BIA KÝ)
+          📖 BIÊN NIÊN SỬ (${loreCount}/${LORE_TABLETS.length} BIA KÝ)
+        </button>
+        <button class="px-btn ${this.tab === "cutscenes" ? "active" : ""}" id="j-tab-cutscenes">
+          🎬 PHIM CỐT TRUYỆN (${seenCount}/${STORY_CUTSCENES.length})
         </button>
       </div>
     `;
 
-    const contentHtml = this.tab === "quests" ? this._buildQuestsHtml() : this._buildLoreHtml();
+    const contentHtml =
+      this.tab === "quests"
+        ? this._buildQuestsHtml()
+        : this.tab === "lore"
+          ? this._buildLoreHtml()
+          : this._buildCutscenesHtml();
     this.bodyEl.innerHTML = navHtml + contentHtml;
 
     this.bodyEl.querySelector("#j-tab-quests")?.addEventListener("click", () => {
@@ -66,6 +79,19 @@ export class QuestJournalModalUI {
       sfx.playUiClick();
       this.tab = "lore";
       this.render();
+    });
+    this.bodyEl.querySelector("#j-tab-cutscenes")?.addEventListener("click", () => {
+      sfx.playUiClick();
+      this.tab = "cutscenes";
+      this.render();
+    });
+    this.bodyEl.querySelectorAll("[data-replay-scene]").forEach((el) => {
+      el.addEventListener("click", () => {
+        const sid = (el as HTMLElement).dataset.replayScene as StoryCutsceneId;
+        if (!sid) return;
+        sfx.playUiClick();
+        this.game.playCutscene(sid, "journal");
+      });
     });
     this.bodyEl.querySelectorAll("[data-jfilter]").forEach((el) => {
       el.addEventListener("click", () => {
@@ -253,6 +279,40 @@ export class QuestJournalModalUI {
       ${tabletsHtml}
       <div class="section-hdr">HỒ SƠ 4 THỦ LĨNH & THE ERASER</div>
       ${bossesHtml}
+    `;
+  }
+
+  private _buildCutscenesHtml(): string {
+    const cards = STORY_CUTSCENES.map((sc) => {
+      const unlocked = Boolean(sc.alwaysUnlocked || this.game.seenCutscenes.has(sc.id));
+      return `
+        <div class="quest-card cs-journal-card" style="border-color:${unlocked ? sc.accent : "#353954"};opacity:${unlocked ? 1 : 0.72}">
+          <div class="quest-card-top">
+            <div>
+              <div style="font-size:10px;font-weight:700;color:${unlocked ? sc.accent : "#7e86a4"}">${sc.chapter} · ${sc.beats.length} PHÂN CẢNH</div>
+              <div style="font-size:14px;font-weight:700;color:${unlocked ? "#ffe066" : "#9ba4bf"};margin-top:2px">
+                ${unlocked ? "🎬" : "🔒"} ${sc.title}
+              </div>
+            </div>
+            ${
+              unlocked
+                ? `<button class="px-btn sm primary" data-replay-scene="${sc.id}">▶ XEM LẠI PHIM</button>`
+                : `<span class="quest-tag side">CHƯA MỞ KHÓA</span>`
+            }
+          </div>
+          <div class="j-summary" style="color:${unlocked ? "#dbe4ff" : "#8e96b4"};margin-top:4px">
+            ${unlocked ? sc.subtitle : `Cách mở khóa: ${sc.unlockHint}`}
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    return `
+      <div class="lore-prologue-box" style="margin-bottom:10px">
+        <div style="color:#5ef2ff;font-weight:700;font-size:13px;margin-bottom:3px">🎬 RẠP CHIẾU BIÊN NIÊN SỬ AETHEL-16</div>
+        <div style="color:#cbd5e1;font-size:12px">Xem lại toàn bộ các phân cảnh cốt truyện 16-bit sống động kết hợp hiệu ứng <b>pixelfx</b> & nhân vật <b>codixel</b> mà bạn đã mở khóa trong hành trình!</div>
+      </div>
+      ${cards}
     `;
   }
 }

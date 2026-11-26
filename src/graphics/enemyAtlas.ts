@@ -82,6 +82,9 @@ export interface CodixelEnemyDrawOpts {
   dashVx: number;
   dashVy: number;
   time: number;
+  spawnAnimTime?: number;
+  alertTimer?: number;
+  hurtTilt?: number;
 }
 
 function dirToAtlasKey(dir: EnemyFacingDir): "front" | "back" | "left" | "right" {
@@ -112,8 +115,20 @@ function selectMonsterFrame(
     return { frame: FRAMES["ash_hopper:roll"], isRollBall: true };
   }
 
+  // Dedicated directional :atk strike silhouette during active attack window!
+  if (
+    animKind !== "idle" &&
+    animKind !== "bark_shield" &&
+    animKind !== "quartz_shield" &&
+    u >= 0.26 &&
+    u <= 0.78 &&
+    FRAMES[`${defId}:${dirKey}:atk`]
+  ) {
+    return { frame: FRAMES[`${defId}:${dirKey}:atk`], isRollBall: false };
+  }
+
   let frameIdx = 0;
-  if (defId === "bleach_hound" || defId === "boss_blight_root") {
+  if (defId === "bleach_hound" || defId === "boss_blight_root" || defId === "boss_the_eraser") {
     const flapSpd = animKind !== "idle" ? 11.5 : isMoving ? 8.5 : 6.8;
     frameIdx = WALK_CYCLE[Math.floor(time * flapSpd + uid * 0.7) & 3];
   } else if (meta.floating) {
@@ -134,7 +149,9 @@ function selectMonsterFrame(
     animKind === "crystal_lunge" ||
     animKind === "root_whip" ||
     animKind === "halberd_sweep" ||
-    animKind === "claw_clamp"
+    animKind === "claw_clamp" ||
+    animKind === "amber_roll" ||
+    animKind === "void_blink"
   ) {
     frameIdx = WALK_CYCLE[Math.floor(walkTime * 7.5) & 3];
   }
@@ -213,7 +230,8 @@ export function drawCodixelEnemy(
     animKind === "spit_moss" ||
     animKind === "thorn_shot" ||
     animKind === "sonic_wave" ||
-    animKind === "refract_split"
+    animKind === "refract_split" ||
+    animKind === "ember_cast"
   ) {
     if (u < 0.3) {
       const k = u / 0.3;
@@ -231,7 +249,9 @@ export function drawCodixelEnemy(
   } else if (
     animKind === "roll_charge" ||
     animKind === "dive_slash" ||
-    animKind === "crystal_lunge"
+    animKind === "crystal_lunge" ||
+    animKind === "amber_roll" ||
+    animKind === "void_blink"
   ) {
     if (u < 0.18) {
       const k = u / 0.18;
@@ -244,7 +264,7 @@ export function drawCodixelEnemy(
         rot = (Math.floor(time * 22) & 3) * (Math.PI / 2);
         oy -= 2;
       } else {
-        ox += Math.round(cs * 2);
+        ox += Math.round(cs * 2.5);
         scaleX = 1.14;
         scaleY = 0.88;
         rot = (cs >= 0 ? 1 : -1) * 0.12;
@@ -256,18 +276,20 @@ export function drawCodixelEnemy(
     animKind === "shard_rain" ||
     animKind === "refract_rain" ||
     animKind === "ground_roots" ||
-    animKind === "vine_trap"
+    animKind === "vine_trap" ||
+    animKind === "molten_slam" ||
+    animKind === "void_slam"
   ) {
     if (u < 0.35) {
       const k = u / 0.35;
-      oy -= Math.round(4 * k);
+      oy -= Math.round(5 * k);
       scaleX = 1 - 0.08 * k;
-      scaleY = 1 + 0.14 * k;
+      scaleY = 1 + 0.15 * k;
     } else if (u < 0.72) {
       const k = 1 - (u - 0.35) / 0.37;
       oy += Math.round(1.5 * k);
-      ox += Math.round(Math.sin(time * 65) * 1.3 * k);
-      scaleX = 1 + 0.22 * k;
+      ox += Math.round(Math.sin(time * 65) * 1.4 * k);
+      scaleX = 1 + 0.24 * k;
       scaleY = 1 - 0.2 * k;
     }
   } else if (
@@ -292,7 +314,8 @@ export function drawCodixelEnemy(
   } else if (
     animKind === "thin_laser" ||
     animKind === "emerald_orb" ||
-    animKind === "prism_breath"
+    animKind === "prism_breath" ||
+    animKind === "void_barrage"
   ) {
     if (u < 0.34) {
       ox += ((Math.floor(time * 48) & 1) ? 1 : -1);
@@ -304,18 +327,36 @@ export function drawCodixelEnemy(
       scaleX = 1.07;
       scaleY = 0.95;
     }
-  } else if (animKind === "leaf_storm" || animKind === "rainbow_storm") {
+  } else if (
+    animKind === "leaf_storm" ||
+    animKind === "rainbow_storm" ||
+    animKind === "ember_volley" ||
+    animKind === "erase_cast"
+  ) {
     oy -= 3;
     const p = 1 + Math.sin(u * Math.PI * 6) * 0.08;
     scaleX = p;
     scaleY = p;
   }
 
-  // Hit-flash micro-squash + recoil shiver
+  // Hit-flash micro-squash + recoil tilt + shiver
+  if (opts.hurtTilt && opts.hurtTilt > 0) {
+    const k = Math.min(1, opts.hurtTilt / 0.16);
+    rot += (opts.facingDir === "left" ? 0.18 : -0.18) * k;
+    ox += (opts.facingDir === "left" ? 2 : -2) * k;
+  }
   if (opts.hitFlash) {
     scaleX *= 1.13;
     scaleY *= 0.88;
     ox += ((Math.floor(time * 55) + opts.uid) & 1) ? 1 : -1;
+  }
+
+  // Portal spawn emergence rise-in animation!
+  if (opts.spawnAnimTime && opts.spawnAnimTime > 0) {
+    const spK = Math.min(1, opts.spawnAnimTime / 0.52);
+    scaleX *= Math.max(0.25, 1 - spK * 0.65);
+    scaleY *= 1 + spK * 0.45;
+    oy -= Math.round(spK * 6);
   }
 
   // Dynamic altitude-aware ground shadow
@@ -369,7 +410,10 @@ export function drawCodixelEnemy(
       animKind === "emerald_orb" ||
       animKind === "prism_breath" ||
       animKind === "leaf_storm" ||
-      animKind === "rainbow_storm")
+      animKind === "rainbow_storm" ||
+      animKind === "ember_volley" ||
+      animKind === "void_barrage" ||
+      animKind === "erase_cast")
   ) {
     const pulseR = Math.round(3 + Math.sin(time * 24) * 1.5);
     ctx.save();
@@ -377,7 +421,14 @@ export function drawCodixelEnemy(
     ctx.fillStyle =
       animKind === "emerald_orb" || animKind === "leaf_storm"
         ? "rgba(88, 255, 138, 0.78)"
-        : "rgba(120, 245, 255, 0.82)";
+        : animKind === "ember_volley"
+          ? "rgba(255, 166, 56, 0.82)"
+          : animKind === "void_barrage" ||
+              animKind === "erase_cast" ||
+              opts.defId === "void_gatekeeper" ||
+              opts.defId === "boss_the_eraser"
+            ? "rgba(216, 128, 255, 0.84)"
+            : "rgba(120, 245, 255, 0.82)";
     ctx.fillRect(
       Math.round(opts.x + ox - pulseR),
       Math.round(opts.y + oy - f.h * 0.55 - pulseR),
@@ -389,18 +440,26 @@ export function drawCodixelEnemy(
 
   // Crisp pixel chamfered hex-barrier / diamond-crystal shield accent when guardTime > 0
   if (opts.guardTime > 0 && !opts.hitFlash) {
-    const isBark = opts.defId === "root_golem";
+    const isHexBarrier =
+      opts.defId === "root_golem" ||
+      opts.defId === "void_gatekeeper" ||
+      opts.defId === "amber_warrior";
     const pulse = 0.55 + Math.sin(time * 9) * 0.16;
     ctx.save();
     ctx.globalAlpha = pulse;
-    if (isBark) {
+    if (isHexBarrier) {
       const rx = Math.round(f.w * 0.52);
       const cy = Math.round(opts.y + oy - f.h * 0.5);
       const ry = Math.round(f.h * 0.52);
       const ch = 6;
       const cx = Math.round(opts.x + ox);
-      ctx.strokeStyle = "#7effa8";
-      ctx.lineWidth = 1;
+      ctx.strokeStyle =
+        opts.defId === "void_gatekeeper"
+          ? "#e5b8ff"
+          : opts.defId === "amber_warrior"
+            ? "#ffaa33"
+            : "#7effa8";
+      ctx.lineWidth = opts.defId === "void_gatekeeper" ? 1.5 : 1;
       ctx.beginPath();
       ctx.moveTo(cx - rx + ch, cy - ry);
       ctx.lineTo(cx + rx - ch, cy - ry);
@@ -427,6 +486,44 @@ export function drawCodixelEnemy(
       ctx.fill();
       ctx.stroke();
     }
+    ctx.restore();
+  }
+
+  // Crisp 4-point Danger Glint during skill windup (u < 0.28) so players can time Chroma Dodge / Just-Parry!
+  if (
+    !opts.hitFlash &&
+    animKind !== "idle" &&
+    animKind !== "bark_shield" &&
+    animKind !== "quartz_shield" &&
+    u > 0.02 &&
+    u < 0.28
+  ) {
+    const gx = Math.round(opts.x + ox + Math.cos(animAngle) * (f.w * 0.22));
+    const gy = Math.round(opts.y + oy - f.h * 0.72);
+    const arm = Math.round(3 + Math.sin((u / 0.28) * Math.PI) * 5);
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.fillStyle = "#ff4455";
+    ctx.fillRect(gx - arm, gy - 1, arm * 2 + 1, 3);
+    ctx.fillRect(gx - 1, gy - arm, 3, arm * 2 + 1);
+    ctx.fillStyle = "#fff5b8";
+    ctx.fillRect(gx - Math.max(2, arm - 2), gy, Math.max(2, arm - 2) * 2 + 1, 1);
+    ctx.fillRect(gx, gy - Math.max(2, arm - 2), 1, Math.max(2, arm - 2) * 2 + 1);
+    ctx.restore();
+  }
+
+  // Crisp pixel "!" Alert pop when spotting player or answering pack aggro!
+  if (opts.alertTimer && opts.alertTimer > 0) {
+    const aK = Math.min(1, opts.alertTimer / 0.72);
+    const bounce = Math.round(Math.sin(aK * Math.PI) * 5);
+    const ax = Math.round(opts.x + ox);
+    const ay = Math.round(opts.y + oy - f.h - 10 - bounce);
+    ctx.save();
+    ctx.fillStyle = "#120c18";
+    ctx.fillRect(ax - 3, ay - 9, 6, 11);
+    ctx.fillStyle = "#ffe044";
+    ctx.fillRect(ax - 1, ay - 8, 2, 5);
+    ctx.fillRect(ax - 1, ay - 1, 2, 2);
     ctx.restore();
   }
 

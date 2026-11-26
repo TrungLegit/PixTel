@@ -66,8 +66,18 @@ export interface PixelfxPosedTheme {
     | "gear_visor"
     | "gear_crest"
     | "gear_crown"
-    | "gear_halo";
-  backAccessory?: "none" | "cape" | "scarf" | "volt_pack";
+    | "gear_halo"
+    | "dragon_helm"
+    | "royal_crown"
+    | "antler_crest";
+  backAccessory?:
+    | "none"
+    | "cape"
+    | "scarf"
+    | "volt_pack"
+    | "prism_wings"
+    | "warden_roots"
+    | "amber_thrusters";
   armorShape?: "tunic" | "mail" | "plate" | "aegis" | "mantle" | "leather";
   bootsShape?: "greaves" | "treads" | "void_step" | "strider";
   shielded?: boolean;

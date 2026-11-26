@@ -27,3 +27,16 @@ Quy tắc bắt buộc cho tất cả thành viên và mọi AI coding assistant
    - **Không xóa hoặc ghi đè** các bản ghi log cũ (chỉ chèn bản ghi mới lên trên cùng — newest-first).
    - Khi commit/push thay đổi lên git, luôn commit kèm `DEV_LOG.md`.
 <!-- DEV_LOG_RULE:END -->
+
+<!-- PREVIEW_FOR_DEVS_RULE:START -->
+## Team Preview Rule — Tự động lưu, commit & push mọi bản Preview vào `preview for devs/`
+
+Quy tắc bắt buộc được ghi nhớ lâu dài cho mọi AI coding assistant làm việc trên repository **PixTel**:
+
+1. **Mỗi khi người dùng yêu cầu tạo bản preview** (giao diện UI/UX, vật phẩm, quái/boss, tính năng mới, visual report...):
+   - Ngoài artifact xem nhanh (nếu có), **bắt buộc** lưu bản preview dạng Markdown chuẩn GitHub vào thư mục **`preview for devs/`** theo tên `YYYY-MM-DD-<ten-preview>.md`.
+   - Lưu toàn bộ ảnh PNG/GIF đã kiểm duyệt trực quan vào **`preview for devs/assets/`** và nhúng bằng **đường dẫn tương đối** (`./assets/<file>.png`) để hiển thị trực tiếp đẹp mắt trên GitHub web (tránh cú pháp riêng không được GitHub hỗ trợ như `carousel`).
+   - Cập nhật bảng mục lục **newest-first** trong **`preview for devs/README.md`**.
+2. **Tự động Commit & Push lên GitHub:**
+   - Ngay sau khi tạo/cập nhật bản preview trong `preview for devs/`, **tự động** cập nhật `DEV_LOG.md` + đồng bộ Project Brain, sau đó **`git add`, `git commit`, và `git push origin main`** thư mục `preview for devs/` (cùng `DEV_LOG.md` & `.brain/`) lên GitHub (không cần đợi người dùng nhắc lại) để các dev khác nắm được tình hình trực tiếp trên repo.
+<!-- PREVIEW_FOR_DEVS_RULE:END -->

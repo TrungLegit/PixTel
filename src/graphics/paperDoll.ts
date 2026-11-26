@@ -30,6 +30,7 @@ export interface PaperDollOptions {
   chargePct?: number;
   aegisActive?: boolean;
   buffActive?: boolean;
+  setAuraColor?: string | null;
 }
 
 /** Converts a hex color into cool Bleached grayscale for unrestored world areas. */

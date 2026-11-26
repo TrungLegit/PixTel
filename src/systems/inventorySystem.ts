@@ -1,5 +1,7 @@
 import { getClassDef } from "../data/classes";
-import { SET_BONUSES, STARTER_WEAPON_BY_CLASS, type SetBonusDef } from "../data/equipments";
+import { STARTER_WEAPON_BY_CLASS } from "../data/equipments";
+import { ALL_SET_BONUSES } from "../data/sets";
+import type { SetBonusDefinition } from "../types/item";
 import {
   CONSUMABLE_HOTKEY_GROUPS,
   ITEMS,
@@ -13,14 +15,96 @@ import {
 } from "../data/items";
 import {
   EQUIP_SLOTS,
+  type AutoSellMode,
+  type AutoSellSettings,
   type ClassId,
   type ConsumableGroup,
   type EquipSlot,
+  type ExoticSkillModId,
   type ItemInstance,
+  type Rarity,
 } from "../data/types";
 import type { PlayerEntity } from "../world/entities";
 
 export const MAX_BAG_SLOTS = 40;
+export const BASE_BAG_SLOTS = 40;
+export const MAX_EXPANDED_BAG_SLOTS = 80;
+export const MAX_STASH_SLOTS = 80;
+
+export interface BackpackUpgradeDef {
+  tier: number;
+  id: string;
+  name: string;
+  bonusSlots: number;
+  totalSlots: number;
+  price: number;
+  iconKey: string;
+  color: string;
+  desc: string;
+}
+
+export const BACKPACK_UPGRADES: BackpackUpgradeDef[] = [
+  {
+    tier: 1,
+    id: "bp_upgrade_1",
+    name: "Balo Du Mục (+10 Ô)",
+    bonusSlots: 10,
+    totalSlots: 50,
+    price: 250,
+    iconKey: "ui_backpack_t1",
+    color: "#44ee88",
+    desc: "Mở rộng vĩnh viễn kho đồ hành trang từ 40 lên 50 ô.",
+  },
+  {
+    tier: 2,
+    id: "bp_upgrade_2",
+    name: "Balo Thám Hiểm Thạch Anh (+10 Ô)",
+    bonusSlots: 10,
+    totalSlots: 60,
+    price: 650,
+    iconKey: "ui_backpack_t2",
+    color: "#38e8ff",
+    desc: "Balo gia cố tinh thể Thạch Anh, mở rộng kho đồ lên 60 ô.",
+  },
+  {
+    tier: 3,
+    id: "bp_upgrade_3",
+    name: "Balo Hành Quân Hổ Phách (+10 Ô)",
+    bonusSlots: 10,
+    totalSlots: 70,
+    price: 1400,
+    iconKey: "ui_backpack_t3",
+    color: "#ffaa33",
+    desc: "Balo bọc giáp Hổ Phách rộng rãi, nâng sức chứa lên 70 ô.",
+  },
+  {
+    tier: 4,
+    id: "bp_upgrade_4",
+    name: "Balo Không Gian Lăng Kính (+10 Ô)",
+    bonusSlots: 10,
+    totalSlots: 80,
+    price: 2800,
+    iconKey: "ui_backpack_t4",
+    color: "#d266ff",
+    desc: "Balo không gian Lăng Kính tối thượng, mở tối đa 80 ô hành trang!",
+  },
+];
+
+const AUTO_SELL_RARITY_RANK: Record<Rarity, number> = {
+  common: 1,
+  uncommon: 2,
+  rare: 3,
+  epic: 4,
+  cursed: 5,
+  legendary: 5,
+};
+
+const AUTO_SELL_THRESHOLD_RANK: Record<AutoSellMode, number> = {
+  off: 0,
+  common: 1,
+  uncommon: 2,
+  rare: 3,
+};
 
 export const HOTKEY_CONSUMABLES: readonly string[] = [
   "pot_hp",
@@ -30,14 +114,16 @@ export const HOTKEY_CONSUMABLES: readonly string[] = [
 ];
 
 export interface ActiveSetStatus {
-  def: SetBonusDef;
+  def: SetBonusDefinition;
   count: number;
+  maxPieces: 3 | 4;
   twoActive: boolean;
+  threeActive: boolean;
   fourActive: boolean;
 }
 
 /**
- * Recomputes total player stats (maxHp, atk, def, spd, crit, elementBonus, maxStamina, passives)
+ * Recomputes total player stats (maxHp, atk, mag, def, spd, crit, elementBonus, maxStamina, passives)
  * from base class stats + level progression + equipped gear + enhancement milestones + Set Bonuses.
  */
 export function recalculatePlayerStats(
@@ -48,17 +134,25 @@ export function recalculatePlayerStats(
   const prevMax = Math.max(1, player.maxHp);
   const ratio = player.hp / prevMax;
   const cdef = getClassDef(player.classId);
-  const eq = inv.getTotalEquipBonuses();
-  const sets = inv.getActiveSetBonusStats();
+  const eq = inv.getTotalEquipBonuses(player.classId);
+  const sets = inv.getActiveSetBonusStats(player.classId);
   const lv = player.level - 1;
   const alloc = player.allocatedStats ?? { str: 0, vit: 0, agi: 0, crt: 0 };
 
   player.maxHp = cdef.baseStats.hp + lv * 14 + alloc.vit * 18 + eq.maxHp + sets.maxHp;
   player.atk = cdef.baseStats.atk + lv * 2 + alloc.str * 3 + eq.atk + sets.atk;
-  player.def = cdef.baseStats.def + lv * 1 + alloc.vit * 1 + eq.def + sets.def;
-  player.spd = Math.round(cdef.baseStats.spd + alloc.agi * 2.5 + eq.spd + sets.spd);
+  player.mag = eq.mag + sets.mag;
+  player.def = Math.max(0, cdef.baseStats.def + lv * 1 + alloc.vit * 1 + eq.def + sets.def);
+  const moveSpeedPct = eq.moveSpeedPct + sets.moveSpeedPct;
+  const rawSpd = cdef.baseStats.spd + alloc.agi * 2.5 + eq.spd + sets.spd;
+  player.spd = Math.max(45, Math.round(rawSpd * (1 + moveSpeedPct / 100)));
+  player.aspdPct = eq.aspdPct + sets.aspdPct;
+  player.moveSpeedPct = moveSpeedPct;
+  player.critDmgPct = eq.critDmgPct + sets.critDmgPct;
+  player.lifestealPct = eq.lifestealPct + sets.lifestealPct;
+  player.fireResPct = Math.min(90, eq.fireResPct + sets.fireResPct);
   player.crit = Math.min(95, Math.round((cdef.baseStats.crit + alloc.crt * 1.5 + eq.crit + sets.crit) * 10) / 10);
-  player.critMult = Number((cdef.baseStats.critMult + alloc.crt * 0.03).toFixed(2));
+  player.critMult = Number((cdef.baseStats.critMult + alloc.crt * 0.03 + player.critDmgPct / 100).toFixed(2));
   player.elementBonus = eq.elementBonus + sets.elementBonus;
 
   player.maxStamina = Math.max(100, 100 + eq.maxStamina + sets.maxStamina);
@@ -69,7 +163,7 @@ export function recalculatePlayerStats(
   player.poiseBreakPct = eq.poiseBreakPct + sets.poiseBreakPct;
   player.skillCdPct = Math.max(-40, eq.skillCdPct + sets.skillCdPct);
 
-  const passives = inv.getActivePassives();
+  const passives = inv.getActivePassives(player.classId);
   player.hasOrbitGrimoire = passives.has("orbit_grimoire");
   player.hasReactionAmp = passives.has("reaction_amp");
   player.hasVoidSiphon = passives.has("void_siphon");
@@ -79,9 +173,15 @@ export function recalculatePlayerStats(
   player.hasRestoredPrismSurge = passives.has("restored_prism_surge");
   player.hasEnergySiphon = passives.has("energy_siphon_magnet");
   player.hasSetResonance = passives.has("set_resonance_echo");
+  player.exoticMods = inv.getActiveExoticMods(player.classId);
+  if (!player.exoticIcds) player.exoticIcds = {};
+
+  const activeSets = inv.getActiveSetBonuses(player.classId);
+  player.activeSetAuraColor =
+    activeSets.find((s) => s.threeActive && s.def.threePieceAuraColor)?.def.threePieceAuraColor ?? null;
 
   if (player.hasSetResonance) {
-    const hasActiveSet = inv.getActiveSetBonuses().length > 0;
+    const hasActiveSet = activeSets.length > 0;
     const pct = hasActiveSet ? 0.08 : 0.04;
     player.atk = Math.round(player.atk * (1 + pct));
     player.def = Math.round(player.def * (1 + pct));
@@ -103,25 +203,54 @@ export class InventorySystem {
   gold = 30;
   equipment: Partial<Record<EquipSlot, ItemInstance>> = {};
   bag: ItemInstance[] = [];
+  bagCapacity = BASE_BAG_SLOTS;
+  backpackTier = 0;
+  stash: ItemInstance[] = [];
+  autoSell: AutoSellSettings = { maxRarity: "off", includeOffClass: false };
 
   resetStarterKit(_classId: ClassId = "prism_knight") {
     this.gold = 30;
     this.equipment = {};
     this.bag = [createItemInstance("pot_hp", 2, 0)];
+    this.bagCapacity = BASE_BAG_SLOTS;
+    this.backpackTier = 0;
+    this.stash = [];
+    this.autoSell = { maxRarity: "off", includeOffClass: false };
   }
 
   /**
-   * Loads saved gold, equipment, and bag.
+   * Loads saved gold, equipment, bag, backpack capacity, personal stash & auto-sell settings.
    * Automatically migrates legacy v2 saves that used `"ring"` / `"chip"` slots into `"accessory"`.
    */
   loadState(
     gold: number,
     equipment: Record<string, ItemInstance | undefined>,
-    bag: ItemInstance[]
+    bag: ItemInstance[],
+    extras?: {
+      bagCapacity?: number;
+      backpackTier?: number;
+      stash?: ItemInstance[];
+      autoSell?: AutoSellSettings;
+    }
   ) {
     this.gold = Math.max(0, Math.floor(gold));
     this.equipment = {};
+    this.backpackTier = Math.max(0, Math.min(BACKPACK_UPGRADES.length, Math.floor(extras?.backpackTier ?? 0)));
+    const expectedCap = BASE_BAG_SLOTS + this.backpackTier * 10;
+    this.bagCapacity = Math.max(
+      BASE_BAG_SLOTS,
+      Math.min(MAX_EXPANDED_BAG_SLOTS, Math.max(expectedCap, Math.floor(extras?.bagCapacity ?? BASE_BAG_SLOTS)))
+    );
     this.bag = bag.filter((b) => ITEMS[b.defId]).map((b) => ({ ...b }));
+    this.stash = Array.isArray(extras?.stash)
+      ? extras!.stash.filter((s) => ITEMS[s.defId]).map((s) => ({ ...s }))
+      : [];
+    const savedMode = extras?.autoSell?.maxRarity;
+    this.autoSell = {
+      maxRarity:
+        savedMode === "common" || savedMode === "uncommon" || savedMode === "rare" ? savedMode : "off",
+      includeOffClass: Boolean(extras?.autoSell?.includeOffClass),
+    };
 
     for (const slot of EQUIP_SLOTS) {
       const it = equipment[slot];
@@ -136,7 +265,7 @@ export class InventorySystem {
       if (!legacyItem || !ITEMS[legacyItem.defId]) continue;
       if (!this.equipment.accessory) {
         this.equipment.accessory = { ...legacyItem };
-      } else if (this.bag.length < MAX_BAG_SLOTS) {
+      } else if (this.bag.length < this.bagCapacity) {
         this.bag.push({ ...legacyItem });
       }
     }
@@ -152,13 +281,13 @@ export class InventorySystem {
         existing.qty += qty;
         return true;
       }
-      if (this.bag.length >= MAX_BAG_SLOTS) return false;
+      if (this.bag.length >= this.bagCapacity) return false;
       this.bag.push(createItemInstance(defId, qty, 0));
       return true;
     }
 
     for (let i = 0; i < qty; i++) {
-      if (this.bag.length >= MAX_BAG_SLOTS) return false;
+      if (this.bag.length >= this.bagCapacity) return false;
       this.bag.push(createItemInstance(defId, 1, enhanceLevel));
     }
     return true;
@@ -170,7 +299,7 @@ export class InventorySystem {
     if (def.category !== "equipment") {
       return this.addItem(inst.defId, inst.qty, 0);
     }
-    if (this.bag.length >= MAX_BAG_SLOTS) return false;
+    if (this.bag.length >= this.bagCapacity) return false;
     this.bag.push({ ...inst });
     return true;
   }
@@ -218,13 +347,11 @@ export class InventorySystem {
       return { ok: false, reason: "Vật phẩm này không thể trang bị." };
     }
 
-    if (
-      playerClassId &&
-      def.requiredClass &&
-      def.requiredClass !== "all" &&
-      def.requiredClass !== playerClassId
-    ) {
-      const reqName = getClassDef(def.requiredClass).vnName;
+    if (playerClassId && !canClassEquip(def, playerClassId)) {
+      const reqName =
+        def.requiredClass && def.requiredClass !== "all"
+          ? getClassDef(def.requiredClass).vnName
+          : "khác";
       return { ok: false, reason: `Chỉ dành cho Class ${reqName}!` };
     }
 
@@ -241,10 +368,161 @@ export class InventorySystem {
   unequipSlot(slot: EquipSlot): boolean {
     const eq = this.equipment[slot];
     if (!eq) return false;
-    if (this.bag.length >= MAX_BAG_SLOTS) return false;
+    if (this.bag.length >= this.bagCapacity) return false;
     this.bag.push(eq);
     delete this.equipment[slot];
     return true;
+  }
+
+  // =========================================================================
+  // BACKPACK EXPANSION UPGRADES (40 -> 50 -> 60 -> 70 -> 80 SLOTS)
+  // =========================================================================
+
+  getNextBackpackUpgrade(): BackpackUpgradeDef | null {
+    return BACKPACK_UPGRADES.find((u) => u.tier === this.backpackTier + 1) ?? null;
+  }
+
+  buyNextBackpackUpgrade(): { ok: boolean; reason?: string; upgrade?: BackpackUpgradeDef } {
+    const next = this.getNextBackpackUpgrade();
+    if (!next) {
+      return { ok: false, reason: `Balo đã đạt cấp tối đa (${this.bagCapacity}/${MAX_EXPANDED_BAG_SLOTS} ô)!` };
+    }
+    if (this.gold < next.price) {
+      return { ok: false, reason: `Cần ${next.price} G để mua ${next.name} (hiện có ${this.gold} G).` };
+    }
+    this.gold -= next.price;
+    this.backpackTier = next.tier;
+    this.bagCapacity = next.totalSlots;
+    return { ok: true, upgrade: next };
+  }
+
+  // =========================================================================
+  // AUTO-SELL LOW-RARITY EQUIPMENT (PROTECTS EXOTIC / HIDDEN / SEASONAL / +N)
+  // =========================================================================
+
+  setAutoSell(mode: AutoSellMode, includeOffClass = this.autoSell.includeOffClass ?? false) {
+    this.autoSell = { maxRarity: mode, includeOffClass };
+  }
+
+  shouldAutoSell(inst: ItemInstance, playerClassId?: ClassId): boolean {
+    const thresh = AUTO_SELL_THRESHOLD_RANK[this.autoSell.maxRarity] ?? 0;
+    const sellOffClass = Boolean(this.autoSell.includeOffClass);
+    if (thresh <= 0 && !sellOffClass) return false;
+
+    const def = ITEMS[inst.defId];
+    if (!def || def.category !== "equipment") return false;
+    // Strict safety guard: never auto-sell Hidden Relics, Drop-Only Exotics, Seasonal Gacha Exclusives, Cursed, or Enhanced items!
+    if (def.isHidden || def.dropOnly || def.seasonalBannerId || def.rarity === "cursed" || inst.enhanceLevel > 0) return false;
+
+    const rank = AUTO_SELL_RARITY_RANK[def.rarity] ?? 99;
+    if (thresh > 0 && rank <= thresh) return true;
+    if (sellOffClass && playerClassId && !canClassEquip(def, playerClassId) && def.rarity !== "legendary") {
+      return true;
+    }
+    return false;
+  }
+
+  tryAutoSellInstance(
+    inst: ItemInstance,
+    playerClassId?: ClassId
+  ): { sold: boolean; gold: number; itemName: string } {
+    const def = ITEMS[inst.defId];
+    if (!def || !this.shouldAutoSell(inst, playerClassId)) {
+      return { sold: false, gold: 0, itemName: def?.name ?? "" };
+    }
+    const val = this.getItemSellValue(inst, false);
+    if (val <= 0) return { sold: false, gold: 0, itemName: def.name };
+    this.gold += val;
+    return { sold: true, gold: val, itemName: def.name };
+  }
+
+  sweepAutoSellBag(playerClassId?: ClassId): { soldCount: number; totalGold: number } {
+    let soldCount = 0;
+    let totalGold = 0;
+    for (let i = this.bag.length - 1; i >= 0; i--) {
+      const item = this.bag[i];
+      if (!this.shouldAutoSell(item, playerClassId)) continue;
+      const val = this.getItemSellValue(item, false);
+      totalGold += val;
+      soldCount += 1;
+      this.bag.splice(i, 1);
+    }
+    this.gold += totalGold;
+    return { soldCount, totalGold };
+  }
+
+  // =========================================================================
+  // PERSONAL STORAGE CHEST AT SPAWN (STASH — UP TO 80 SLOTS)
+  // =========================================================================
+
+  findInStash(uid: string): ItemInstance | undefined {
+    return this.stash.find((s) => s.uid === uid);
+  }
+
+  hasItemAnywhere(defId: string): boolean {
+    for (const slot of EQUIP_SLOTS) {
+      if (this.equipment[slot]?.defId === defId) return true;
+    }
+    if (this.bag.some((b) => b.defId === defId && b.qty > 0)) return true;
+    return this.stash.some((s) => s.defId === defId && s.qty > 0);
+  }
+
+  depositToStash(uid: string): { ok: boolean; reason?: string; itemName?: string } {
+    const idx = this.bag.findIndex((b) => b.uid === uid);
+    if (idx < 0) return { ok: false, reason: "Không tìm thấy vật phẩm trong túi đồ." };
+    const item = this.bag[idx];
+    const def = ITEMS[item.defId];
+    if (!def) return { ok: false, reason: "Vật phẩm không hợp lệ." };
+
+    if (def.category !== "equipment") {
+      const existing = this.stash.find((s) => s.defId === item.defId);
+      if (existing) {
+        existing.qty += item.qty;
+        this.bag.splice(idx, 1);
+        return { ok: true, itemName: def.name };
+      }
+    }
+    if (this.stash.length >= MAX_STASH_SLOTS) {
+      return { ok: false, reason: `Rương Cá Nhân đã đầy (${MAX_STASH_SLOTS}/${MAX_STASH_SLOTS} ô)!` };
+    }
+    this.stash.push({ ...item });
+    this.bag.splice(idx, 1);
+    return { ok: true, itemName: def.name };
+  }
+
+  withdrawFromStash(uid: string): { ok: boolean; reason?: string; itemName?: string } {
+    const idx = this.stash.findIndex((s) => s.uid === uid);
+    if (idx < 0) return { ok: false, reason: "Không tìm thấy vật phẩm trong Rương." };
+    const item = this.stash[idx];
+    const def = ITEMS[item.defId];
+    if (!def) return { ok: false, reason: "Vật phẩm không hợp lệ." };
+
+    if (def.category !== "equipment") {
+      const existing = this.bag.find((b) => b.defId === item.defId);
+      if (existing) {
+        existing.qty += item.qty;
+        this.stash.splice(idx, 1);
+        return { ok: true, itemName: def.name };
+      }
+    }
+    if (this.bag.length >= this.bagCapacity) {
+      return { ok: false, reason: `Túi đồ đã đầy (${this.bag.length}/${this.bagCapacity} ô)! Hãy bán bớt hoặc mua Balo lớn hơn.` };
+    }
+    this.bag.push({ ...item });
+    this.stash.splice(idx, 1);
+    return { ok: true, itemName: def.name };
+  }
+
+  depositAllMaterialsToStash(): number {
+    let moved = 0;
+    for (let i = this.bag.length - 1; i >= 0; i--) {
+      const item = this.bag[i];
+      const def = ITEMS[item.defId];
+      if (!def || def.category !== "material" || def.gachaKeyBiome) continue;
+      const res = this.depositToStash(item.uid);
+      if (res.ok) moved++;
+    }
+    return moved;
   }
 
   getEquippedDef(slot: EquipSlot) {
@@ -252,7 +530,19 @@ export class InventorySystem {
     return eq ? ITEMS[eq.defId] : undefined;
   }
 
-  /** Moves any equipped gear incompatible with `classId` safely back into the bag on Class Altar switch. */
+  getValidEquippedWeapon(classId: ClassId): ItemInstance | undefined {
+    const wpn = this.equipment.weapon;
+    if (!wpn) return undefined;
+    const def = ITEMS[wpn.defId];
+    if (!def || !canClassEquip(def, classId)) return undefined;
+    return wpn;
+  }
+
+  hasValidEquippedWeapon(classId: ClassId): boolean {
+    return Boolean(this.getValidEquippedWeapon(classId));
+  }
+
+  /** Moves any equipped gear incompatible with `classId` safely back into the bag on Class Altar switch or save migration. */
   unequipIncompatibleForClass(classId: ClassId): string[] {
     const removed: string[] = [];
     for (const slot of EQUIP_SLOTS) {
@@ -260,7 +550,7 @@ export class InventorySystem {
       if (!eq) continue;
       const def = ITEMS[eq.defId];
       if (!def) continue;
-      if (def.requiredClass && def.requiredClass !== "all" && def.requiredClass !== classId) {
+      if (!canClassEquip(def, classId)) {
         this.bag.push(eq);
         delete this.equipment[slot];
         removed.push(def.name);
@@ -389,24 +679,43 @@ export class InventorySystem {
     return out;
   }
 
-  getActivePassives(): Set<string> {
+  getActivePassives(classId?: ClassId): Set<string> {
     const set = new Set<string>();
     for (const slot of EQUIP_SLOTS) {
       const eq = this.equipment[slot];
       if (!eq) continue;
       const def = ITEMS[eq.defId];
-      if (def?.passiveId) set.add(def.passiveId);
+      if (!def || (classId && !canClassEquip(def, classId))) continue;
+      if (def.passiveId) set.add(def.passiveId);
     }
     return set;
   }
 
-  getTotalEquipBonuses(): NormalizedEquipStats {
+  getActiveExoticMods(classId?: ClassId): Set<ExoticSkillModId> {
+    const set = new Set<ExoticSkillModId>();
+    for (const slot of EQUIP_SLOTS) {
+      const eq = this.equipment[slot];
+      if (!eq) continue;
+      const def = ITEMS[eq.defId];
+      if (!def || (classId && !canClassEquip(def, classId))) continue;
+      if (def.exoticModId) set.add(def.exoticModId);
+    }
+    return set;
+  }
+
+  getTotalEquipBonuses(classId?: ClassId): NormalizedEquipStats {
     const sum: NormalizedEquipStats = {
       atk: 0,
+      mag: 0,
       def: 0,
       maxHp: 0,
       spd: 0,
+      aspdPct: 0,
+      moveSpeedPct: 0,
       crit: 0,
+      critDmgPct: 0,
+      lifestealPct: 0,
+      fireResPct: 0,
       elementBonus: 0,
       maxStamina: 0,
       staminaCostPct: 0,
@@ -416,12 +725,20 @@ export class InventorySystem {
     for (const slot of EQUIP_SLOTS) {
       const eq = this.equipment[slot];
       if (!eq) continue;
+      const def = ITEMS[eq.defId];
+      if (!def || (classId && !canClassEquip(def, classId))) continue;
       const st = getItemEffectiveStats(eq);
       sum.atk += st.atk;
+      sum.mag += st.mag;
       sum.def += st.def;
       sum.maxHp += st.maxHp;
       sum.spd += st.spd;
+      sum.aspdPct += st.aspdPct;
+      sum.moveSpeedPct += st.moveSpeedPct;
       sum.crit += st.crit;
+      sum.critDmgPct += st.critDmgPct;
+      sum.lifestealPct += st.lifestealPct;
+      sum.fireResPct += st.fireResPct;
       sum.elementBonus += st.elementBonus;
       sum.maxStamina += st.maxStamina;
       sum.staminaCostPct += st.staminaCostPct;
@@ -441,10 +758,16 @@ export class InventorySystem {
     if (cur.uid === candidate.uid) {
       return {
         atk: 0,
+        mag: 0,
         def: 0,
         maxHp: 0,
         spd: 0,
+        aspdPct: 0,
+        moveSpeedPct: 0,
         crit: 0,
+        critDmgPct: 0,
+        lifestealPct: 0,
+        fireResPct: 0,
         elementBonus: 0,
         maxStamina: 0,
         staminaCostPct: 0,
@@ -455,10 +778,16 @@ export class InventorySystem {
     const curStats = getItemEffectiveStats(cur);
     return {
       atk: candStats.atk - curStats.atk,
+      mag: candStats.mag - curStats.mag,
       def: candStats.def - curStats.def,
       maxHp: candStats.maxHp - curStats.maxHp,
       spd: candStats.spd - curStats.spd,
+      aspdPct: candStats.aspdPct - curStats.aspdPct,
+      moveSpeedPct: candStats.moveSpeedPct - curStats.moveSpeedPct,
       crit: candStats.crit - curStats.crit,
+      critDmgPct: candStats.critDmgPct - curStats.critDmgPct,
+      lifestealPct: candStats.lifestealPct - curStats.lifestealPct,
+      fireResPct: candStats.fireResPct - curStats.fireResPct,
       elementBonus: candStats.elementBonus - curStats.elementBonus,
       maxStamina: candStats.maxStamina - curStats.maxStamina,
       staminaCostPct: candStats.staminaCostPct - curStats.staminaCostPct,
@@ -472,53 +801,84 @@ export class InventorySystem {
   }
 
   /** Returns active Set Bonuses for any equipped setId >= 2 pieces. */
-  getActiveSetBonuses(): ActiveSetStatus[] {
+  getActiveSetBonuses(classId?: ClassId): ActiveSetStatus[] {
     const counts: Record<string, number> = {};
     for (const slot of EQUIP_SLOTS) {
       const eq = this.equipment[slot];
       const def = eq ? ITEMS[eq.defId] : undefined;
-      if (def?.setId && SET_BONUSES[def.setId]) {
+      if (def && classId && !canClassEquip(def, classId)) continue;
+      if (def?.setId && ALL_SET_BONUSES[def.setId]) {
         counts[def.setId] = (counts[def.setId] ?? 0) + 1;
       }
     }
     const out: ActiveSetStatus[] = [];
     for (const [setId, count] of Object.entries(counts)) {
-      const def = SET_BONUSES[setId];
+      const def = ALL_SET_BONUSES[setId];
       if (!def || count < 2) continue;
       out.push({
         def,
         count,
+        maxPieces: def.maxPieces,
         twoActive: count >= 2,
-        fourActive: count >= 4,
+        threeActive: def.maxPieces === 3 ? count >= 3 : false,
+        fourActive: def.maxPieces === 4 ? count >= 4 : false,
       });
     }
     return out;
   }
 
-  getActiveSetBonusStats(): NormalizedEquipStats {
+  getActiveSetBonusStats(classId?: ClassId): NormalizedEquipStats {
     const sum: NormalizedEquipStats = {
       atk: 0,
+      mag: 0,
       def: 0,
       maxHp: 0,
       spd: 0,
+      aspdPct: 0,
+      moveSpeedPct: 0,
       crit: 0,
+      critDmgPct: 0,
+      lifestealPct: 0,
+      fireResPct: 0,
       elementBonus: 0,
       maxStamina: 0,
       staminaCostPct: 0,
       poiseBreakPct: 0,
       skillCdPct: 0,
     };
-    for (const st of this.getActiveSetBonuses()) {
-      const apply = (b: { atk?: number; def?: number; maxHp?: number; spd?: number; crit?: number; elementBonus?: number }) => {
+    for (const st of this.getActiveSetBonuses(classId)) {
+      const apply = (b: {
+        atk?: number;
+        mag?: number;
+        def?: number;
+        maxHp?: number;
+        spd?: number;
+        aspdPct?: number;
+        moveSpeedPct?: number;
+        crit?: number;
+        critDmgPct?: number;
+        lifestealPct?: number;
+        fireResPct?: number;
+        elementBonus?: number;
+        poiseBreakPct?: number;
+      }) => {
         sum.atk += b.atk ?? 0;
+        sum.mag += b.mag ?? 0;
         sum.def += b.def ?? 0;
         sum.maxHp += b.maxHp ?? 0;
         sum.spd += b.spd ?? 0;
+        sum.aspdPct += b.aspdPct ?? 0;
+        sum.moveSpeedPct += b.moveSpeedPct ?? 0;
         sum.crit += b.crit ?? 0;
+        sum.critDmgPct += b.critDmgPct ?? 0;
+        sum.lifestealPct += b.lifestealPct ?? 0;
+        sum.fireResPct += b.fireResPct ?? 0;
         sum.elementBonus += b.elementBonus ?? 0;
+        sum.poiseBreakPct += b.poiseBreakPct ?? 0;
       };
       if (st.twoActive) apply(st.def.twoPiece);
-      if (st.fourActive) apply(st.def.fourPiece);
+      if (st.threeActive && st.def.threePiece) apply(st.def.threePiece);
+      if (st.fourActive && st.def.fourPiece) apply(st.def.fourPiece);
     }
     return sum;
   }

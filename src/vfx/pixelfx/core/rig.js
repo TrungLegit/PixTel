@@ -437,6 +437,44 @@ function drawExtras(S) {
     const coilTop = atC([-4.2, 6.2, -0.8]);
     sweep(pkTop, coilTop, 0.75, 0.65, PART.pack, 2, 0, th.eye || WCOL.gold);
     addGlow(coilTop, th.eye || WCOL.gold, 5);
+  } else if (th.backAccessory === "prism_wings") {
+    for (const sgn of [-1, 1]) {
+      const root = atC([-2.6, 2.4, sgn * 2.0]);
+      const mid = atC([-8.2, 6.8, sgn * 5.6]);
+      const tip1 = atC([-12.5, 9.2, sgn * 7.2]);
+      const tip2 = atC([-11.2, 2.6, sgn * 6.0]);
+      const tip3 = atC([-9.0, -2.6, sgn * 4.4]);
+      sweep(root, mid, 1.35, 1.1, PART.cloak, 6);
+      sweep(mid, tip1, 1.15, 0.55, PART.cloak, 2, 0, th.mark || WCOL.hi);
+      sweep(mid, tip2, 1.2, 0.6, PART.cloak, 6);
+      sweep(root, tip3, 1.1, 0.55, PART.cloak, 6);
+      addGlow(tip1, th.mark || WCOL.hi, 6);
+    }
+  } else if (th.backAccessory === "warden_roots") {
+    for (const sgn of [-1, 1]) {
+      const sh = atC([0.2, 3.2, sgn * 5.6]);
+      ellipsoid(sh, CR, [2.4, 2.2, 2.2], PART.cloak, 6);
+      const vineMid = atC([-3.2, 5.4, sgn * 4.5]);
+      const vineTip = atC([-4.8, 8.6, sgn * 2.2]);
+      sweep(sh, vineMid, 1.25, 0.9, PART.cloak, 6);
+      sweep(vineMid, vineTip, 0.95, 0.55, PART.cloak, 2, 0, th.eye || WCOL.gold);
+      addGlow(vineTip, th.eye || WCOL.gold, 4.5);
+    }
+    const heart = atC([-3.8, 1.8, 0]);
+    sphere(heart, 2.0, PART.pack, 2, th.mark || WCOL.gold);
+  } else if (th.backAccessory === "amber_thrusters") {
+    const topL = atC([-2.5, 2.6, -2.4]), topR = atC([-2.4, 2.5, 2.2]);
+    const botL = add(P, [-5.4, -4.4, -3.0]), botR = add(P, [-5.0, -4.6, 2.6]);
+    for (let u = 0; u <= 1.001; u += 0.33) {
+      sweep(add(mul(topL, 1 - u), mul(topR, u)), add(mul(botL, 1 - u), mul(botR, u)), 1.3, 1.8, PART.cloak, 6);
+    }
+    for (const sgn of [-1, 1]) {
+      const vent = atC([-3.8, 3.8, sgn * 4.0]);
+      const flame = atC([-6.4, 5.6, sgn * 4.6]);
+      sweep(atC([-2.2, 2.4, sgn * 3.4]), vent, 1.5, 1.2, PART.pack, 5);
+      sweep(vent, flame, 0.9, 0.45, PART.pack, 2, 0, WCOL.gold);
+      addGlow(flame, WCOL.gold, 5);
+    }
   }
 
   // Armor silhouettes build on the selected class rig without replacing its pose.
@@ -520,13 +558,47 @@ function drawExtras(S) {
       sphere(pt, 0.75, PART.helmet, 2, th.helmetAccent || WCOL.gold);
     }
     addGlow(haloPos, th.helmetAccent || WCOL.gold, 6);
+  } else if (hg === "dragon_helm") {
+    ellipsoid(atH([-0.2, 0.8, 0]), HR, [3.4, 3.35, 3.15], PART.helmet, 3);
+    ellipsoid(atH([0.7, 3.3, 0]), HR, [2.4, 1.15, 0.85], PART.helmet, 6);
+    for (const sgn of [-1, 1]) {
+      const hBase = atH([0.3, 2.1, sgn * 2.2]);
+      const hMid = atH([-2.2, 4.6, sgn * 3.5]);
+      const hTip = atH([-5.0, 6.2, sgn * 4.0]);
+      sweep(hBase, hMid, 1.25, 0.85, PART.helmet, 6);
+      sweep(hMid, hTip, 0.85, 0.45, PART.helmet, 2, 0, th.eye || WCOL.hi);
+    }
+    addGlow(atH([2.4, 0.4, 0]), th.eye || WCOL.hi, 5);
+  } else if (hg === "royal_crown") {
+    ellipsoid(atH([-0.6, 1.2, 0]), HR, [3.0, 2.3, 2.9], PART.hair, 7);
+    ellipsoid(atH([0.0, 2.6, 0]), HR, [3.2, 1.0, 3.1], PART.helmet, 3);
+    for (let k = 0; k < 5; k++) {
+      const a = (k / 5) * Math.PI * 2;
+      const base = atH([Math.cos(a) * 2.6, 3.0, Math.sin(a) * 2.5]);
+      const tip = atH([Math.cos(a) * 2.9, k === 0 ? 5.8 : 4.8, Math.sin(a) * 2.7]);
+      sweep(base, tip, 0.85, 0.4, PART.helmet, k === 0 ? 2 : 3, 0, k === 0 ? (th.mark || WCOL.gold) : 0);
+    }
+    const jewel = atH([2.8, 3.2, 0]);
+    sphere(jewel, 0.95, PART.helmet, 2, th.mark || WCOL.hi);
+    addGlow(jewel, th.mark || WCOL.hi, 5.5);
+  } else if (hg === "antler_crest") {
+    ellipsoid(atH([-0.4, 0.9, 0]), HR, [3.2, 3.0, 3.0], PART.helmet, 3);
+    for (const sgn of [-1, 1]) {
+      const a0 = atH([0.2, 2.8, sgn * 1.6]);
+      const a1 = atH([-0.8, 5.2, sgn * 3.0]);
+      const a2 = atH([-1.8, 6.8, sgn * 3.8]);
+      const tine = atH([0.8, 6.2, sgn * 2.8]);
+      sweep(a0, a1, 0.85, 0.65, PART.helmet, 6);
+      sweep(a1, a2, 0.65, 0.4, PART.helmet, 6);
+      sweep(a1, tine, 0.6, 0.4, PART.helmet, 2, 0, th.mark || WCOL.gold);
+    }
   }
 
   // Eyes / Glowing Visor slit on face front
   if (mv(HR, [1, 0, 0])[2] > -0.25 && th.eye) {
     const e1 = atH([2.6, 0.0, 1.0]);
     const e2 = atH([2.7, 0.0, -0.7]);
-    if (hg === "plume_helm" || hg === "gear_visor") {
+    if (hg === "plume_helm" || hg === "gear_visor" || hg === "dragon_helm") {
       sweep(e1, e2, 0.7, 0.7, PART.helmet, 2, 0, th.eye);
     } else if (hg !== "tinker_goggles") {
       sphere(e1, 0.75, PART.face, 2, th.eye);

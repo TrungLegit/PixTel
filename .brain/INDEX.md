@@ -1,34 +1,34 @@
 # Project Brain Index
-*Generated: 2026-11-26T06:56:47.945273+00:00*
+*Generated: 2026-11-26T07:35:49.890767+00:00*
 
 ## Description
-> **Thế giới mở 16-Bit Action RPG trên trình duyệt** — Chiến đấu thời gian thực, đánh thức các **Trụ Sắc Màu**, khôi phục bảng màu 16-bit cho vùng đất bị **Nhiễu Trắng** và đánh bại **The Eraser**.
+> **Thế giới mở 16-Bit Action RPG trên trình duyệt (PC · Mobile PWA · Co-op 2–4 Người)** — Khởi đầu tay không tại **Thị Trấn Khởi Nguyên**, săn trang bị **khóa chặt theo Class**, luyện **Ma Trận Luyện
 
 ## Main Modules
-- **src/** (161 files)
+- **src/** (188 files)
 - **.agents/** (38 files)
 - **(root)/** (14 files)
-- **.brain/** (3 files)
-- **scripts/** (2 files)
+- **preview for devs/** (7 files)
+- **public/** (4 files)
 
 ## Central Nodes
-- `file:src/game.ts` (file, 70 links): Supplies current dash direction to both player and clone Paper-Doll render calls.
-- `file:src/data/types.ts` (file, 52 links): Extended ItemDef, RecipeDef, EquipPassiveId, and SaveDataV2 with hidden item metadata, craftRecipe, and unlock tracking.
-- `file:src/systems/combat.ts` (file, 44 links): 9-element CombatSystem handling exclusive Boss hidden drops with rainbow-burst/waypoint-pillar VFX and hidden passives.
-- `file:src/data/items.ts` (file, 33 links): Unified item catalog spreading HIDDEN_ITEMS and guarding pickRandomEquipByRarity against hidden item leakage.
-- `file:tests/featureTests.ts` (file, 30 links): Asserts helmet, boots, and accessory shape metadata map from real equipment definitions and reject cross-slot shapes.
-- `file:src/ui/ItemReviewTooltip.ts` (file, 25 links): Vintage parchment hover tooltip masking un-unlocked hidden items (???) and displaying exclusive source tags when unlocked.
-- `file:src/ui/ForgeModal.ts` (file, 22 links): Rune Matrix Forge modal with Hidden Blueprints filter tab, ??? secrecy masking, level checks, and unlock triggers.
-- `file:src/graphics/pixelfxHeroModels.ts` (file, 21 links): Maps equipment metadata to rig shapes, gear palettes, distinct accessory pixel motifs, and a cached-sprite dash echo.
-- `file:src/systems/inventorySystem.ts` (file, 21 links): 5-slot inventory & recalculatePlayerStats() supporting restored_prism_surge, energy_siphon_magnet, and set_resonance_echo.
-- `file:src/main.ts` (file, 20 links): Imported the local Pixelify Sans variable font before bootstrapping the game UI.
+- `file:src/game.ts` (file, 86 links): Supplies current dash direction to player and clone Paper-Doll render calls and uses reverse clone aim during attacks.
+- `file:src/graphics/pixelfxHeroModels.ts` (file, 27 links): Renders latest combat attack poses and weapon rigs with shape-driven equipment, named visuals, cached dash afterimage, and set-bonus aura.
+- `file:DEV_LOG.md` (file, 15 links): Newest-first development log records latest main merge while preserving the gear-rendering entry and prior history.
+- `file:src/vfx/pixelfxTypes.ts` (file, 15 links): Types Paper-Doll gear shapes and the merged named helmet and back-accessory silhouettes.
+- `file:src/ui/GachaModal.ts` (file, 11 links): const RARITY_RANK: Record<Rarity, number> = {
+- `file:src/ui/CutsceneModal.ts` (file, 10 links): STORY_CUTSCENE_BY_ID,
+- `file:src/systems/ItemEffectSystem.ts` (file, 9 links): export type PassiveDamageFn = (
+- `file:src/ui/HomeScreen.ts` (file, 9 links): const LAST_NAME_KEY = "pixtel_last_player_name";
+- `decision:20261125144603-selfhosted-vietnamese-pixel-ui` (decision, 9 links): Use the OFL-licensed Pixelify Sans variable font from a local npm package as the primary game-wide UI font, removing Google Fonts runtime requests to keep Vietnamese glyph rendering available offline.
+- `file:src/data/weaponSkills.ts` (file, 8 links): export interface WeaponSkillDef {
 
 ## Recent Decisions
+- **Merge latest main with equipment rendering** (`decision:20261126073152-merge-latest-main-with`): Preserve main's named helmet, back-accessory, and boot visuals alongside shape-driven gear and dash echoes; combine clone reverse aim with the dash-angle render input.
 - **Render gear from equipment shapes and add dash echo** (`decision:20261126065126-render-gear-from-equipment`): Keep the existing selected-class rig, weapon mapping, and VFX manager; extend the Paper-Doll theme with equipment-shape mappings for helmet, armor, boots, and accessory silhouettes, and draw a single low-alpha cached-hero dash afterimage without changing combat timing or damage.
 - **Self-hosted Vietnamese pixel UI font** (`decision:20261125144603-selfhosted-vietnamese-pixel-ui`): Use the OFL-licensed Pixelify Sans variable font from a local npm package as the primary game-wide UI font, removing Google Fonts runtime requests to keep Vietnamese glyph rendering available offline.
 - **Resolve current main conflicts without dropping branch history** (`decision:20261125144411-resolve-current-main-conflicts`): Use a merge commit to retain both histories; preserve both DEV_LOG entries and let project-brain tooling compact the graph and regenerate its digest rather than hand-editing graph files.
 - **Block-pixel logo lettering** (`decision:20261125143734-blockpixel-logo-lettering`): Broaden the PIXTEL canvas wordmark into a chunky 7x7 bitmap alphabet inspired by the user's Vietnamese Minecraft font reference, while keeping custom glyphs and the current chroma crest.
-- **Hidden Items System (Craft-Only & Boss-Drop Only)** (`decision:20261125143028-hidden-items-system-craftonly`): Added 8 isHidden items (4 craft_only, 4 boss_only) strictly isolated from shops/chests/normal mobs, masked as ??? until discovered, permanently unlocked in localStorage, and integrated with combat passives, VFX, and Paper-Doll shimmer.
 
 ## Stale Files (Need Re-reading)
 - `file:.agents/skills/codixel/LICENSE` (.agents/skills/codixel/LICENSE)
@@ -75,3 +75,8 @@
 - `file:CLAUDE.md` (CLAUDE.md)
 - `file:GEMINI.md` (GEMINI.md)
 - `file:LICENSE` (LICENSE)
+- `file:README.md` (README.md)
+- `file:index.html` (index.html)
+- `file:package-lock.json` (package-lock.json)
+- `file:package.json` (package.json)
+- `file:scripts/extract_enemy_sprites.py` (scripts/extract_enemy_sprites.py)

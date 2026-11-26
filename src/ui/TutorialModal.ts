@@ -378,19 +378,19 @@ export class TutorialModalUI {
           <div class="tut-skill-grid">
             <div class="tut-skill-item">
               <span class="tut-skill-key">LMB</span>
-              <div><b>${cls.skills.lmb.name}</b><p>${cls.skills.lmb.desc}</p></div>
+              <div><b>Đánh thường · ${cls.skills.lmb.name}</b><p>${cls.skills.lmb.desc}</p></div>
             </div>
             <div class="tut-skill-item">
               <span class="tut-skill-key">Giữ LMB</span>
-              <div><b>${cls.skills.charge.name}</b><p>${cls.skills.charge.desc}</p></div>
+              <div><b>Tụ lực · ${cls.skills.charge.name}</b><p>${cls.skills.charge.desc}</p></div>
             </div>
             <div class="tut-skill-item">
-              <span class="tut-skill-key">[E]</span>
-              <div><b>${cls.skills.skill.name} (${cls.baseStats.skillCooldown}s)</b><p>${cls.skills.skill.desc}</p></div>
+              <span class="tut-skill-key">Skill [Q]</span>
+              <div><b>Kỹ năng cố định · ${cls.skills.ult.name}</b><p>${cls.skills.ult.desc}</p></div>
             </div>
             <div class="tut-skill-item">
-              <span class="tut-skill-key">[Q]</span>
-              <div><b>${cls.skills.ult.name} (100% Nộ)</b><p>${cls.skills.ult.desc}</p></div>
+              <span class="tut-skill-key">[E] Vũ Khí</span>
+              <div><b>${cls.skills.skill.name}</b><p>${cls.skills.skill.desc}</p></div>
             </div>
           </div>
           <div class="tut-class-tip">

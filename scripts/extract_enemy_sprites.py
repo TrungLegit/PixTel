@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 from collections import deque
 from pathlib import Path
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageEnhance
 
 ROOT = Path(__file__).resolve().parent.parent
 UPLOAD_DIR = Path(
@@ -22,42 +22,122 @@ UPLOAD_DIR = Path(
 SCRATCH_PREVIEW = Path(
     r"C:/Users/ADMIN/.gemini/antigravity/brain/df2ae07d-0719-4c2d-ba07-655ccbdc3295/scratch/enemies_preview_sheet.png"
 )
+SCRATCH_NEW9 = Path(
+    r"C:/Users/ADMIN/.gemini/antigravity/brain/df2ae07d-0719-4c2d-ba07-655ccbdc3295/scratch/enemies_new9_preview.png"
+)
 OUT_PNG = ROOT / "src" / "assets" / "codixel-enemies.png"
 OUT_JSON = ROOT / "src" / "assets" / "codixel-enemies.json"
 
 MONSTERS = [
-    ("null_slime", "media_1795607452236_9604b567.jpg", (24, 22), False),
-    ("ash_hopper", "media_1795607461412_b46c4e8e.jpg", (26, 24), False),
-    ("thorn_archer", "media_1795607472939_3416cbc1.jpg", (28, 24), False),
-    ("root_golem", "media_1795607477778_e06823e4.jpg", (38, 36), False),
-    ("boss_xing_warden", "media_1795607483705_180d0116.jpg", (44, 44), False),
-    ("bleach_hound", "media_1795607487958_45f6723b.jpg", (28, 24), True),
-    ("quartz_stalker", "media_1795607491806_2f451d01.jpg", (28, 24), False),
-    ("static_imp", "media_1795607499205_b8832e4c.jpg", (24, 24), True),
-    ("quartz_knight", "media_1795607503743_93ba39f1.jpg", (40, 38), False),
-    ("boss_blight_root", "media_1795607508580_deb4d615.jpg", (48, 46), True),
+    # Meadow + Quartz (Original 10 — upgraded +22% HD pixel clarity!)
+    ("null_slime", "media_1795607452236_9604b567.jpg", (28, 26), False),
+    ("ash_hopper", "media_1795607461412_b46c4e8e.jpg", (32, 28), False),
+    ("thorn_archer", "media_1795607472939_3416cbc1.jpg", (34, 30), False),
+    ("root_golem", "media_1795607477778_e06823e4.jpg", (46, 44), False),
+    ("boss_xing_warden", "media_1795607483705_180d0116.jpg", (54, 52), False),
+    ("bleach_hound", "media_1795607487958_45f6723b.jpg", (34, 30), True),
+    ("quartz_stalker", "media_1795607491806_2f451d01.jpg", (34, 30), False),
+    ("static_imp", "media_1795607499205_b8832e4c.jpg", (30, 30), True),
+    ("quartz_knight", "media_1795607503743_93ba39f1.jpg", (48, 46), False),
+    ("boss_blight_root", "media_1795607508580_deb4d615.jpg", (56, 54), True),
+    # Amber Mines (4)
+    ("cinder_imp", "media_1795624921638_138c46be.jpg", (32, 32), True),
+    ("amber_beetle", "media_1795624925854_702592b0.jpg", (40, 30), False),
+    ("amber_warrior", "media_1795624929848_d35b7365.jpg", (48, 46), False),
+    ("boss_gilded_null", "media_1795624933348_de226694.jpg", (56, 54), False),
+    # Blank Ruins (5)
+    ("void_wraith", "media_1795624937182_33f71a2d.jpg", (34, 34), True),
+    ("prism_golem", "media_1795624940625_a4f0db26.jpg", (34, 34), True),
+    ("null_knight", "media_1795624944081_2f82dfdc.jpg", (44, 44), False),
+    ("void_gatekeeper", "media_1795624948842_43ccbf10.jpg", (50, 48), True),
+    ("boss_the_eraser", "media_1795624953342_1b282af1.jpg", (60, 58), True),
 ]
 
-DIR_BOXES = {
+DEFAULT_DIR_BOXES = {
     "front": (23, 114, 245, 269),
     "right": (275, 114, 497, 269),
     "left": (527, 114, 749, 269),
     "back": (779, 114, 1001, 269),
 }
 
+CUSTOM_DIR_BOXES: dict[str, dict[str, tuple[int, int, int, int]]] = {
+    "cinder_imp": {
+        "front": (49, 108, 243, 296),
+        "right": (291, 108, 488, 296),
+        "left": (535, 108, 732, 296),
+        "back": (781, 108, 974, 296),
+    },
+    "amber_beetle": {
+        "front": (38, 132, 238, 295),
+        "right": (280, 132, 494, 295),
+        "left": (529, 132, 743, 295),
+        "back": (784, 132, 985, 295),
+    },
+    "amber_warrior": {
+        "front": (55, 120, 251, 274),
+        "right": (297, 120, 493, 274),
+        "left": (536, 120, 732, 274),
+        "back": (777, 120, 972, 274),
+    },
+    "boss_gilded_null": {
+        "front": (43, 139, 258, 304),
+        "right": (284, 139, 498, 304),
+        "left": (525, 139, 739, 304),
+        "back": (766, 139, 980, 304),
+    },
+    "void_wraith": {
+        "front": (114, 167, 248, 298),
+        "right": (335, 167, 466, 298),
+        "left": (557, 167, 688, 298),
+        "back": (775, 167, 909, 298),
+    },
+    "prism_golem": {
+        "front": (44, 126, 250, 285),
+        "right": (287, 126, 494, 285),
+        "left": (529, 126, 736, 285),
+        "back": (773, 126, 979, 285),
+    },
+    "null_knight": {
+        "front": (60, 152, 233, 303),
+        "right": (300, 152, 476, 303),
+        "left": (547, 152, 723, 303),
+        "back": (790, 152, 962, 303),
+    },
+    "void_gatekeeper": {
+        "front": (68, 130, 258, 279),
+        "right": (300, 130, 490, 279),
+        "left": (533, 130, 723, 279),
+        "back": (765, 130, 955, 279),
+    },
+    "boss_the_eraser": {
+        "front": (56, 102, 236, 264),
+        "right": (299, 102, 481, 264),
+        "left": (542, 102, 724, 264),
+        "back": (787, 102, 967, 264),
+    },
+}
+
+# Corner text masks (relative to each cropped box) where FRONT/RIGHT/LEFT/BACK text sits inside the box
+INNER_TEXT_MASKS: dict[str, tuple[int, int, int, int]] = {
+    "cinder_imp": (0, 0, 74, 25),
+}
+
 INK = (12, 15, 24, 255)
 
 
 def is_navy_bg(r: int, g: int, b: int) -> bool:
-    if r <= 34 and g <= 46 and 20 <= b <= 84 and (b - r) >= 12 and (b - g) >= 8:
+    # Navy grid backgrounds always have blue dominant and green >= red - 4 (protects dark violet sprites!)
+    if r > g + 4:
+        return False
+    if r <= 34 and g <= 46 and 18 <= b <= 86 and (b - r) >= 12 and (b - g) >= 8:
         return True
-    if r <= 24 and g <= 30 and 18 <= b <= 56 and (b - r) >= 8 and (b - g) >= 5:
+    if r <= 24 and g <= 30 and 16 <= b <= 56 and (b - r) >= 8 and (b - g) >= 5:
         return True
     return False
 
 
 def is_strict_empty_cell(r: int, g: int, b: int) -> bool:
-    return r <= 14 and g <= 18 and 24 <= b <= 50 and (b - g) >= 14
+    return r <= g + 2 and r <= 18 and g <= 26 and 22 <= b <= 62 and (b - g) >= 14
 
 
 def strip_navy_grid(crop: Image.Image) -> Image.Image:
@@ -196,7 +276,7 @@ def quantize_shared_colors(frames: dict[str, Image.Image], cell_w: int, cell_h: 
                     strip.putpixel((idx * cell_w + x, y), (r, g, b))
         alphas[d] = a_grid
 
-    q_strip = strip.quantize(colors=30, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE).convert("RGB")
+    q_strip = strip.quantize(colors=38, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE).convert("RGB")
     qpx = q_strip.load()
 
     result: dict[str, Image.Image] = {}
@@ -519,19 +599,92 @@ def make_biped_frames(im: Image.Image) -> tuple[Image.Image, Image.Image]:
     return write_points(w, h, pts1), write_points(w, h, pts2)
 
 
+def make_flame_frames(im: Image.Image) -> tuple[Image.Image, Image.Image]:
+    """Synthesizes living flame/phantom flicker: whole body floats cleanly while flame crown & wisps sway without tearing."""
+    w, h = im.size
+    pts = opaque_coords(im)
+    if not pts:
+        return im.copy(), im.copy()
+    y0 = min(p[1] for p in pts)
+    y1 = max(p[1] for p in pts)
+    bh = max(1, y1 - y0 + 1)
+    top_cut = y0 + bh * 0.34
+    bot_cut = y1 - bh * 0.18
+    pts1, pts2 = [], []
+    for x, y, c in pts:
+        # Frame 1: entire body floats up -1px together (zero horizontal seam!), top wisps lean +1px
+        if y < top_cut:
+            pts1.append((x + 1, y - 1, c))
+            pts2.append((x - 1, y, c))
+        elif y > bot_cut:
+            pts1.append((x, y - 1, c))
+            pts2.append((x + 1, y, c))
+        else:
+            pts1.append((x, y - 1, c))
+            pts2.append((x, y, c))
+    return write_points(w, h, pts1), write_points(w, h, pts2)
+
+
+def make_attack_frame(im: Image.Image, def_id: str, direction: str) -> Image.Image:
+    """Synthesizes a dedicated directional strike/cast silhouette (:atk) with forward lean & glowing core/eyes."""
+    w, h = im.size
+    pts = opaque_coords(im)
+    if not pts:
+        return im.copy()
+    x0 = min(p[0] for p in pts)
+    x1 = max(p[0] for p in pts)
+    y0 = min(p[1] for p in pts)
+    y1 = max(p[1] for p in pts)
+    cx = (x0 + x1) * 0.5
+    bh = max(1, y1 - y0 + 1)
+    mid_y = y0 + bh * 0.68
+
+    dx_fwd = 2 if direction == "right" else (-2 if direction == "left" else 0)
+    dy_fwd = 1 if direction == "front" else (-1 if direction == "back" else 0)
+
+    out_pts = []
+    for x, y, c in pts:
+        r, g, b, a = c
+        lum = r * 0.299 + g * 0.587 + b * 0.114
+        # Brighten glowing eyes, flames, runes & crystal highlights on strike frame!
+        if lum >= 150 or (max(r, g, b) - min(r, g, b)) >= 85:
+            nc = (min(255, int(r * 1.18 + 18)), min(255, int(g * 1.18 + 16)), min(255, int(b * 1.18 + 18)), a)
+        else:
+            nc = c
+
+        if y < mid_y:
+            if direction in ("front", "back"):
+                # Flare arms/wings outward +1px and surge slightly toward attack
+                ox = 1 if x > cx + 2 else (-1 if x < cx - 2 else 0)
+                out_pts.append((x + ox, y + dy_fwd, nc))
+            else:
+                # Lean upper torso & weapon aggressively forward (+2px)
+                out_pts.append((x + dx_fwd, y, nc))
+        else:
+            # Plant feet/base solidly (1px step forward for side strikes to prevent gap)
+            step_x = 1 if direction == "right" else (-1 if direction == "left" else 0)
+            out_pts.append((x + step_x, y, nc))
+    return write_points(w, h, out_pts)
+
+
 def build_anim_frames(
     def_id: str, interior_dirs: dict[str, Image.Image]
 ) -> dict[str, Image.Image]:
     out: dict[str, Image.Image] = {}
-    wing_ids = {"bleach_hound", "boss_blight_root"}
-    crawler_ids = {"ash_hopper", "quartz_stalker"}
+    wing_ids = {"bleach_hound", "boss_blight_root", "boss_the_eraser"}
+    crystal_ids = {"static_imp", "prism_golem", "void_gatekeeper"}
+    flame_ids = {"cinder_imp", "void_wraith"}
+    crawler_ids = {"ash_hopper", "quartz_stalker", "amber_beetle"}
 
     for d, base_int in interior_dirs.items():
         if def_id in wing_ids:
             f1_int, f2_int = make_wing_frames(base_int, d)
             sp_name, sp_int = None, None
-        elif def_id == "static_imp":
+        elif def_id in crystal_ids:
             f1_int, f2_int = make_crystal_frames(base_int)
+            sp_name, sp_int = None, None
+        elif def_id in flame_ids:
+            f1_int, f2_int = make_flame_frames(base_int)
             sp_name, sp_int = None, None
         elif def_id == "null_slime":
             f1_int, f2_int, sp_int = make_slime_frames(base_int, d)
@@ -543,9 +696,12 @@ def build_anim_frames(
             f1_int, f2_int = make_biped_frames(base_int)
             sp_name, sp_int = None, None
 
+        atk_int = make_attack_frame(base_int, def_id, d)
+
         out[d] = apply_outline(base_int)
         out[f"{d}:1"] = apply_outline(f1_int)
         out[f"{d}:2"] = apply_outline(f2_int)
+        out[f"{d}:atk"] = apply_outline(atk_int)
         if sp_name and sp_int is not None:
             out[sp_name] = apply_outline(sp_int)
     return out
@@ -553,15 +709,32 @@ def build_anim_frames(
 
 def process_monster(def_id: str, filename: str, target_size: tuple[int, int]) -> dict[str, Image.Image]:
     src = Image.open(UPLOAD_DIR / filename).convert("RGBA")
+    boxes = CUSTOM_DIR_BOXES.get(def_id, DEFAULT_DIR_BOXES)
+    text_mask = INNER_TEXT_MASKS.get(def_id)
     raw_dirs: dict[str, Image.Image] = {}
-    for d, box in DIR_BOXES.items():
-        raw_dirs[d] = strip_navy_grid(src.crop(box))
+    for d, box in boxes.items():
+        cropped = src.crop(box)
+        if text_mask:
+            mx0, my0, mx1, my1 = text_mask
+            cpx = cropped.load()
+            for yy in range(max(0, my0), min(cropped.height, my1)):
+                for xx in range(max(0, mx0), min(cropped.width, mx1)):
+                    cpx[xx, yy] = (2, 10, 29, 255)
+        stripped = strip_navy_grid(cropped)
+        # Subtle RGB clarity & color pop while keeping alpha untouched
+        rgb = stripped.convert("RGB")
+        rgb = ImageEnhance.Sharpness(rgb).enhance(1.32)
+        rgb = ImageEnhance.Contrast(rgb).enhance(1.08)
+        rgb = ImageEnhance.Color(rgb).enhance(1.12)
+        rgba = rgb.convert("RGBA")
+        rgba.putalpha(stripped.getchannel("A"))
+        raw_dirs[d] = rgba
 
     max_w = max(im.width for im in raw_dirs.values())
     max_h = max(im.height for im in raw_dirs.values())
     tw, th = target_size
-    # Reserve 4px cushion horizontally & vertically for 1px outline + 1px multi-frame motion
-    inner_w = max(4, tw - 4)
+    # Reserve 6px horizontal cushion for 1px outline + 2px directional :atk strike lean
+    inner_w = max(4, tw - 6)
     inner_h = max(4, th - 4)
     scale = min(inner_w / max_w, inner_h / max_h)
 
@@ -569,7 +742,7 @@ def process_monster(def_id: str, filename: str, target_size: tuple[int, int]) ->
     for d, im in raw_dirs.items():
         sw = max(2, int(round(im.width * scale)))
         sh = max(2, int(round(im.height * scale)))
-        down = im.resize((sw, sh), resample=Image.Resampling.BOX)
+        down = im.resize((sw, sh), resample=Image.Resampling.LANCZOS)
         down = harden_and_clean(down)
 
         cell = Image.new("RGBA", (tw, th), (0, 0, 0, 0))
@@ -595,7 +768,7 @@ def main() -> None:
         monster_meta[def_id] = {"w": target_size[0], "h": target_size[1], "floating": floating}
         keys = []
         for d in ("front", "right", "left", "back"):
-            keys.extend([d, f"{d}:1", f"{d}:2"])
+            keys.extend([d, f"{d}:1", f"{d}:2", f"{d}:atk"])
         for extra in ("slam", "roll"):
             if extra in sprites:
                 keys.append(extra)
@@ -670,9 +843,36 @@ def main() -> None:
             draw.text((rx, ry + bh + 3), actual_label, fill=(160, 175, 200, 255))
 
     sheet.save(SCRATCH_PREVIEW, "PNG")
+
+    # Save a focused 3x QA contact sheet for ONLY the 9 newly added Amber & Ruins monsters/bosses
+    new9 = MONSTERS[10:]
+    n9_h = 20 + len(new9) * row_h
+    sheet9 = Image.new("RGBA", (sheet_w, n9_h), (24, 26, 38, 255))
+    draw9 = ImageDraw.Draw(sheet9)
+    for r_idx, (def_id, _, (cw, ch), _) in enumerate(new9):
+        ry = 14 + r_idx * row_h
+        draw9.text((12, ry + 6), f"{def_id}\n({cw}x{ch})", fill=(255, 210, 140, 255))
+        sprites = all_sprites[def_id]
+        for c_idx, (key, label) in enumerate(cols):
+            rx = 180 + c_idx * (max_cw * scale + 12)
+            bw, bh = cw * scale, ch * scale
+            actual_key = "back" if key == "special" else key
+            actual_label = "BACK:0" if key == "special" else label
+            for cy in range(0, bh, 8):
+                for cx in range(0, bw, 8):
+                    chk = (52, 56, 72, 255) if ((cx // 8 + cy // 8) & 1) == 0 else (40, 44, 58, 255)
+                    draw9.rectangle(
+                        [rx + cx, ry + cy, min(rx + bw - 1, rx + cx + 7), min(ry + bh - 1, ry + cy + 7)],
+                        fill=chk,
+                    )
+            spr_big = sprites[actual_key].resize((bw, bh), resample=Image.Resampling.NEAREST)
+            sheet9.paste(spr_big, (rx, ry), spr_big)
+            draw9.text((rx, ry + bh + 3), actual_label, fill=(160, 175, 200, 255))
+    sheet9.save(SCRATCH_NEW9, "PNG")
+
     print(
         f"Saved atlas {OUT_PNG} ({atlas_w}x{atlas_h}, {len(frames_meta)} frames), "
-        f"metadata {OUT_JSON}, and QA sheet {SCRATCH_PREVIEW}"
+        f"metadata {OUT_JSON}, and QA sheets {SCRATCH_PREVIEW} / {SCRATCH_NEW9}"
     )
 
 

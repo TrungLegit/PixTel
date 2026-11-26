@@ -20,6 +20,7 @@ export const meta = {
     accent: ["#7a3ae4", "#b682ff", "#ecd2ff"],
     wind: 1,
     seed: 5,
+    drawActor: false,
   },
 };
 
@@ -137,29 +138,33 @@ export function create(o) {
     },
     draw(p) {
       const f = front(t);
-      // charge: a crackling outline that thickens, the rim of the body catching light
+      // charge: a crackling outline that thickens (only draw humanoid rim if drawActor is enabled)
       if (t < FLASH) {
         const k = t / FLASH, fr = Math.floor(t * 30);
-        for (const c of rim) {
-          const h = rand(c.mx * 61 + c.my, fr, 7);
-          if (h < 0.12 + 0.62 * k * k) p.px(c.x, c.y, k > 0.72 && rand(c.mx, c.my, fr) < 0.5 ? WHITE : h < 0.2 ? C[6] : C[5]);
+        if (o.drawActor) {
+          for (const c of rim) {
+            const h = rand(c.mx * 61 + c.my, fr, 7);
+            if (h < 0.12 + 0.62 * k * k) p.px(c.x, c.y, k > 0.72 && rand(c.mx, c.my, fr) < 0.5 ? WHITE : h < 0.2 ? C[6] : C[5]);
+          }
         }
         p.glow(0, CORE_Y, 26, C[4], 0.42 * k);
         p.glow(0, CORE_Y, 12, C[6], 0.25 * k * k);
       }
-      // the body: drawn by us from the shudder on, flashing white, then charged, glowing hot at the front
+      // the body: only draw humanoid silhouette when drawActor is explicitly enabled
       if (t >= FLASH - 0.1) {
         const shake = t < FLASH ? (Math.floor(t * 60) % 2 ? 1 : -1) * 0.6 : 0, white = t >= FLASH && t < P0;
-        for (const b of body.list) {
-          if (b.gone) continue;
-          let c;
-          if (white) c = b.edge ? C[6] : WHITE;
-          else if (t < FLASH) c = b.edge ? mix(b.c, C[6], 0.7) : mix(b.c, C[5], 0.25);
-          else {
-            const d = b.key - f, above = !body.on(b.mx, b.my - 1) || body.cell(b.mx, b.my - 1).gone;
-            c = above && d < 0.06 ? WHITE : d < 0.03 ? mix(b.c, C[6], 0.7) : d < 0.1 ? mix(b.c, C[5], 0.4) : b.edge ? mix(b.c, C[5], 0.5) : mix(b.c, C[4], 0.16);
+        if (o.drawActor) {
+          for (const b of body.list) {
+            if (b.gone) continue;
+            let c;
+            if (white) c = b.edge ? C[6] : WHITE;
+            else if (t < FLASH) c = b.edge ? mix(b.c, C[6], 0.7) : mix(b.c, C[5], 0.25);
+            else {
+              const d = b.key - f, above = !body.on(b.mx, b.my - 1) || body.cell(b.mx, b.my - 1).gone;
+              c = above && d < 0.06 ? WHITE : d < 0.03 ? mix(b.c, C[6], 0.7) : d < 0.1 ? mix(b.c, C[5], 0.4) : b.edge ? mix(b.c, C[5], 0.5) : mix(b.c, C[4], 0.16);
+            }
+            p.px(b.x + shake, b.y, c);
           }
-          p.px(b.x + shake, b.y, c);
         }
         if (white) {
           p.glow(0, CORE_Y, 34, C[5], 0.7);

@@ -2,9 +2,16 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PIXTEL — 16-Bit Open-World Action RPG</title>
-  <link rel="stylesheet" href="/style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#090712" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>PIXTEL — 16-Bit Open-World Action RPG (PC · Mobile · Co-op)</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+  <link rel="apple-touch-icon" href="./icon.svg" />
+  <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
   <div id="app-shell">
@@ -37,6 +44,9 @@
         <button id="hud-stat-pts-btn" class="hud-stat-pts-btn hidden" title="Nhấn [I] để cộng điểm tiềm năng!">✨ +0 ĐIỂM TIỀM NĂNG [I]</button>
       </div>
 
+      <!-- Top-Left Co-op Party Box -->
+      <div id="hud-party-box" class="hud-panel hud-party-box hidden"></div>
+
       <!-- Top-Center Boss HP & Bleach Shield Bar -->
       <div id="hud-boss-bar" class="hud-panel hud-boss-bar hidden">
         <div id="hud-boss-name" class="boss-name">THE ERASER</div>
@@ -57,10 +67,14 @@
       <!-- Top-Right Minimap + Toolbar + Quest Tracker -->
       <div class="hud-top-right">
         <div class="hud-toolbar">
+          <button id="hud-btn-gacha" class="hud-mini-btn" style="color:#ffe066;border-color:#ff99cc" title="Rương Gacha Theo Mùa [G]">G·GACHA</button>
+          <button id="hud-btn-coop" class="hud-mini-btn" style="color:#44ee88;border-color:#44ee88" title="Tổ Đội Co-op Online 2–4 Người [P]">P·COOP</button>
           <button id="hud-btn-help" class="hud-mini-btn" style="color:#ffe066;border-color:#ffe066" title="Cẩm Nang Tân Thủ, Combo & 9 Nguyên Tố [H / F1]">H·HDẪN</button>
           <button id="hud-btn-map" class="hud-mini-btn" title="Bản đồ thế giới [M]">M·MAP</button>
           <button id="hud-btn-bag" class="hud-mini-btn" title="Túi đồ [I / B]">I·TÚI</button>
           <button id="hud-btn-quest" class="hud-mini-btn" title="Nhiệm vụ & Biên Niên Sử [J]">J·SỔ</button>
+          <button id="hud-btn-touch" class="hud-mini-btn" title="Bật/Tắt nút cảm ứng Mobile">📱</button>
+          <button id="hud-btn-fs" class="hud-mini-btn" title="Toàn màn hình ngang">⛶</button>
           <button id="hud-btn-save" class="hud-mini-btn" title="Lưu nhanh">LƯU</button>
           <button id="hud-btn-mute" class="hud-mini-btn" title="Bật/Tắt âm thanh">SFX</button>
           <button id="hud-btn-pause" class="hud-mini-btn" title="Tạm dừng [ESC]">ESC</button>
@@ -81,27 +95,45 @@
       <!-- [F] World Interact Prompt -->
       <button id="interact-prompt" class="interact-prompt hidden">[F] Tương tác</button>
 
-      <!-- Bottom Skill & Consumable Hotbar -->
+      <!-- Bottom Backpack, Pixel Skill Icons & Smart Consumable Hotbar -->
+      <div id="hud-skill-tooltip" class="hud-skill-tooltip hidden"></div>
       <div class="hud-bottom-bar">
-        <div id="slot-skill-lmb" class="skill-slot" title="Đánh thường 3 nhịp / Giữ Chuột trái để Tụ Lực (Just-Charge)">
+        <button id="slot-bag" class="skill-slot icon-skill-slot bag-slot" type="button" data-hud-tip="bag" aria-label="Túi Đồ & Trang Bị [I]">
+          <span class="key-cap">I</span>
+          <span id="bag-slot-pts" class="bag-pts-pill hidden">+0</span>
+          <canvas id="bag-slot-icon" class="skill-icon-canvas" width="36" height="36"></canvas>
+          <span id="bag-slot-count" class="cons-qty">0/40</span>
+        </button>
+        <button id="slot-gacha" class="skill-slot icon-skill-slot gacha-slot" type="button" data-hud-tip="gacha" aria-label="Rương Gacha Mùa [G]">
+          <span class="key-cap">G</span>
+          <canvas id="gacha-slot-icon" class="skill-icon-canvas" width="36" height="36"></canvas>
+          <span id="gacha-slot-count" class="cons-qty">🗝0</span>
+        </button>
+        <div class="hotbar-sep bag-sep"></div>
+        <div id="slot-skill-lmb" class="skill-slot icon-skill-slot" data-hud-tip="lmb" aria-label="Đòn Đánh Thường & Tụ Lực [LMB]">
           <span class="key-cap">LMB</span>
-          <span id="skill-lmb-name" class="slot-title">Đấm Tay Không</span>
-          <span id="skill-lmb-sub" class="slot-sub">TAY KHÔNG</span>
+          <canvas id="skill-lmb-icon" class="skill-icon-canvas" width="36" height="36"></canvas>
+          <span id="skill-lmb-sub" class="skill-badge hidden"></span>
         </div>
-        <div id="slot-skill-e" class="skill-slot">
+        <div id="slot-skill-e" class="skill-slot icon-skill-slot" data-hud-tip="skill" aria-label="Kỹ Năng Đặc Trưng [E]">
           <span class="key-cap">E</span>
-          <span id="skill-e-name" class="slot-title">Kỹ Năng</span>
-          <span id="skill-e-cd" class="slot-sub">READY</span>
+          <div id="skill-e-veil" class="skill-cd-veil"></div>
+          <canvas id="skill-e-icon" class="skill-icon-canvas" width="36" height="36"></canvas>
+          <canvas id="skill-e-lock" class="skill-lock-icon hidden" width="16" height="16"></canvas>
+          <span id="skill-e-cd" class="skill-badge hidden"></span>
         </div>
-        <div id="slot-skill-q" class="skill-slot">
+        <div id="slot-skill-q" class="skill-slot icon-skill-slot" data-hud-tip="ult" aria-label="Tuyệt Kỹ [Q]">
           <span class="key-cap">Q</span>
-          <span id="skill-q-name" class="slot-title">Tuyệt Kỹ</span>
-          <span id="skill-q-cd" class="slot-sub">35%</span>
+          <div id="skill-q-gauge" class="skill-ult-gauge"></div>
+          <canvas id="skill-q-icon" class="skill-icon-canvas" width="36" height="36"></canvas>
+          <canvas id="skill-q-lock" class="skill-lock-icon hidden" width="16" height="16"></canvas>
+          <span id="skill-q-cd" class="skill-badge">0%</span>
         </div>
-        <div id="slot-dash" class="skill-slot" title="Lướt đúng khoảnh khắc đòn đánh chạm tới = CHROMA DODGE!">
+        <div id="slot-dash" class="skill-slot icon-skill-slot" data-hud-tip="dash" aria-label="Chroma Dash [Space]">
           <span class="key-cap">SPC</span>
-          <span class="slot-title">Dash</span>
-          <span id="skill-dash-cd" class="slot-sub">READY</span>
+          <div id="skill-dash-veil" class="skill-cd-veil"></div>
+          <canvas id="skill-dash-icon" class="skill-icon-canvas" width="36" height="36"></canvas>
+          <span id="skill-dash-cd" class="skill-badge hidden"></span>
         </div>
         <div class="hotbar-sep"></div>
         <button id="slot-c1" class="skill-slot cons-slot">
@@ -131,8 +163,96 @@
       </div>
     </div>
 
+    <!-- PHASE 1: MOBILE TWIN-STICK TOUCH OVERLAY & PORTRAIT ROTATE HINT -->
+    <div id="mobile-touch-layer" class="mobile-touch-layer hidden">
+      <div id="touch-joy-zone" class="touch-joy-zone">
+        <div id="touch-joy-base" class="touch-joy-base">
+          <div id="touch-joy-knob" class="touch-joy-knob"></div>
+        </div>
+        <button id="touch-btn-sprint" class="touch-sprint-pill" type="button">⚡ CHẠY</button>
+      </div>
+
+      <div id="touch-action-zone" class="touch-action-zone">
+        <div id="touch-btn-interact" class="touch-arc-btn interact-btn">
+          <span class="touch-btn-ico">🖐</span>
+          <span class="touch-btn-sub">[F] MỞ</span>
+        </div>
+        <div id="touch-btn-ult" class="touch-arc-btn ult-btn">
+          <span class="touch-btn-ico">🔥 [Q]</span>
+          <span id="touch-ult-sub" class="touch-btn-sub">0%</span>
+        </div>
+        <div id="touch-btn-skill" class="touch-arc-btn skill-btn">
+          <span class="touch-btn-ico">✦ [E]</span>
+          <span id="touch-skill-sub" class="touch-btn-sub">SẴN SÀNG</span>
+        </div>
+        <div id="touch-btn-dash" class="touch-arc-btn dash-btn">
+          <span class="touch-btn-ico">💨 LƯỚT</span>
+          <span id="touch-dash-sub" class="touch-btn-sub">SẴN SÀNG</span>
+        </div>
+        <div id="touch-btn-atk" class="touch-atk-btn">
+          <span class="touch-atk-ico">⚔ ĐÁNH</span>
+          <span id="touch-atk-sub" class="touch-atk-sub">NHỊP 1/3</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="mobile-rotate-banner" class="mobile-rotate-banner hidden">
+      <span>📱 Xoay ngang điện thoại để chiến đấu rộng rãi hơn!</span>
+      <button id="btn-rotate-fullscreen" class="px-btn sm primary" type="button">⛶ TOÀN MÀN HÌNH NGANG</button>
+    </div>
+
+    <!-- SCREEN: HOME / TITLE & HERO NAMING (STEP 1 OF NEW GAME) -->
+    <div id="screen-home" class="overlay-screen home-screen">
+      <canvas id="home-bg-canvas" class="home-bg-canvas" width="480" height="270"></canvas>
+      <div class="home-card">
+        <div class="title-header">
+          <canvas
+            id="pixtel-home-logo"
+            class="pixel-logo-canvas home-logo-canvas"
+            width="480"
+            height="176"
+            role="img"
+            aria-label="PIXTEL — huy hiệu lăng kính 16-bit"
+          >PIXTEL</canvas>
+          <div class="title-eyebrow">BIÊN NIÊN SỬ AETHEL-16 · 16-BIT OPEN-WORLD ACTION RPG</div>
+          <div class="title-sub">
+            Bước 1/2: Đặt tên cho Chiến Binh Lăng Kính của bạn trước khi chọn Class &amp; khai mở câu chuyện!
+          </div>
+        </div>
+
+        <div id="home-room-invite-banner" class="coop-invite-banner hidden"></div>
+
+        <div class="home-name-panel">
+          <label for="home-name-input" class="home-name-label">✦ TÊN NHÂN VẬT (HIỂN THỊ TRONG GAME, CỐT TRUYỆN &amp; CO-OP)</label>
+          <div class="home-name-row">
+            <input
+              id="home-name-input"
+              class="home-name-input"
+              type="text"
+              maxlength="16"
+              placeholder="Nhập tên chiến binh... (VD: Aetherion)"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button id="btn-home-random-name" class="px-btn" type="button" title="Gợi ý tên 16-bit ngẫu nhiên">🎲 NGẪU NHIÊN</button>
+          </div>
+          <div id="home-name-hint" class="home-name-hint">Nhập tên anh hùng của bạn (1–16 ký tự), rồi chọn Class để bắt đầu!</div>
+        </div>
+
+        <div class="home-actions">
+          <button id="btn-home-continue" class="px-btn good big hidden" type="button">▶ TIẾP TỤC PHIÊU LƯU</button>
+          <button id="btn-home-next-class" class="px-btn primary big home-cta-btn" type="button">⚔ TIẾP TỤC → CHỌN CLASS</button>
+          <div class="home-sub-actions">
+            <button id="btn-home-watch-story" class="px-btn" style="border-color:#c478ff;color:#e0b8ff" type="button">🎬 XEM PHIM CỐT TRUYỆN MỞ ĐẦU</button>
+            <button id="btn-home-coop" class="px-btn" style="border-color:#44ee88;color:#44ee88" type="button">🤝 TỔ ĐỘI CO-OP [P]</button>
+            <button id="btn-home-tutorial" class="px-btn" style="border-color:#ffe066;color:#ffe066" type="button">📖 CẨM NANG TÂN THỦ [H]</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- SCREEN: CLASS SELECT / TITLE / CLASS ALTAR -->
-    <div id="screen-class-select" class="overlay-screen">
+    <div id="screen-class-select" class="overlay-screen hidden">
       <div class="class-select-box">
         <div class="title-header">
           <canvas
@@ -144,13 +264,15 @@
             aria-label="PIXTEL — huy hiệu lăng kính 16-bit"
           >PIXTEL</canvas>
           <div class="title-eyebrow">BIÊN NIÊN SỬ AETHEL-16 · 16-BIT ACTION RPG</div>
+          <div id="class-player-name-banner" class="class-player-banner"></div>
           <div id="class-select-subtitle" class="title-sub">
             BIÊN NIÊN SỬ AETHEL-16 — Giải mã Bia Ký, làm chủ 9 Nguyên Tố & thanh tẩy The Eraser
           </div>
         </div>
+        <div id="title-room-invite-banner" class="coop-invite-banner hidden"></div>
         <div id="class-grid" class="class-grid"></div>
         <div class="title-controls-hint">
-          <b>WASD</b> Di chuyển · <b>Shift</b> Chạy · <b>Space</b> Chroma Dodge · <b>LMB / Giữ</b> Combo 3 nhịp & Just-Charge · <b>E / Q</b> Kỹ năng · <b>F</b> Tương tác · <b>1-4</b> Dược phẩm · <b>H / F1</b> Cẩm nang Tân thủ & 9 Nguyên Tố
+          <b>PC:</b> WASD · Shift · Space · LMB/Giữ · <b>E</b> Skill Vũ Khí · <b>Q</b> Skill Class · <b>G</b> Rương Gacha Mùa · F · 1-4 · <b>P</b> Co-op · <b>H</b> Cẩm nang
         </div>
         <div id="newbie-guide-wrap" class="tutorial-opt-row">
           <label class="tutorial-opt-toggle">
@@ -159,10 +281,50 @@
           </label>
         </div>
         <div class="title-actions">
+          <button id="btn-back-home" class="px-btn big">← ĐỔI TÊN / TRANG CHỦ</button>
           <button id="btn-continue-save" class="px-btn good big hidden">▶ TIẾP TỤC PHIÊU LƯU (SAVE)</button>
           <button id="btn-start-adventure" class="px-btn primary big">BẮT ĐẦU PHIÊU LƯU MỚI</button>
+          <button id="btn-open-coop" class="px-btn big" style="border-color:#44ee88;color:#44ee88">🤝 TỔ ĐỘI CO-OP (2–4 NGƯỜI) [P]</button>
           <button id="btn-open-tutorial" class="px-btn big" style="border-color:#ffe066;color:#ffe066">📖 HƯỚNG DẪN TÂN THỦ & COMBO [H]</button>
           <button id="btn-close-class-select" class="px-btn big hidden">ĐÓNG</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: WIDESCREEN 16-BIT STORY CUTSCENE CINEMA -->
+    <div id="modal-cutscene" class="modal-backdrop cutscene-backdrop hidden">
+      <div class="cutscene-shell">
+        <div class="cutscene-topbar">
+          <div class="cutscene-meta">
+            <div id="cutscene-chapter" class="cutscene-chapter">HỒI I · KHỞI NGUYÊN</div>
+            <div id="cutscene-title" class="cutscene-title">THẢM HỌA TẨY TRẮNG</div>
+          </div>
+          <div class="cutscene-progress-col">
+            <div class="cutscene-counter-row">
+              <span id="cutscene-counter" class="cutscene-counter">01 / 16</span>
+              <div class="cutscene-progress-bar">
+                <div id="cutscene-progress-fill" class="cutscene-progress-fill"></div>
+              </div>
+            </div>
+            <div id="cutscene-pips" class="cutscene-pips"></div>
+          </div>
+        </div>
+        <div class="cutscene-stage-wrap">
+          <canvas id="cutscene-canvas" class="cutscene-canvas" width="480" height="200"></canvas>
+          <div id="cutscene-scene-stamp" class="cutscene-scene-stamp hidden">CẢNH 01</div>
+          <div id="cutscene-title-card" class="cutscene-title-card hidden"></div>
+        </div>
+        <div class="cutscene-dialogue-box">
+          <div id="cutscene-speaker" class="cutscene-speaker">BIÊN NIÊN SỬ</div>
+          <div id="cutscene-text" class="cutscene-text"></div>
+          <div class="cutscene-controls">
+            <div class="cutscene-controls-left">
+              <button id="btn-cutscene-skip" class="px-btn sm" type="button">⏩ BỎ QUA [ESC]</button>
+              <button id="btn-cutscene-auto" class="px-btn sm" type="button">⏯ TỰ PHÁT: TẮT</button>
+              <button id="btn-cutscene-prev" class="px-btn sm" type="button">◀ CẢNH TRƯỚC</button>
+            </div>
+            <button id="btn-cutscene-next" class="px-btn primary" type="button">▶ CẢNH TIẾP [SPACE]</button>
+          </div>
         </div>
       </div>
     </div>
@@ -178,48 +340,85 @@
       </div>
     </div>
 
-    <!-- MODAL: INVENTORY & EQUIPMENT [I / B] -->
+    <!-- MODAL: INVENTORY & EQUIPMENT [I / B] — 3-COLUMN 16-BIT LAYOUT -->
     <div id="modal-inventory" class="modal-backdrop hidden">
-      <div class="modal-box modal-xl">
+      <div class="modal-box modal-xl inv-modal-box">
         <div class="modal-header">
           <div>TÚI ĐỒ & TRANG BỊ [I / B]</div>
           <button id="btn-close-inventory" class="px-btn sm">✕ ĐÓNG</button>
         </div>
         <div class="inv-layout">
-          <div class="inv-left">
-            <div class="inv-char-stage">
+          <!-- CỘT TRÁI: EQUIP (Paper-doll + 4/5 ô trang bị + 2 ô tiêu hao nhanh) -->
+          <div class="inv-left inv-col-equip">
+            <div class="inv-ribbon"><span>EQUIP</span></div>
+            <div id="inv-equip-slots" class="inv-paperdoll-frame">
+              <div id="inv-equip-left" class="equip-rail"></div>
               <div class="inv-char-preview">
-                <canvas id="inv-hero-canvas" width="128" height="96"></canvas>
+                <canvas id="inv-hero-canvas" width="144" height="168"></canvas>
                 <div id="inv-hero-class" class="inv-hero-tag">CLASS · LV.1</div>
                 <div class="inv-rot-bar">
                   <button id="inv-rot-left" class="px-btn sm" title="Xoay trái">◀</button>
                   <button id="inv-rot-right" class="px-btn sm" title="Xoay phải">▶</button>
                 </div>
               </div>
-              <div class="inv-equip-col">
-                <div class="section-hdr" style="margin-top:0">5 Ô TRANG BỊ ĐANG MẶC</div>
-                <div id="inv-equip-slots" class="equip-grid"></div>
-              </div>
+              <div id="inv-equip-right" class="equip-rail"></div>
             </div>
-            <div class="section-hdr">TỔNG HỢP CHỈ SỐ & ĐIỂM TIỀM NĂNG</div>
+            <div id="inv-quick-consumables" class="inv-quick-consumables"></div>
+            <div class="section-hdr">CHỈ SỐ & ĐIỂM TIỀM NĂNG</div>
             <div id="inv-hero-stats" class="inv-hero-stats"></div>
             <div id="inv-stat-alloc" class="stat-alloc-panel"></div>
             <div id="inv-set-bonuses" class="inv-set-bonuses"></div>
           </div>
-          <div class="inv-right">
+
+          <!-- CỘT GIỮA: BAG (Lưới 4x4+ theo độ hiếm) -->
+          <div class="inv-center inv-col-bag">
+            <div class="inv-ribbon"><span>BAG</span></div>
             <div class="inv-bag-hdr-row">
-              <div class="section-hdr" style="margin:0;border:0;padding:0">TÚI ĐỒ (40 Ô)</div>
+              <div id="inv-bag-title" class="section-hdr" style="margin:0;border:0;padding:0">TÚI ĐỒ (0/40 Ô)</div>
               <div class="inv-bag-actions">
-                <button id="btn-equip-best" class="px-btn sm primary" title="Tự động mặc trang bị mạnh nhất đúng Class của bạn">⚡ TRANG BỊ TỐT NHẤT</button>
-                <button id="btn-toggle-quicksell" class="px-btn sm warn" title="Tự chọn trước đồ khác Class và bấm chọn thêm đồ muốn bán rồi mới Xác Nhận">💰 BÁN NHANH</button>
+                <button id="btn-buy-backpack" class="px-btn sm good" title="Mua thêm Balo mở rộng vĩnh viễn +10 ô kho đồ (Tối đa 80 ô)">🎒 +10 Ô (250G)</button>
+                <button id="btn-equip-best" class="px-btn sm primary" title="Tự động mặc trang bị mạnh nhất đúng Class của bạn">⚡ TỐT NHẤT</button>
+                <button id="btn-toggle-quicksell" class="px-btn sm warn" title="Tự chọn trước đồ khác Class và bấm chọn thêm đồ muốn bán rồi mới Xác Nhận">💰 BÁN</button>
               </div>
             </div>
+            <div id="inv-autosell-bar" class="inv-autosell-bar"></div>
             <div id="inv-quicksell-bar" class="inv-quicksell-bar hidden"></div>
-            <div id="inv-bag-grid" class="bag-grid"></div>
-            <div class="section-hdr">SO SÁNH CHỈ SỐ & THAO TÁC</div>
+            <div class="inv-bag-scroll">
+              <div id="inv-bag-grid" class="bag-grid"></div>
+            </div>
+          </div>
+
+          <!-- CỘT PHẢI: INFO (Tooltip cố định chuẩn 16-bit) -->
+          <div class="inv-right inv-col-info">
+            <div class="inv-ribbon"><span>INFO</span></div>
             <div id="inv-item-detail" class="item-detail-box"></div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- MODAL: PERSONAL STORAGE CHEST AT SPAWN [F] -->
+    <div id="modal-stash" class="modal-backdrop hidden">
+      <div class="modal-box modal-xl stash-modal-box">
+        <div class="modal-header">
+          <div>📦 RƯƠNG CÁ NHÂN — KHO LƯU TRỮ TẠI QUẢNG TRƯỜNG SPAWN (80 Ô)</div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button id="btn-stash-deposit-mats" class="px-btn sm primary" title="Cất toàn bộ nguyên liệu thường vào Rương Cá Nhân">📦 CẤT NHANH NGUYÊN LIỆU</button>
+            <button id="btn-close-stash" class="px-btn sm">✕ ĐÓNG</button>
+          </div>
+        </div>
+        <div id="stash-status-msg" class="stash-status-msg"></div>
+        <div class="stash-layout">
+          <div class="stash-col">
+            <div id="stash-bag-title" class="section-hdr" style="margin-top:0">TÚI ĐỒ HÀNH TRANG</div>
+            <div id="stash-bag-grid" class="stash-grid"></div>
+          </div>
+          <div class="stash-col">
+            <div id="stash-chest-title" class="section-hdr" style="margin-top:0;color:#5ef2ff">📦 RƯƠNG CÁ NHÂN (0/80 Ô)</div>
+            <div id="stash-chest-grid" class="stash-grid"></div>
+          </div>
+        </div>
+        <div class="stash-foot-note">★ Vật phẩm trong Rương Cá Nhân được lưu vĩnh viễn theo Save và không bị ảnh hưởng khi bạn Đổi Class tại Đài Đổi Class!</div>
       </div>
     </div>
 
@@ -250,6 +449,53 @@
       </div>
     </div>
 
+    <!-- MODAL: SEASONAL GACHA CHEST [G] -->
+    <div id="modal-gacha" class="modal-backdrop hidden">
+      <div class="modal-box modal-xl gacha-modal-box">
+        <div class="modal-header gacha-header">
+          <div>★ ĐÀI RƯƠNG GACHA THEO MÙA [G]</div>
+          <div class="gacha-hdr-right">
+            <div id="gacha-key-pill" class="gacha-key-pill"></div>
+            <button id="btn-close-gacha" class="px-btn sm">✕ ĐÓNG</button>
+          </div>
+        </div>
+        <div id="gacha-tabs" class="gacha-tabs"></div>
+        <div class="gacha-body">
+          <div class="gacha-banner-meta">
+            <div id="gacha-banner-title" class="gacha-banner-title"></div>
+            <div id="gacha-banner-desc" class="gacha-banner-desc"></div>
+          </div>
+          <div class="gacha-stage-wrap">
+            <canvas id="gacha-stage-canvas" class="gacha-stage-canvas" width="380" height="128"></canvas>
+            <button id="btn-gacha-skip" class="px-btn sm gacha-skip-btn hidden">⏩ BỎ QUA</button>
+          </div>
+          <div id="gacha-results-tray" class="gacha-results-tray hidden"></div>
+          <div class="gacha-controls-row">
+            <div class="gacha-roll-btns">
+              <button id="btn-gacha-roll1" class="px-btn gacha-roll-btn roll-1">🗝 MỞ ×1</button>
+              <button id="btn-gacha-roll5" class="px-btn gacha-roll-btn roll-5">★ MỞ ×5</button>
+            </div>
+            <div class="gacha-util-btns">
+              <button id="btn-gacha-craft-key" class="px-btn sm primary" title="Mở Lò Rèn Lăng Kính để đúc Chìa Mùa">⚒ RÈN CHÌA</button>
+              <button id="btn-gacha-rates" class="px-btn sm">📊 TỈ LỆ</button>
+              <button id="btn-gacha-history" class="px-btn sm">📜 LỊCH SỬ</button>
+            </div>
+          </div>
+          <div class="gacha-lower-grid">
+            <div class="gacha-pity-col">
+              <div class="gacha-sec-lbl">BẢO HIỂM PITY RƯƠNG NÀY</div>
+              <div id="gacha-pity-bars" class="gacha-pity-bars"></div>
+            </div>
+            <div class="gacha-feat-col">
+              <div class="gacha-sec-lbl">★ VẬT PHẨM ĐỘC QUYỀN MÙA NỔI BẬT (RÊ CHUỘT ĐỂ XEM)</div>
+              <div id="gacha-featured-row" class="gacha-featured-row"></div>
+            </div>
+          </div>
+          <div id="gacha-sub-panel" class="gacha-sub-panel hidden"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- MODAL: WORLD MAP & FAST TRAVEL [M] -->
     <div id="modal-world-map" class="modal-backdrop hidden">
       <div class="modal-box modal-xl">
@@ -265,6 +511,7 @@
               <span><i style="background:#ffe066"></i> Bạn</span>
               <span><i style="background:#38f2ff"></i> Trụ Đã Mở (Click để Dịch chuyển)</span>
               <span><i style="background:#7c8291"></i> Trụ Tắt</span>
+              <span><i style="background:#ff9933"></i> Khu Farm Quái</span>
               <span><i style="background:#ff2e55"></i> Đấu Trường Boss</span>
             </div>
           </div>
@@ -299,6 +546,17 @@
       </div>
     </div>
 
+    <!-- MODAL: CO-OP MULTIPLAYER [P] -->
+    <div id="modal-coop" class="modal-backdrop hidden">
+      <div class="modal-box modal-lg">
+        <div class="modal-header">
+          <div>🤝 TỔ ĐỘI CO-OP ONLINE (2–4 NGƯỜI · PC & MOBILE) [P]</div>
+          <button id="btn-close-coop" class="px-btn sm">✕ ĐÓNG</button>
+        </div>
+        <div id="coop-body" class="modal-scroll"></div>
+      </div>
+    </div>
+
     <!-- MODAL: PAUSE [ESC] -->
     <div id="modal-pause" class="modal-backdrop hidden">
       <div class="modal-box modal-sm">
@@ -307,6 +565,7 @@
         </div>
         <div class="pause-actions">
           <button id="btn-pause-resume" class="px-btn primary">▶ TIẾP TỤC CHƠI</button>
+          <button id="btn-pause-coop" class="px-btn" style="border-color:#44ee88;color:#44ee88">🤝 TỔ ĐỘI CO-OP ONLINE [P]</button>
           <button id="btn-pause-help" class="px-btn" style="border-color:#ffe066;color:#ffe066">📖 CẨM NANG & COMBO [H]</button>
           <button id="btn-pause-save" class="px-btn good">💾 LƯU TIẾN TRÌNH</button>
           <button id="btn-pause-title" class="px-btn">🏠 VỀ MÀN HÌNH CHÍNH</button>
@@ -333,6 +592,6 @@
     <div id="item-review-tooltip" class="rope-review-frame hidden" aria-hidden="true"></div>
   </div>
 
-  <script type="module" src="/src/main.ts"></script>
+  <script type="module" src="./src/main.ts"></script>
 </body>
 </html>

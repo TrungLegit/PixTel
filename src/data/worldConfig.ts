@@ -321,8 +321,10 @@ export const CHROMA_RAINBOW = [
   "#bb55ff",
 ];
 
-// 3 Fixed NPCs in Origin Town + Class Altar coordinate
+// 3 Fixed NPCs in Origin Town + Class Altar + Personal Stash Chest (beside Spawn!) + Seasonal Gacha Altar
 export const CLASS_ALTAR_POS = { tx: 80, ty: 74 };
+export const STORAGE_CHEST_POS = { tx: 77, ty: 82 };
+export const GACHA_ALTAR_POS = { tx: 80, ty: 86 };
 
 export const TOWN_NPCS: NpcDef[] = [
   {
@@ -377,7 +379,7 @@ export const WAYPOINTS: WaypointDef[] = [
   { id: "wp_ruins_sanctum", name: "Trụ Đấu Trường Vô Sắc", biome: "ruins", tx: 128, ty: 126, restoreRadiusTiles: 46 },
 ];
 
-// Enemy Camps & Boss Arenas (patrol + aggro + leash + respawn + locked chests)
+// Enemy Camps & Boss Arenas (patrol + aggro + leash + respawn; ONLY the 4 Boss Arenas hold Main Chests!)
 export const WORLD_CAMPS: CampDef[] = [
   // Meadow (Lv 1-6) — starter camps + Meadow Boss Xing Warden!
   {
@@ -386,9 +388,9 @@ export const WORLD_CAMPS: CampDef[] = [
     tx: 56,
     ty: 76,
     enemies: [{ typeId: "null_slime", count: 4 }],
-    hasLockedChest: true,
+    hasLockedChest: false,
     chestRarity: "uncommon",
-    respawnSec: 32,
+    respawnSec: 30,
   },
   {
     id: "camp_meadow_2",
@@ -400,9 +402,9 @@ export const WORLD_CAMPS: CampDef[] = [
       { typeId: "ash_hopper", count: 2 },
       { typeId: "thorn_archer", count: 2 },
     ],
-    hasLockedChest: true,
+    hasLockedChest: false,
     chestRarity: "uncommon",
-    respawnSec: 35,
+    respawnSec: 32,
   },
   {
     id: "camp_meadow_3",
@@ -414,9 +416,9 @@ export const WORLD_CAMPS: CampDef[] = [
       { typeId: "ash_hopper", count: 2 },
       { typeId: "thorn_archer", count: 2 },
     ],
-    hasLockedChest: true,
+    hasLockedChest: false,
     chestRarity: "rare",
-    respawnSec: 38,
+    respawnSec: 36,
   },
   {
     id: "camp_meadow_boss",
@@ -427,6 +429,55 @@ export const WORLD_CAMPS: CampDef[] = [
     hasLockedChest: true,
     chestRarity: "rare",
     respawnSec: 60,
+  },
+  // Meadow Farm Zones (Combat XP & Tier 2 Gear Grinding)
+  {
+    id: "camp_meadow_farm_south",
+    biome: "meadow",
+    tx: 60,
+    ty: 65,
+    enemies: [{ typeId: "null_slime", count: 4 }, { typeId: "ash_hopper", count: 2 }],
+    hasLockedChest: false,
+    chestRarity: "uncommon",
+    respawnSec: 18,
+  },
+  {
+    id: "camp_meadow_farm_north",
+    biome: "meadow",
+    tx: 64,
+    ty: 44,
+    enemies: [{ typeId: "ash_hopper", count: 3 }, { typeId: "thorn_archer", count: 3 }],
+    hasLockedChest: false,
+    chestRarity: "uncommon",
+    respawnSec: 20,
+  },
+  {
+    id: "camp_meadow_farm_west_glade",
+    biome: "meadow",
+    tx: 18,
+    ty: 62,
+    enemies: [
+      { typeId: "root_golem", count: 1 },
+      { typeId: "null_slime", count: 3 },
+      { typeId: "thorn_archer", count: 2 },
+    ],
+    hasLockedChest: false,
+    chestRarity: "rare",
+    respawnSec: 22,
+  },
+  {
+    id: "camp_meadow_farm_grove",
+    biome: "meadow",
+    tx: 48,
+    ty: 24,
+    enemies: [
+      { typeId: "root_golem", count: 1 },
+      { typeId: "ash_hopper", count: 2 },
+      { typeId: "thorn_archer", count: 3 },
+    ],
+    hasLockedChest: false,
+    chestRarity: "uncommon",
+    respawnSec: 21,
   },
   // Quartz Forest (Lv 5-10)
   {
@@ -439,7 +490,7 @@ export const WORLD_CAMPS: CampDef[] = [
       { typeId: "static_imp", count: 2 },
       { typeId: "quartz_stalker", count: 1 },
     ],
-    hasLockedChest: true,
+    hasLockedChest: false,
     chestRarity: "rare",
     respawnSec: 36,
   },
@@ -453,7 +504,7 @@ export const WORLD_CAMPS: CampDef[] = [
       { typeId: "bleach_hound", count: 2 },
       { typeId: "quartz_stalker", count: 2 },
     ],
-    hasLockedChest: true,
+    hasLockedChest: false,
     chestRarity: "rare",
     respawnSec: 38,
   },
@@ -467,6 +518,59 @@ export const WORLD_CAMPS: CampDef[] = [
     chestRarity: "epic",
     respawnSec: 65,
   },
+  // Quartz Farm Zones (Combat XP & Tier 3 Gear Grinding)
+  {
+    id: "camp_quartz_farm_gate",
+    biome: "quartz",
+    tx: 98,
+    ty: 72,
+    enemies: [{ typeId: "static_imp", count: 3 }, { typeId: "bleach_hound", count: 3 }],
+    hasLockedChest: false,
+    chestRarity: "rare",
+    respawnSec: 20,
+  },
+  {
+    id: "camp_quartz_farm_west",
+    biome: "quartz",
+    tx: 92,
+    ty: 34,
+    enemies: [
+      { typeId: "bleach_hound", count: 2 },
+      { typeId: "static_imp", count: 2 },
+      { typeId: "quartz_stalker", count: 2 },
+    ],
+    hasLockedChest: false,
+    chestRarity: "rare",
+    respawnSec: 22,
+  },
+  {
+    id: "camp_quartz_farm_east",
+    biome: "quartz",
+    tx: 138,
+    ty: 64,
+    enemies: [
+      { typeId: "quartz_knight", count: 1 },
+      { typeId: "quartz_stalker", count: 3 },
+      { typeId: "static_imp", count: 2 },
+    ],
+    hasLockedChest: false,
+    chestRarity: "rare",
+    respawnSec: 24,
+  },
+  {
+    id: "camp_quartz_farm_ridge",
+    biome: "quartz",
+    tx: 112,
+    ty: 18,
+    enemies: [
+      { typeId: "quartz_knight", count: 1 },
+      { typeId: "bleach_hound", count: 2 },
+      { typeId: "quartz_stalker", count: 2 },
+    ],
+    hasLockedChest: false,
+    chestRarity: "rare",
+    respawnSec: 23,
+  },
   // Amber Mines (Lv 10-15)
   {
     id: "camp_amber_1",
@@ -474,7 +578,7 @@ export const WORLD_CAMPS: CampDef[] = [
     tx: 56,
     ty: 100,
     enemies: [{ typeId: "amber_beetle", count: 3 }, { typeId: "cinder_imp", count: 2 }],
-    hasLockedChest: true,
+    hasLockedChest: false,
     chestRarity: "rare",
     respawnSec: 38,
   },
@@ -483,8 +587,12 @@ export const WORLD_CAMPS: CampDef[] = [
     biome: "amber",
     tx: 38,
     ty: 118,
-    enemies: [{ typeId: "amber_beetle", count: 2 }, { typeId: "prism_golem", count: 2 }],
-    hasLockedChest: true,
+    enemies: [
+      { typeId: "amber_warrior", count: 1 },
+      { typeId: "amber_beetle", count: 2 },
+      { typeId: "cinder_imp", count: 2 },
+    ],
+    hasLockedChest: false,
     chestRarity: "epic",
     respawnSec: 40,
   },
@@ -498,14 +606,67 @@ export const WORLD_CAMPS: CampDef[] = [
     chestRarity: "epic",
     respawnSec: 65,
   },
+  // Amber Mines Farm Zones (Combat XP & Tier 4 Gear Grinding)
+  {
+    id: "camp_amber_farm_gate",
+    biome: "amber",
+    tx: 62,
+    ty: 94,
+    enemies: [{ typeId: "amber_beetle", count: 3 }, { typeId: "cinder_imp", count: 3 }],
+    hasLockedChest: false,
+    chestRarity: "rare",
+    respawnSec: 21,
+  },
+  {
+    id: "camp_amber_farm_west",
+    biome: "amber",
+    tx: 24,
+    ty: 98,
+    enemies: [{ typeId: "amber_beetle", count: 3 }, { typeId: "cinder_imp", count: 3 }],
+    hasLockedChest: false,
+    chestRarity: "rare",
+    respawnSec: 23,
+  },
+  {
+    id: "camp_amber_farm_south",
+    biome: "amber",
+    tx: 64,
+    ty: 132,
+    enemies: [
+      { typeId: "amber_warrior", count: 1 },
+      { typeId: "amber_beetle", count: 2 },
+      { typeId: "cinder_imp", count: 3 },
+    ],
+    hasLockedChest: false,
+    chestRarity: "epic",
+    respawnSec: 24,
+  },
+  {
+    id: "camp_amber_farm_crater",
+    biome: "amber",
+    tx: 56,
+    ty: 146,
+    enemies: [
+      { typeId: "amber_warrior", count: 1 },
+      { typeId: "cinder_imp", count: 3 },
+      { typeId: "amber_beetle", count: 2 },
+    ],
+    hasLockedChest: false,
+    chestRarity: "epic",
+    respawnSec: 24,
+  },
   // Blank Ruins (Lv 15-20)
   {
     id: "camp_ruins_1",
     biome: "ruins",
     tx: 102,
     ty: 102,
-    enemies: [{ typeId: "prism_golem", count: 2 }, { typeId: "void_wraith", count: 3 }],
-    hasLockedChest: true,
+    enemies: [
+      { typeId: "prism_golem", count: 2 },
+      { typeId: "void_wraith", count: 2 },
+      { typeId: "null_knight", count: 1 },
+    ],
+    hasLockedChest: false,
     chestRarity: "epic",
     respawnSec: 42,
   },
@@ -514,8 +675,12 @@ export const WORLD_CAMPS: CampDef[] = [
     biome: "ruins",
     tx: 120,
     ty: 114,
-    enemies: [{ typeId: "void_wraith", count: 3 }, { typeId: "bleach_hound", count: 2 }],
-    hasLockedChest: true,
+    enemies: [
+      { typeId: "void_gatekeeper", count: 1 },
+      { typeId: "void_wraith", count: 2 },
+      { typeId: "null_knight", count: 2 },
+    ],
+    hasLockedChest: false,
     chestRarity: "epic",
     respawnSec: 42,
   },
@@ -528,6 +693,63 @@ export const WORLD_CAMPS: CampDef[] = [
     hasLockedChest: true,
     chestRarity: "legendary",
     respawnSec: 90,
+  },
+  // Blank Ruins Endgame Farm Zones (LV 15-20 XP & Epic/Legendary Gear Grinding)
+  {
+    id: "camp_ruins_farm_gate",
+    biome: "ruins",
+    tx: 98,
+    ty: 92,
+    enemies: [
+      { typeId: "prism_golem", count: 2 },
+      { typeId: "void_wraith", count: 2 },
+      { typeId: "null_knight", count: 1 },
+    ],
+    hasLockedChest: false,
+    chestRarity: "epic",
+    respawnSec: 22,
+  },
+  {
+    id: "camp_ruins_farm_east",
+    biome: "ruins",
+    tx: 142,
+    ty: 96,
+    enemies: [
+      { typeId: "prism_golem", count: 2 },
+      { typeId: "null_knight", count: 2 },
+      { typeId: "void_wraith", count: 2 },
+    ],
+    hasLockedChest: false,
+    chestRarity: "epic",
+    respawnSec: 24,
+  },
+  {
+    id: "camp_ruins_farm_south",
+    biome: "ruins",
+    tx: 98,
+    ty: 136,
+    enemies: [
+      { typeId: "void_gatekeeper", count: 1 },
+      { typeId: "null_knight", count: 2 },
+      { typeId: "void_wraith", count: 2 },
+    ],
+    hasLockedChest: false,
+    chestRarity: "epic",
+    respawnSec: 25,
+  },
+  {
+    id: "camp_ruins_farm_bastion",
+    biome: "ruins",
+    tx: 116,
+    ty: 146,
+    enemies: [
+      { typeId: "void_gatekeeper", count: 1 },
+      { typeId: "prism_golem", count: 2 },
+      { typeId: "null_knight", count: 2 },
+    ],
+    hasLockedChest: false,
+    chestRarity: "legendary",
+    respawnSec: 26,
   },
 ];
 
