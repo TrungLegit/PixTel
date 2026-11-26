@@ -48,7 +48,7 @@ import { drawItemIcon } from "./graphics/itemIcons";
 import { TileRenderer } from "./graphics/tileRenderer";
 import { VfxManager } from "./vfx/vfxManager";
 import { rasterText, textWidth } from "./vfx/pixelfx/core/font.js";
-import { WorldMap } from "./world/worldMap";
+import { TileKind, WorldMap } from "./world/worldMap";
 import { WorldSpawner } from "./world/spawner";
 import { findNearestInteractable, type InteractableTarget } from "./world/interactables";
 import type {
@@ -73,7 +73,7 @@ import type {
   PlayerNetSnapshot,
 } from "./net/protocol";
 import { BEGINNER_PRACTICE_STEPS } from "./ui/TutorialModal";
-import { sfx } from "./audio/chiptuneSynth";
+import { sfx, type FootstepSurfaceId } from "./audio/chiptuneSynth";
 import { DEFAULT_HERO_NAME, sanitizePlayerName } from "./utils/playerName";
 
 export type ModalId =
@@ -231,6 +231,9 @@ export class PixTelOpenWorldGame {
         },
       },
       customWsFactory
+    );
+    this.coop.setListenerPositionProvider(() =>
+      this.running ? { x: this.player.x, y: this.player.y } : null
     );
 
     sprites.init();
@@ -976,6 +979,7 @@ export class PixTelOpenWorldGame {
     const prevDash = this.player.dashing;
     this.combat.performDash(this._makeCombatContext(), dx, dy);
     if (this.player.dashing > prevDash) {
+      this._broadcastHeroFx("dash");
       this._advanceTutorial("dash");
     }
   }
@@ -1074,7 +1078,7 @@ export class PixTelOpenWorldGame {
 
   sendCoopPing(text = "Tập hợp tại đây!") {
     if (!this.coop.isConnected) return;
-    sfx.playWaypoint();
+    sfx.playCoopPing();
     this.vfx.spawnPooled("waypoint-pillar", { x: this.player.x, y: this.player.y });
     this.coop.send({
       type: "ping_beacon",
@@ -1087,7 +1091,7 @@ export class PixTelOpenWorldGame {
     this.ui.onToast(`📍 Đã phát tín hiệu tập hợp cho tổ đội!`, "info");
   }
 
-  private _broadcastHeroFx(kind: "slash" | "charge" | "skill" | "ult") {
+  private _broadcastHeroFx(kind: "slash" | "charge" | "skill" | "ult" | "dash") {
     if (!this.coop.isConnected) return;
     const preset =
       kind === "ult"
@@ -1096,7 +1100,10 @@ export class PixTelOpenWorldGame {
           ? "crit-gold"
           : kind === "skill"
             ? "zap-hit"
-            : "hit-cyan";
+            : kind === "dash"
+              ? "death-poof"
+              : "hit-cyan";
+    const wpn = this.inv.getValidEquippedWeapon(this.player.classId);
     this.coop.send({
       type: "hero_fx",
       playerId: this.coop.localId,
@@ -1104,6 +1111,9 @@ export class PixTelOpenWorldGame {
       x: Math.round(this.player.x + Math.cos(this.player.aimAngle) * 14),
       y: Math.round(this.player.y - 6 + Math.sin(this.player.aimAngle) * 14),
       angle: this.player.aimAngle,
+      sfxKind: kind,
+      classId: this.player.classId,
+      element: wpn?.infusedElement,
     });
   }
 
@@ -1583,7 +1593,6 @@ export class PixTelOpenWorldGame {
     }
 
     if (pkt.type === "ping_beacon") {
-      sfx.playWaypoint();
       this.vfx.spawnPooled("waypoint-pillar", { x: pkt.x, y: pkt.y });
       this.ui.onToast(`📍 [${sanitizePlayerName(pkt.name, DEFAULT_HERO_NAME)}]: ${pkt.text}`, "epic");
       return;
@@ -1789,14 +1798,14 @@ export class PixTelOpenWorldGame {
 
       if (spec.group === "power" || (spec.overdriveGain ?? 0) > 0) sfx.playOverdrive();
       else if (spec.group === "aegis") sfx.playBlock();
-      else sfx.playLootPickup(true);
+      else sfx.playConsumable(spec.group);
       this.ui.onToast(`Đã dùng ${def.name}!`, "good");
     } else if (def.consumableKind === "hp_potion") {
       const heal = Math.round(this.player.maxHp * 0.45);
       this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal);
       this.vfx.spawnPooled("heal-burst", { x: this.player.x, y: this.player.y - 6 });
       this.vfx.spawnDamageText(this.player.x, this.player.y - 12, `+${heal} HP`, { color: "#44ee88", crit: true });
-      sfx.playLootPickup(true);
+      sfx.playConsumable("hp");
     }
 
     this.ui.onHudUpdate();
@@ -1875,7 +1884,7 @@ export class PixTelOpenWorldGame {
     const wy = lore.ty * TILE_SIZE + 8;
     const firstTime = !this.discoveredLore.has(lore.id);
 
-    sfx.playWaypoint();
+    sfx.playLoreDecode(firstTime);
     if (firstTime) {
       this.discoveredLore.add(lore.id);
       this.colorSys.triggerWave(wx, wy, 92, 210);
@@ -2429,8 +2438,23 @@ export class PixTelOpenWorldGame {
       const exhaustSlow = p.exhausted ? 0.84 : 1.0;
       const chargeSlow = p.charging && p.chargeTime > 0.18 ? 0.65 : 1.0;
       const spd = p.spd * moveScale * sprintMult * buffMult * gustMult * exhaustSlow * chargeSlow;
-      this.world.moveWithCollision(p, mx * spd * dt, my * spd * dt, p.radius);
+      const movedRes = this.world.moveWithCollision(p, mx * spd * dt, my * spd * dt, p.radius);
       p.walkTime += dt * (p.sprinting ? 11 : 7.5);
+      if (movedRes.movedX || movedRes.movedY) {
+        const curTile = this.world.getTileAtWorld(p.x, p.y);
+        const nearWater =
+          curTile !== TileKind.Bridge &&
+          (this.world.getTileAtWorld(p.x + 10, p.y) === TileKind.Water ||
+            this.world.getTileAtWorld(p.x - 10, p.y) === TileKind.Water ||
+            this.world.getTileAtWorld(p.x, p.y + 10) === TileKind.Water ||
+            this.world.getTileAtWorld(p.x, p.y - 10) === TileKind.Water);
+        const stepSurface: FootstepSurfaceId = nearWater
+          ? "water"
+          : curTile === TileKind.Bridge
+            ? "town"
+            : this.currentBiome;
+        sfx.playFootstep(stepSurface, p.sprinting);
+      }
       if (this.tutorialActive && BEGINNER_PRACTICE_STEPS[this.tutorialStep]?.id === "move") {
         this.tutorialMoveDist += spd * dt;
         if (this.tutorialMoveDist >= 26) {
@@ -2499,6 +2523,7 @@ export class PixTelOpenWorldGame {
     } else if (p.charging) {
       if (p.chargeTime >= reqCharge) {
         this.combat.performChargedAttack(combatCtx, isJustWindow);
+        this._broadcastHeroFx("charge");
         this._advanceTutorial("charge");
       }
       p.charging = false;
@@ -3843,6 +3868,7 @@ export class PixTelOpenWorldGame {
         const prevDash = this.player.dashing;
         this.combat.performDash(this._makeCombatContext(), mx, my);
         if (this.player.dashing > prevDash) {
+          this._broadcastHeroFx("dash");
           this._advanceTutorial("dash");
         }
       } else if (e.code === "Digit1") {

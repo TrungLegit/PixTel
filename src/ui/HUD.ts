@@ -113,10 +113,20 @@ export class HudUI {
     document.getElementById("hud-btn-quest")!.addEventListener("click", () => this.game.toggleModal("journal"));
     this.hudRoot.querySelector(".qt-hdr")?.addEventListener("click", () => this.game.toggleModal("journal"));
     document.getElementById("hud-btn-save")!.addEventListener("click", () => this.game.saveGame(true));
-    document.getElementById("hud-btn-mute")!.addEventListener("click", (ev) => {
+    document.getElementById("hud-btn-mute")!.addEventListener("click", () => {
+      sfx.unlock();
       const muted = sfx.toggleMute();
-      (ev.currentTarget as HTMLElement).textContent = muted ? "MUTE" : "SFX";
+      if (!muted) sfx.playUiClick();
+      this._syncMuteBtn();
+      this.toast(
+        muted
+          ? "🔇 Đã tắt âm thanh SFX (Nhấn lại hoặc vào [ESC] để bật)"
+          : `🔊 Đã bật âm thanh SFX (${Math.round(sfx.getVolume() * 100)}%)`,
+        "info"
+      );
     });
+    sfx.onChange(() => this._syncMuteBtn());
+    this._syncMuteBtn();
     document.getElementById("hud-btn-pause")!.addEventListener("click", () => this.game.toggleModal("pause"));
 
     this.miniCanvas.addEventListener("click", () => this.game.toggleModal("world_map"));
@@ -175,6 +185,17 @@ export class HudUI {
     const fsBtn = document.getElementById("hud-btn-fs");
     if (!fsBtn) return;
     fsBtn.classList.toggle("active", Boolean(document.fullscreenElement));
+  }
+
+  private _syncMuteBtn() {
+    const muteBtn = document.getElementById("hud-btn-mute");
+    if (!muteBtn) return;
+    const isMuted = sfx.muted || sfx.getVolume() <= 0;
+    muteBtn.textContent = isMuted ? "MUTE" : "SFX";
+    muteBtn.classList.toggle("muted", isMuted);
+    muteBtn.title = isMuted
+      ? "Âm thanh đang TẮT (Nhấn để bật lại)"
+      : `Âm thanh SFX: ${Math.round(sfx.getVolume() * 100)}% (Nhấn để tắt · Chỉnh % trong [ESC])`;
   }
 
   private _clearToastTimer(el: HTMLElement) {

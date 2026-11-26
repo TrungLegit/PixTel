@@ -162,7 +162,32 @@ function bootstrap() {
     }
   }
 
-  // Pause Modal Controls
+  // Pause Modal Controls + Persistent 16-bit Audio Settings
+  const pauseVolSlider = document.getElementById("pause-vol-slider") as HTMLInputElement | null;
+  const pauseVolVal = document.getElementById("pause-vol-val");
+  const pauseMuteBtn = document.getElementById("btn-pause-mute");
+  const syncPauseAudioUi = () => {
+    const pct = sfx.muted ? 0 : Math.round(sfx.getVolume() * 100);
+    if (pauseVolSlider) pauseVolSlider.value = String(Math.round(sfx.getVolume() * 100));
+    if (pauseVolVal) pauseVolVal.textContent = sfx.muted ? "TẮT" : `${pct}%`;
+    if (pauseMuteBtn) {
+      pauseMuteBtn.textContent = sfx.muted ? "🔊 BẬT LẠI" : "🔇 TẮT TIẾNG";
+    }
+  };
+  pauseVolSlider?.addEventListener("input", () => {
+    sfx.unlock();
+    const v = Number(pauseVolSlider.value) / 100;
+    sfx.setVolume(v);
+    sfx.playUiClick();
+  });
+  pauseMuteBtn?.addEventListener("click", () => {
+    sfx.unlock();
+    const m = sfx.toggleMute();
+    if (!m) sfx.playUiClick();
+  });
+  sfx.onChange(syncPauseAudioUi);
+  syncPauseAudioUi();
+
   document.getElementById("btn-pause-resume")!.addEventListener("click", () => {
     sfx.playUiClick();
     game.setModal(null);

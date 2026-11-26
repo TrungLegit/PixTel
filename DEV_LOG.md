@@ -9,10 +9,14 @@
 
 ## Trạng Thái Hiện Tại (Current Project Stage Snapshot)
 
-- **Giai đoạn / Phiên bản hiện tại:** `PIXTEL v3.2.6` — Zero-Overlap HUD Layout (`0 px²`), High-Contrast 16-Bit Typography, Fullscreen `[F11]` & Combat Minimal HUD `[V]`, Clean Name Filter (`"Lữ Khách"`), Starter Stash Weapon FTUE + trọn bộ `v3.2` (16-Scene Prologue, HD Core-16 Sprites, Gacha Mùa `[G]`, Mobile PWA & 2–4P Co-op)
-- **Commit mới nhất trên `main`:** `b07db9e` + `v3.2.6` HUD/UX/FTUE Overhaul (`2026-11-26`)
-- **Thành viên / AI đóng góp gần đây:** `chu0n6-iot`, `TrungLegit`, `Antigravity` (`qa_playtester` + `ui_ux_dev`), `Yaros`, `GitHub Copilot`
+- **Giai đoạn / Phiên bản hiện tại:** `PIXTEL v3.3` — Hybrid Retro 16-Bit JRPG SFX Engine (`22050 Hz` Mono `-3 dBFS` `.ogg/.mp3` + Web Audio API `0 KB` Procedural Synth, 9-Element & 4-Class Voices, NPC Typewriter Blips, 2D Spatial Co-op Audio & Offline PWA SFX Cache) + trọn bộ `v3.2.6` Zero-Overlap HUD
+- **Commit mới nhất trên `main`:** `9b560f4` + `v3.3` Hybrid 16-Bit JRPG SFX Architecture (`2026-11-26`)
+- **Thành viên / AI đóng góp gần đây:** `chu0n6-iot`, `TrungLegit`, `Antigravity`, `Yaros`, `GitHub Copilot`
 - **Các hệ thống chính đã hoàn thiện:**
+  - **PIXTEL v3.3 — Hệ Thống Âm Thanh Hiệu Ứng (SFX) Lai Retro 16-Bit JRPG Tối Ưu Mobile, Co-op & Offline PWA:**
+    - **Pipeline chuẩn hóa âm thanh (`scripts/convert_sfx.py`, `npm run sfx`):** Xử lý nguồn `.wav/.ogg/.mp3` từ `raw_sfx/` (kèm `--seed-cc0` tự tổng hợp 16 clip CC0 sạch bản quyền khi thư mục trống) sang `public/sfx/` theo chuẩn Retro 16-bit (`22050 Hz`, `Mono`, chuẩn hóa đỉnh `-3.0 dBFS`), xuất đồng thời `.ogg` (`105.8 KB` cho Chrome/Android) & `.mp3` (`57.6 KB` `64kbps` cho Safari iOS PWA) cùng `public/sfx/manifest.json`.
+    - **Bộ máy âm thanh lai (`src/audio/chiptuneSynth.ts`):** Kết hợp tổng hợp Web Audio API độ trễ `0 ms` (đòn đánh/tụ lực/tuyệt kỹ `[Q]` riêng cho 4 Class, 41 kỹ năng vũ khí `[E]`, toàn bộ 9 nguyên tố & 28+1 phản ứng nguyên tố, giọng bíp máy chữ riêng từng NPC/Boss/Class, âm thanh Lò Rèn/Đổi Mệnh/Khảm Sắc/Kiểm tra vật phẩm) với bộ nạp `AudioBuffer` bất đồng bộ (tự động fallback tức thì sang Web Audio API nếu file thiếu/chưa nạp, tự thử chéo `.ogg` ↔ `.mp3`, tự mở khóa `AudioContext` cảm ứng iOS/Android, giới hạn đa âm di động & dùng chung bộ đệm nhiễu LFSR `0 GC`).
+    - **Âm thanh không gian 2D Co-op (`playSpatialSfx` + `src/net/coopClient.ts`) & Lưu cấu hình (`localStorage`):** Tự động suy giảm âm lượng, lọc thông thấp theo khoảng cách và đảo kênh trái/phải (`StereoPannerNode`) khi đồng đội tung chiêu, lướt, bước chạy, kích nổ phản ứng, mở trụ hoặc phát tín hiệu tập hợp; thêm thanh trượt âm lượng `0–100%` trong `[ESC]` đồng bộ với nút `SFX`/`MUTE` trên HUD qua `pixtel_audio_settings_v1` và pre-cache toàn bộ `/sfx/*` trong `public/sw.js`.
   - **PIXTEL v3.2.6 — Đại Tu Bố Cục HUD `0 px²` Chồng Chéo, Tương Phản 16-Bit, `[F11]` / `[V]`, Bộ Lọc Tên Sạch & Luồng FTUE:** Tách cột trái `.hud-left-stack` (xếp gọn Hero Panel, Party Box, Tutorial Banner sang mép trái không bao giờ che trung tâm), neo `#toast-stack` mảnh sát mép trên (tối đa `2` toast, tự gộp trùng, `2.5s`), đồng bộ `currentBiome` khi hồi sinh/dịch chuyển dập tắt bắn kép toast, nâng tương phản `.hud-meta-row` / `Bia Ký 0/8` / `✊ TAY KHÔNG` / biển hiệu thế giới có viền sáng + glyph `[` `]`, sửa sạch thanh đáy (`58×56px`, `.key-cap` nền đặc xóa lỗi `LMB...`, `SPACE`, `0 CHÌA`, `CẦN VK`), gom Toolbar 2 hàng chuẩn, thêm `⛶ F11` + Thu gọn HUD chiến đấu `👁 HUD [V]`, bộ lọc `sanitizePlayerName` (`"Lữ Khách"`) tự dọn sạch `localStorage`/Save cũ, và đặt sẵn Vũ Khí Khởi Đầu vào `STARTER STASH [F]` kèm nút **`⚡ LẤY & TRANG BỊ NGAY`**.
   - **Web / Mobile PWA & Triển khai GitHub Pages:** Tự động test (`npm test`), build & deploy qua GitHub Actions lên `https://trunglegit.github.io/PixTel/`, kèm `manifest.webmanifest`, `sw.js`, `icon.svg`, chế độ màn hình ngang fullscreen, font Pixelify Sans tiếng Việt tự lưu trữ cục bộ (không phụ thuộc CDN).
   - **Giai đoạn 1 — Mobile Twin-Stick & Smart Auto-Aim:** Cần xoay Analog đa điểm (đẩy sát viền tự động Chạy Nhanh + nút khóa Sprint), cụm phím chiến đấu bên phải (`⚔ ĐÁNH / GIỮ TỤ LỰC` phát sáng vàng ở khung Just-Charge, `💨 LƯỚT`, `✦ [E]`, `🔥 [Q]`, `🖐 [F]`), Tự Ngắm Mục Tiêu Thông Minh (ưu tiên Trụ Đấu Trường -> Boss/Quái -> Mỏ quặng) hoặc kéo 360°, chạm xem chi tiết trang bị (Tap-to-Inspect).
@@ -24,7 +28,7 @@
     - **Quái & Boss Sắc Nét HD (`306` frame) & Cân Bằng Hardcore Grind-to-Boss:** Tăng độ phân giải & làm nét toàn bộ 19 model quái/boss kèm frame đánh **`:atk`** 4 hướng, tia cảnh báo đòn (Danger Glint), gọi bầy đàn `"!"` (`125px`), bật lùi trúng đòn, xuất hiện cổng màu; tăng mạnh HP/ATK/DEF/Giáp Trắng của quái & Boss + hồi chiêu Bình Máu `2.5s` để buộc người chơi farm bãi quái, làm nhiệm vụ & cường hóa trang bị trước khi thách đấu Boss.
 - **Trọng tâm tiếp theo (Active / Next Focus Areas):**
   - Tiếp tục thu thập phản hồi thực chiến trên `https://trunglegit.github.io/PixTel/` (PC & Mobile Co-op).
-  - Giai đoạn 3 (tùy chọn mở rộng): Authoritative Cloud Server (Colyseus / Fly.io / Railway) chống cheat tuyệt đối, Bảng xếp hạng Time-Attack Boss, hoặc đóng gói Capacitor lên Google Play / App Store.
+  - Giai đoạn 3 (tùy chọn mở rộng): Nhạc nền BGM 16-bit biến thiên động theo Quần xã / Boss Phase, Authoritative Cloud Server (Colyseus / Fly.io / Railway), hoặc đóng gói Capacitor lên Google Play / App Store.
 
 ---
 
@@ -45,6 +49,26 @@
 ---
 
 ## Nhật Ký Cập Nhật (Newest First)
+
+### [2026-11-26 16:08 UTC] — chu0n6-iot (Antigravity) — Xây Dựng & Tích Hợp Hệ Thống SFX Lai Retro 16-Bit JRPG (Mobile · Co-op Không Gian 2D · Offline PWA)
+- **Commit / Branch:** `main`
+- **Giai đoạn / Version:** `PIXTEL v3.3` — Hybrid Retro 16-Bit JRPG SFX Engine & Pipeline
+- **Đã làm (Done):**
+  - **Giai đoạn 1 — Pipeline xử lý & chuẩn hóa âm thanh (`scripts/convert_sfx.py`, `raw_sfx/README.md`, `public/sfx/*`):**
+    - Viết `scripts/convert_sfx.py` hỗ trợ cả `ffmpeg` và `pydub`, chuẩn hóa mọi file `.wav/.ogg/.mp3` trong `raw_sfx/` về đúng chuẩn Retro 16-bit (`22050 Hz`, `Mono`, `-3.00 dBFS`) và xuất đồng thời 2 định dạng `64kbps` `.ogg` (`105.8 KB` cho Chrome/Android) & `.mp3` (`57.6 KB` cho Safari iOS PWA) cùng `public/sfx/manifest.json` (tích hợp `--seed-cc0` tự tổng hợp 16 clip gốc CC0 sạch bản quyền).
+  - **Giai đoạn 2 — Nâng cấp bộ máy âm thanh lai (`src/audio/chiptuneSynth.ts`):**
+    - **Procedural Chiptune (`0 KB`, độ trễ `0 ms`):** Tổng hợp trực tiếp đòn thường/combo, tụ lực Just-Charge, 41 kỹ năng vũ khí `[E]`, tuyệt kỹ `[Q]` riêng cho 4 Class, đầy đủ 9 nguyên tố (`fire`, `ice`, `nature`, `volt`, `prism`, `void`, `chroma`, `wind`, `quake`) & 28+1 phản ứng nguyên tố, giọng nói máy chữ tần số riêng cho từng NPC (`Elian`, `Kael`, `Mira`) / Boss / Class, cùng hiệu ứng Lò Rèn, Xúc Xắc Đổi Mệnh, Khảm Sắc Tố & kiểm tra túi đồ.
+    - **Hybrid `AudioBuffer` Loader & Tối ưu Mobile:** Nạp bất đồng bộ 16 clip `/sfx/*` (bước chân 5 quần xã + lội nước, 4 tiếng gầm Boss, mở rương, thắp trụ, đào/vỡ mỏ, búa đe lò rèn, tín hiệu Co-op), tự động fallback sang Web Audio API nếu file chưa nạp hoặc lỗi mạng, tự thử chéo `.ogg` ↔ `.mp3`, tự mở khóa/resume `AudioContext` trên iOS/Android, giới hạn đa âm (`14` mobile / `24` desktop) và tái sử dụng bộ đệm nhiễu LFSR 15-bit không tạo rác bộ nhớ.
+    - **Co-op 2D Spatial Audio & Lưu cấu hình:** Hiện thực `computeSpatialParams` & `playSpatialSfx` (suy giảm âm lượng theo khoảng cách, lọc thông thấp không khí & `StereoPannerNode` trái/phải) và lưu trạng thái tắt tiếng / âm lượng vào `localStorage` (`pixtel_audio_settings_v1`).
+  - **Giai đoạn 3 — Tích hợp toàn diện Gameplay, Thế giới mở, UI, Co-op & Offline PWA:**
+    - Gắn SFX chiến đấu Class, 9 nguyên tố/phản ứng, tiếng gầm chuyển Phase 1/2/3 theo từng Boss & cảnh báo đòn Boss trong `src/systems/combat.ts`.
+    - Gắn tiếng bước chân theo quần xã & mép nước, giải mã Bia Ký, dùng dược phẩm và phát tín hiệu Co-op trong `src/game.ts`.
+    - Gắn hiệu ứng chạy chữ kèm tiếng bíp giọng riêng trong `src/ui/DialogueModal.ts` & `src/ui/CutsceneModal.ts`, tiếng búa rèn/đổi mệnh/khảm sắc trong `src/ui/ForgeModal.ts`, tiếng xem trang bị theo độ hiếm trong `src/ui/InventoryModal.ts` & `src/ui/ItemReviewTooltip.ts`, đồng bộ nút `SFX`/`MUTE` trên `src/ui/HUD.ts` và thêm thanh trượt Âm lượng SFX `0–100%` trong menu `[ESC]` (`index.html`, `src/main.ts`, `style.css`).
+    - Tự động phát âm thanh không gian 2D khi nhận gói tin đồng đội trong `src/net/coopClient.ts` (`src/net/protocol.ts`) và cập nhật `public/sw.js` (`pixtel-pwa-v3.3-sfx`) để pre-cache & phục vụ offline toàn bộ file `.ogg/.mp3`.
+- **File chính đã sửa / thêm:** `scripts/convert_sfx.py`, `raw_sfx/README.md`, `public/sfx/*` (`16 .ogg` + `16 .mp3` + `manifest.json`), `public/sw.js`, `src/audio/chiptuneSynth.ts`, `src/systems/combat.ts`, `src/game.ts`, `src/net/protocol.ts`, `src/net/coopClient.ts`, `src/ui/DialogueModal.ts`, `src/ui/CutsceneModal.ts`, `src/ui/ForgeModal.ts`, `src/ui/InventoryModal.ts`, `src/ui/ItemReviewTooltip.ts`, `src/ui/HUD.ts`, `index.html`, `src/main.ts`, `style.css`, `package.json`, `.gitignore`, `tests/featureTests.ts`, `DEV_LOG.md`
+- **Kiểm tra (Verified):** `npm run typecheck` (`0` lỗi), `npm test` (**20/20** feature suites PASS sạch — bổ sung **Suite 20** kiểm thử chuẩn hóa `22050 Hz`/`-3 dBFS`, `ChiptuneSynth` procedural + fallback, tần số giọng NPC, Co-op Spatial Audio qua WebSocket thật & PWA `sw.js`), `npm run build` (`vite build` sạch, xuất đầy đủ `dist/sfx/`).
+- **Lưu ý / Handoff (Breaking changes / Đang dở):** Không có breaking change; để thêm/thay thế gói âm thanh CC0 tùy chỉnh, chỉ cần chép `.wav/.ogg/.mp3` vào `raw_sfx/` và chạy `npm run sfx` (`python3 scripts/convert_sfx.py`).
+- **Gợi ý bước tiếp theo (Next Steps):** Có thể mở rộng thêm nhạc nền BGM Chiptune 16-bit chuyển tiếp mượt theo từng Quần xã & Boss Arena.
 
 ### [2026-11-26 15:25 UTC] — chu0n6-iot (Antigravity Multi-Agent: `qa_playtester` + `ui_ux_dev`) — Đại Tu Bố Cục HUD `0 px²` Chồng Chéo, Độ Tương Phản 16-Bit, `[F11]` / `[V]`, Bộ Lọc Tên Sạch & Luồng FTUE Tân Thủ
 - **Commit / Branch:** `main`

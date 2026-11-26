@@ -449,7 +449,13 @@ export class InventoryModalUI {
       const uid = (el as HTMLElement).dataset.uid ?? null;
       const isBag = (el as HTMLElement).dataset.bag === "1";
       el.addEventListener("click", () => {
-        sfx.playUiClick();
+        const found = uid ? inv.findByUid(uid) : null;
+        const def = found ? ITEMS[found.item.defId] : undefined;
+        if (def && !this.quickSellMode) {
+          sfx.playItemInspect(def.rarity);
+        } else {
+          sfx.playUiClick();
+        }
         if (this.quickSellMode && isBag && uid) {
           if (this.selectedSellUids.has(uid)) {
             this.selectedSellUids.delete(uid);
@@ -466,6 +472,9 @@ export class InventoryModalUI {
       el.addEventListener("mouseenter", () => {
         if (this.hoveredUid !== uid) {
           this.hoveredUid = uid;
+          const found = uid ? inv.findByUid(uid) : null;
+          const def = found ? ITEMS[found.item.defId] : undefined;
+          if (def) sfx.playItemInspect(def.rarity);
           this._renderDetail();
         }
       });

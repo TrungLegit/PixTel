@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "sfx": "python3 scripts/convert_sfx.py",
     "server": "./node_modules/.bin/esbuild server/coopServer.ts --bundle --platform=node --format=esm --external:ws --outfile=node_modules/.cache/coopServer.mjs && PIXTEL_RUN_SERVER=1 node node_modules/.cache/coopServer.mjs",
     "test": "./node_modules/.bin/esbuild tests/featureTests.ts --bundle --platform=node --format=esm --external:ws --external:peerjs --loader:.png=dataurl --outfile=node_modules/.cache/featureTests.mjs && node node_modules/.cache/featureTests.mjs"
   },

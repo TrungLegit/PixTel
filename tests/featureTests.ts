@@ -60,11 +60,21 @@ import { WorldSpawner } from "../src/world/spawner";
 import { WorldMap } from "../src/world/worldMap";
 import { ATLAS_PRESETS, PIXELFX_MODS } from "../src/vfx/vfxManager";
 import { createFrame, createFx } from "../src/vfx/pixelfx/core/index.js";
+import fs from "node:fs";
+import path from "node:path";
 import WebSocket from "ws";
 import { PixTelOpenWorldGame } from "../src/game";
 import { DEFAULT_HERO_NAME, isProfanePlayerName, sanitizePlayerName } from "../src/utils/playerName";
 import { startCoopServer } from "../server/coopServer";
-import type { WebSocketLike } from "../src/net/coopClient";
+import { CoopClient, type WebSocketLike } from "../src/net/coopClient";
+import {
+  AUDIO_STORAGE_KEY,
+  ChiptuneSynth,
+  HYBRID_SFX_IDS,
+  NPC_VOICE_PROFILES,
+  computeSpatialParams,
+  sfx,
+} from "../src/audio/chiptuneSynth";
 
 // Lightweight headless mocks for browser globals so all systems run at pure logic speed in Node
 (globalThis as unknown as { performance?: { now: () => number } }).performance ??= {
@@ -2894,6 +2904,318 @@ async function runAsyncSuitesAndPrint() {
 
     results.push(
       "PASS · Player Name Profanity Sanitizer, FTUE Starter Stash Weapon, Biome Toast Deduplication & Compact HUD [V]"
+    );
+  }
+
+  // =========================================================================
+  // SUITE 20: HYBRID 16-BIT JRPG SFX ENGINE, DUAL-FORMAT ASSETS, SPATIAL CO-OP & PWA CACHE
+  // =========================================================================
+  {
+    // 1. Verify Phase 1 `public/sfx/` converted 22050Hz Mono -3dBFS `.ogg` + `.mp3` assets & `public/sw.js` cache list
+    const sfxDir = path.resolve(process.cwd(), "public/sfx");
+    const manifestPath = path.join(sfxDir, "manifest.json");
+    assert.equal(fs.existsSync(manifestPath), true, "public/sfx/manifest.json exists");
+    const sfxManifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8")) as {
+      sampleRate: number;
+      channels: number;
+      targetDbfs: number;
+      bitrate: string;
+      clips: Record<string, { peakDbfs: number; oggBytes: number; mp3Bytes: number }>;
+    };
+    assert.equal(sfxManifest.sampleRate, 22050, "SFX bank normalized to 22050 Hz Retro 16-bit sample rate");
+    assert.equal(sfxManifest.channels, 1, "SFX bank normalized to Mono (1 channel)");
+    assert.equal(sfxManifest.targetDbfs, -3.0, "SFX bank normalized to -3.0 dBFS target");
+    for (const id of HYBRID_SFX_IDS) {
+      const oggPath = path.join(sfxDir, `${id}.ogg`);
+      const mp3Path = path.join(sfxDir, `${id}.mp3`);
+      assert.equal(fs.existsSync(oggPath), true, `Hybrid OGG exists: ${id}.ogg`);
+      assert.equal(fs.existsSync(mp3Path), true, `Hybrid MP3 exists: ${id}.mp3`);
+      assert.ok(fs.statSync(oggPath).size > 500, `${id}.ogg is non-empty`);
+      assert.ok(fs.statSync(mp3Path).size > 500, `${id}.mp3 is non-empty`);
+      const meta = sfxManifest.clips[id];
+      assert.ok(meta, `Manifest includes clip metadata for ${id}`);
+      assert.ok(Math.abs(meta.peakDbfs - -3.0) <= 0.25, `${id} peak normalized to -3.0 dBFS (got ${meta.peakDbfs})`);
+    }
+
+    const swSource = fs.readFileSync(path.resolve(process.cwd(), "public/sw.js"), "utf-8");
+    for (const id of HYBRID_SFX_IDS) {
+      assert.ok(swSource.includes(`"${id}"`), `Service Worker pre-caches hybrid SFX clip '${id}'`);
+    }
+    assert.ok(swSource.includes('"/sfx/"'), "Service Worker includes cache-first offline handler for /sfx/");
+
+    // 2. Unit-test `ChiptuneSynth` with deterministic mock Web Audio API, storage & fetch
+    let resumedCount = 0;
+    let oscCount = 0;
+    let bufSrcCount = 0;
+    let lastPanValue = 0;
+
+    const makeMockAudioContext = () => {
+      const dummyNode = {
+        connect: () => dummyNode,
+        disconnect: () => {},
+      };
+      const ctxMock = {
+        state: "suspended" as AudioContextState,
+        sampleRate: 22050,
+        currentTime: 0,
+        destination: dummyNode,
+        resume: async () => {
+          ctxMock.state = "running";
+          resumedCount++;
+        },
+        createGain: () => ({
+          gain: {
+            value: 1,
+            setValueAtTime: () => {},
+            exponentialRampToValueAtTime: () => {},
+          },
+          connect: () => dummyNode,
+          disconnect: () => {},
+        }),
+        createDynamicsCompressor: () => ({
+          threshold: { value: 0 },
+          knee: { value: 0 },
+          ratio: { value: 1 },
+          attack: { value: 0 },
+          release: { value: 0 },
+          connect: () => dummyNode,
+          disconnect: () => {},
+        }),
+        createOscillator: () => {
+          oscCount++;
+          return {
+            type: "square",
+            frequency: {
+              value: 440,
+              setValueAtTime: () => {},
+              exponentialRampToValueAtTime: () => {},
+            },
+            connect: () => dummyNode,
+            start: () => {},
+            stop: () => {},
+          };
+        },
+        createBiquadFilter: () => ({
+          type: "bandpass",
+          frequency: { value: 1000 },
+          connect: () => dummyNode,
+          disconnect: () => {},
+        }),
+        createStereoPanner: () => ({
+          pan: {
+            get value() {
+              return lastPanValue;
+            },
+            set value(v: number) {
+              lastPanValue = v;
+            },
+          },
+          connect: () => dummyNode,
+          disconnect: () => {},
+        }),
+        createBuffer: (_ch: number, len: number, sr: number) => ({
+          duration: len / sr,
+          length: len,
+          sampleRate: sr,
+          numberOfChannels: 1,
+          getChannelData: () => new Float32Array(len),
+        }),
+        createBufferSource: () => {
+          bufSrcCount++;
+          return {
+            buffer: null,
+            loop: false,
+            playbackRate: { value: 1 },
+            connect: () => dummyNode,
+            start: () => {},
+            stop: () => {},
+          };
+        },
+        decodeAudioData: async (ab: ArrayBuffer) =>
+          ({
+            duration: Math.max(0.08, ab.byteLength / 22050),
+            length: ab.byteLength,
+            sampleRate: 22050,
+            numberOfChannels: 1,
+            getChannelData: () => new Float32Array(128),
+          }) as unknown as AudioBuffer,
+      };
+      return ctxMock as unknown as AudioContext;
+    };
+
+    const audioStoreMap = new Map<string, string>();
+    const mockStorage = {
+      getItem: (k: string) => audioStoreMap.get(k) ?? null,
+      setItem: (k: string, v: string) => {
+        audioStoreMap.set(k, v);
+      },
+    };
+
+    const fetchedUrls: string[] = [];
+    const testSynth = new ChiptuneSynth({
+      contextFactory: makeMockAudioContext,
+      storage: mockStorage,
+      preferredFormat: "ogg",
+      autoBindDom: false,
+      fetchFn: async (url: string) => {
+        fetchedUrls.push(url);
+        // Simulate: `step_meadow.ogg` 404s so engine falls back to `step_meadow.mp3`, `mine_hit` 404s completely -> procedural fallback!
+        if (url.endsWith("step_meadow.ogg")) {
+          return { ok: false, arrayBuffer: async () => new ArrayBuffer(0) };
+        }
+        if (url.includes("mine_hit")) {
+          return { ok: false, arrayBuffer: async () => new ArrayBuffer(0) };
+        }
+        return { ok: true, arrayBuffer: async () => new ArrayBuffer(2048) };
+      },
+    });
+
+    // Unlock suspended mobile context & verify persistence to localStorage
+    testSynth.unlock();
+    assert.ok(resumedCount >= 1, "unlock() resumes suspended mobile AudioContext");
+    testSynth.setVolume(0.55);
+    assert.equal(testSynth.getVolume(), 0.55, "setVolume updates active volume");
+    testSynth.toggleMute();
+    assert.equal(testSynth.muted, true, "toggleMute mutes synth");
+    const savedRaw = audioStoreMap.get(AUDIO_STORAGE_KEY);
+    assert.ok(savedRaw, "Audio settings persisted to localStorage");
+
+    const restoredSynth = new ChiptuneSynth({
+      contextFactory: makeMockAudioContext,
+      storage: mockStorage,
+      autoBindDom: false,
+    });
+    assert.equal(restoredSynth.muted, true, "Persisted mute state restores from localStorage");
+    assert.equal(restoredSynth.getVolume(), 0.55, "Persisted volume restores from localStorage");
+
+    // Unmute testSynth and verify procedural 4-Class, 9-Element, Reaction & Character NPC Voice synthesis
+    testSynth.setMuted(false);
+    testSynth.resetTelemetry();
+    const oscBefore = oscCount;
+    for (const cid of ["prism_knight", "chroma_mage", "bit_rogue", "pixel_tinker"] as ClassId[]) {
+      testSynth.playClassAttack(cid, 2, true);
+      testSynth.playClassCharge(cid, true);
+      testSynth.playClassUltimate(cid);
+    }
+    for (const elem of ALL_ELEMENTS) {
+      testSynth.resetTelemetry();
+      testSynth.playElementAura(elem);
+    }
+    testSynth.playReaction("fire", "ice", false);
+    testSynth.playReaction("void", "prism", true);
+    assert.ok(oscCount > oscBefore + 30, "Procedural Class skills, 9 Elements & Reactions synthesize oscillators");
+
+    // Verify distinct NPC voice frequencies + punctuation skip
+    testSynth.resetTelemetry();
+    const fBlacksmith = testSynth.playNpcVoice("npc_blacksmith", "o");
+    testSynth.resetTelemetry();
+    const fElder = testSynth.playNpcVoice("Trưởng Làng Elian", "o");
+    testSynth.resetTelemetry();
+    const fMerchant = testSynth.playNpcVoice("Thương Nhân Mira", "o");
+    testSynth.resetTelemetry();
+    const fPunct = testSynth.playNpcVoice("npc_elder", " ");
+    assert.equal(fPunct, 0, "Whitespace/punctuation produces 0 Hz (no harsh typewriter buzz)");
+    assert.ok(
+      fBlacksmith < fElder && fElder < fMerchant,
+      `NPC voices have distinct pitch registers: Kael(${fBlacksmith}Hz) < Elian(${fElder}Hz) < Mira(${fMerchant}Hz)`
+    );
+    assert.notEqual(
+      NPC_VOICE_PROFILES.boss_the_eraser.baseFreq,
+      NPC_VOICE_PROFILES.boss_xing_warden.baseFreq,
+      "Boss voice profiles have distinct frequencies"
+    );
+
+    // 3. Verify Hybrid AudioBuffer fallback-before-load, `.ogg` -> `.mp3` cross-format retry, and cached buffer playback
+    testSynth.resetTelemetry();
+    // Before preload finishes, playMine(false) (`mine_hit` 404s) immediately uses procedural fallback with 0 errors
+    testSynth.playMine(false);
+    assert.ok(
+      testSynth.getRecentEvents().some((e) => e.tag === "mine_hit" && e.mode === "hybrid_fallback"),
+      "Missing / uncached hybrid clip immediately triggers zero-latency procedural fallback"
+    );
+
+    const decodedCount = await testSynth.preloadHybridBank(["step_meadow", "boss_roar_eraser", "mine_hit"]);
+    assert.equal(decodedCount, 2, "Preloads available clips (.mp3 fallback for step_meadow + .ogg for boss_roar_eraser)");
+    assert.equal(testSynth.hasCachedBuffer("step_meadow"), true, "step_meadow decoded via .mp3 fallback after .ogg 404");
+    assert.equal(testSynth.hasCachedBuffer("mine_hit"), false, "mine_hit stays uncached on 404 without throwing");
+
+    testSynth.resetTelemetry();
+    const bufBefore = bufSrcCount;
+    testSynth.playFootstep("meadow", false);
+    testSynth.playBossPhaseRoar("boss_the_eraser", 3);
+    assert.ok(bufSrcCount > bufBefore, "Cached hybrid clips play directly through AudioBufferSourceNode");
+    assert.ok(
+      testSynth.getRecentEvents().some((e) => e.tag === "step_meadow" && e.mode === "hybrid_buffer"),
+      "Decoded step_meadow plays in hybrid_buffer mode"
+    );
+
+    // 4. Verify Co-op 2D Spatial Audio math (`computeSpatialParams`) & live `CoopClient` spatial packet trigger
+    const nearP = computeSpatialParams(100, 100, 120, 100, 420, 48);
+    const rightMidP = computeSpatialParams(100, 100, 260, 100, 420, 48);
+    const leftMidP = computeSpatialParams(100, 100, -40, 100, 420, 48);
+    const farP = computeSpatialParams(100, 100, 620, 100, 420, 48);
+    assert.equal(nearP.audible, true);
+    assert.equal(nearP.gain, 1, "Teammate within refDist has full 1.0 gain");
+    assert.ok(rightMidP.gain > 0 && rightMidP.gain < 1, `Mid-range teammate attenuates smoothly (gain=${rightMidP.gain})`);
+    assert.ok(rightMidP.pan > 0, "Teammate to the right pans right (> 0)");
+    assert.ok(leftMidP.pan < 0, "Teammate to the left pans left (< 0)");
+    assert.equal(farP.audible, false, "Teammate beyond maxDist is culled (gain=0)");
+    assert.equal(farP.gain, 0);
+
+    const spRes = testSynth.playSpatialSfx("ult", 100, 100, 240, 100, { classId: "chroma_mage" });
+    assert.equal(spRes.audible, true);
+    assert.ok(lastPanValue > 0, "StereoPannerNode receives positive pan for right-side Co-op ally");
+
+    // Live WebSocket room test verifying `CoopClient` triggers spatial SFX on incoming teammate packets
+    const srv = await startCoopServer(0);
+    try {
+      const wsUrl = `ws://127.0.0.1:${srv.port}`;
+      const wsFactory = (u: string) => new WebSocket(u) as unknown as WebSocketLike;
+      const hostClient = new CoopClient(
+        { onStatusChange: () => {}, onPacket: () => {}, onPeerJoined: () => {}, onPeerLeft: () => {} },
+        wsFactory
+      );
+      const guestClient = new CoopClient(
+        { onStatusChange: () => {}, onPacket: () => {}, onPeerJoined: () => {}, onPeerLeft: () => {} },
+        wsFactory
+      );
+      guestClient.setListenerPositionProvider(() => ({ x: 500, y: 500 }));
+
+      const room = await hostClient.hostRoom({ mode: "ws", wsUrl, playerName: "HostHero" });
+      await guestClient.joinRoom(room, { mode: "ws", wsUrl, playerName: "GuestHero" });
+
+      sfx.setMuted(false);
+      sfx.resetTelemetry();
+      hostClient.send({
+        type: "hero_fx",
+        playerId: hostClient.localId,
+        preset: "collect-burst-legendary",
+        x: 610,
+        y: 500,
+        sfxKind: "ult",
+        classId: "prism_knight",
+      });
+
+      const deadline = Date.now() + 1500;
+      while (
+        Date.now() < deadline &&
+        !sfx.getRecentEvents().some((ev) => ev.tag === "spatial:ult")
+      ) {
+        await new Promise((r) => setTimeout(r, 20));
+      }
+      assert.ok(
+        sfx.getRecentEvents().some((ev) => ev.tag === "spatial:ult"),
+        "CoopClient automatically plays distance-attenuated spatial SFX when receiving teammate hero_fx packet"
+      );
+
+      hostClient.disconnect();
+      guestClient.disconnect();
+    } finally {
+      await srv.close();
+    }
+
+    results.push(
+      "PASS · Hybrid 16-Bit JRPG SFX Engine (22050Hz .ogg/.mp3, 9-Elem/Class/NPC Synth, Auto-Fallback, Spatial Co-op & PWA)"
     );
   }
 

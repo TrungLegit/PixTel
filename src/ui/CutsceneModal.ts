@@ -286,7 +286,7 @@ export class CutsceneModalUI {
     else if (beat.sfx === "explosion") sfx.playExplosion();
     else if (beat.sfx === "slash") sfx.playSlash(2);
     else if (beat.sfx === "magic") sfx.playMagic(1);
-    else if (beat.sfx === "boss") sfx.playExplosion();
+    else if (beat.sfx === "boss") sfx.playBossRoar();
     else if (beat.sfx === "quest") sfx.playQuestComplete();
 
     // Update counter, progress bar & clickable beat pips
@@ -332,10 +332,16 @@ export class CutsceneModalUI {
     const beat = this.activeScene.beats[this.beatIdx];
     this.beatT += dt;
 
-    // Typewriter progression
+    // Typewriter progression + character-specific 16-bit JRPG voice blips
     if (this.typedChars < this.fullText.length) {
+      const prevWhole = Math.floor(this.typedChars);
       this.typedChars = Math.min(this.fullText.length, this.typedChars + dt * this.typeSpeed);
-      this.textEl.textContent = this.fullText.slice(0, Math.floor(this.typedChars));
+      const nextWhole = Math.floor(this.typedChars);
+      this.textEl.textContent = this.fullText.slice(0, nextWhole);
+      if (nextWhole > prevWhole) {
+        const ch = this.fullText[nextWhole - 1] ?? "a";
+        sfx.playNpcVoice(beat.speaker, ch, this.game.player?.classId ?? "prism_knight");
+      }
       if (this.typedChars >= this.fullText.length) {
         this._updateNextBtnLabel();
       }

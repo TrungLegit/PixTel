@@ -574,6 +574,13 @@
         </div>
         <div class="pause-actions">
           <button id="btn-pause-resume" class="px-btn primary">▶ TIẾP TỤC CHƠI</button>
+          <div class="pause-audio-box">
+            <div class="pause-audio-hdr">
+              <span id="pause-vol-label">🔊 ÂM LƯỢNG SFX: <b id="pause-vol-val">80%</b></span>
+              <button id="btn-pause-mute" class="px-btn sm" type="button">TẮT TIẾNG</button>
+            </div>
+            <input id="pause-vol-slider" class="pause-vol-slider" type="range" min="0" max="100" step="5" value="80" aria-label="Âm lượng hiệu ứng SFX" />
+          </div>
           <button id="btn-pause-coop" class="px-btn" style="border-color:#44ee88;color:#44ee88">🤝 TỔ ĐỘI CO-OP ONLINE [P]</button>
           <button id="btn-pause-help" class="px-btn" style="border-color:#ffe066;color:#ffe066">📖 CẨM NANG & COMBO [H]</button>
           <button id="btn-pause-save" class="px-btn good">💾 LƯU TIẾN TRÌNH</button>

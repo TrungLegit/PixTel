@@ -25,6 +25,7 @@ import {
   type UiAuraKind,
 } from "../vfx/uiRarityFx";
 import type { PixTelOpenWorldGame } from "../game";
+import { sfx } from "../audio/chiptuneSynth";
 
 const CAPE_LABELS: Record<string, string> = {
   cape_t1: "Khăn Choàng Du Mục",
@@ -246,6 +247,7 @@ export class ItemReviewTooltip {
       this.hide();
       return;
     }
+    sfx.playItemInspect(resolved.def.rarity);
 
     const { def, inst, isEquipped, sourceKind } = resolved;
 

@@ -272,8 +272,13 @@ export class ForgeModalUI {
       this.lastT = now;
 
       if (this.matrixPhase === "channeling") {
+        const prevStep = Math.floor(this.matrixProgress * 4);
         this.matrixRot += dt * 3.4;
         this.matrixProgress = Math.min(1, this.matrixProgress + dt / CHANNEL_DURATION);
+        const curStep = Math.floor(this.matrixProgress * 4);
+        if (curStep > prevStep && curStep < 4) {
+          sfx.playForgeHammer(curStep);
+        }
         if (Math.random() < 0.45 && PIXELFX_MODS["lightning/zap-hit"]) {
           const ang = Math.random() * Math.PI * 2;
           const r = (1 - this.matrixProgress) * 58 + 10;
@@ -763,7 +768,7 @@ export class ForgeModalUI {
         this.matrixPhase = "success";
         this.matrixTimer = 1.4;
         this._burstSparks(true);
-        sfx.playForgeSuccess();
+        sfx.playFateReroll();
         this.game.recalcPlayerStats(true);
         this.game.refreshHud();
         this.game.saveGame(false);
@@ -789,7 +794,7 @@ export class ForgeModalUI {
           this.matrixPhase = "success";
           this.matrixTimer = 1.4;
           this._burstSparks(true);
-          sfx.playForgeSuccess();
+          sfx.playForgeInfuse(elem);
           this.game.recalcPlayerStats(true);
           this.game.refreshHud();
           this.game.saveGame(false);

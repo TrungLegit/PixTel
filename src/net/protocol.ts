@@ -183,6 +183,9 @@ export type NetGamePacket =
       x: number;
       y: number;
       angle?: number;
+      sfxKind?: "slash" | "charge" | "skill" | "ult" | "dash";
+      classId?: ClassId;
+      element?: ElementType;
     }
   | {
       type: "ping_beacon";

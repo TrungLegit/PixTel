@@ -3,3 +3,6 @@ node_modules/
 dist/
 records/
 sheets/
+raw_sfx/*.wav
+raw_sfx/*.ogg
+raw_sfx/*.mp3

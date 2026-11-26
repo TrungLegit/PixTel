@@ -442,7 +442,7 @@ export class CombatSystem {
           scale: 0.78,
         });
       }
-      sfx.playSlash(step);
+      sfx.playClassAttack(player.classId, step, isFinisher);
       this._meleeArcHit(
         ctx,
         player.x,
@@ -482,7 +482,7 @@ export class CombatSystem {
                 ? "proj-void"
                 : "proj-poison";
       const { dmg, crit } = this._rollDamage(ctx, isFinisher ? 1.32 : 1.05, 0, true, undefined, true);
-      sfx.playMagic(step);
+      sfx.playClassAttack(player.classId, step, isFinisher);
       vfx.spawnPooled(ELEMENT_HIT_PRESET[elem], {
         x: wpPos.x,
         y: wpPos.y,
@@ -508,7 +508,7 @@ export class CombatSystem {
     }
 
     if (player.classId === "bit_rogue") {
-      sfx.playSlash(step);
+      sfx.playClassAttack(player.classId, step, isFinisher);
       const rogueElem: ElementType | undefined = isFinisher ? (bonusElem ?? "wind") : bonusElem;
       const defaultKind: HeroAttackKind = isFinisher ? "spin" : step === 0 ? "flurry_1" : "flurry_2";
       const animKind = this._pickWeaponComboAnim(player.classId, equippedWpnId, step, defaultKind);
@@ -633,7 +633,7 @@ export class CombatSystem {
       const animKind = this._pickWeaponComboAnim(player.classId, equippedWpnId, step, defaultKind);
       this._startAttackAnim(player, animKind, isFinisher || animKind === "recoil_barrage" ? 0.28 : 0.20, ang);
       const wpPos = this._weaponOrigin(player, ang, 14);
-      sfx.playShoot(isFinisher ? 880 : 720);
+      sfx.playClassAttack(player.classId, step, isFinisher);
       vfx.spawnPooled("muzzle-pistol", {
         x: wpPos.x,
         y: wpPos.y,
@@ -759,7 +759,11 @@ export class CombatSystem {
 
     const ang = player.aimAngle;
     this._syncFacingFromAngle(player, ang);
-    sfx.playChargeRelease();
+    if (ctx.inv.hasValidEquippedWeapon(player.classId)) {
+      sfx.playClassCharge(player.classId, justCharge);
+    } else {
+      sfx.playChargeRelease();
+    }
     ctx.addShake(justCharge ? 4.4 : 3.2);
     if (justCharge) {
       ctx.addHitstop(0.055);
@@ -1022,7 +1026,8 @@ export class CombatSystem {
     const wsId = ws?.id ?? "ws_shield_bash";
     const wpPos = this._weaponOrigin(player, ang, 13);
 
-    // Execute Weapon-Specific Skill!
+    // Execute Weapon-Specific Skill + Element-tinted 16-bit SFX!
+    sfx.playWeaponSkill(wsId, skillElem);
     this._executeWeaponSkill(ctx, wsId, ang, skillElem, wpPos);
 
     // Apply Exotic / Seasonal Skill-Altering Modifiers on [E]!
@@ -1778,6 +1783,7 @@ export class CombatSystem {
     player.overdrive = 0;
     player.bleachDebuffTime = 0;
     sfx.playOverdrive();
+    sfx.playClassUltimate(player.classId);
     ctx.addShake(5);
 
     // Every Ultimate [Q] unleashes a local Chroma Restoration burst!
@@ -2754,8 +2760,12 @@ export class CombatSystem {
 
     // Apply base aura when no reaction triggered
     if (incoming !== "prism") {
+      const wasSameAura = e.element === incoming && e.elementTime > 2.5;
       e.element = incoming;
       e.elementTime = 5.0;
+      if (!wasSameAura) {
+        sfx.playElementAura(incoming);
+      }
       if (incoming === "fire") e.burnTime = Math.max(e.burnTime, 3.2);
       else if (incoming === "ice") e.slowTime = Math.max(e.slowTime, 3.0);
       else if (incoming === "nature") e.poisonTime = Math.max(e.poisonTime, 3.6);
@@ -2791,6 +2801,7 @@ export class CombatSystem {
     const label = spec?.shortTag ?? "PHẢN ỨNG";
 
     e.hp -= dmg;
+    sfx.playReaction(a, b, fromPrism);
     ctx.onCoopReactionVfx?.({ x: e.x, y: e.y, tag: `${label}!`, color });
 
     if (pair === "fire+ice") {
@@ -4048,7 +4059,7 @@ export class CombatSystem {
           e.state = "aggro";
           e.alertTimer = 0.72;
           this._alertCampPack(ctx, e);
-          if (e.isBoss) sfx.playBossRoar();
+          if (e.isBoss) sfx.playBossPhaseRoar(e.defId, 1);
         }
       } else if (e.state === "aggro") {
         if ((player.stealthTime ?? 0) > 0 && !(ctx.coopTargets && ctx.coopTargets.length > 0)) {
@@ -5363,7 +5374,7 @@ export class CombatSystem {
         b.enrageBuffTime = 8.0;
         b.totemChannelTimer = 12.0;
         spawner.spawnEraserTotems(b.homeX, b.homeY, vfx, 2);
-        sfx.playBossRoar();
+        sfx.playBossPhaseRoar(b.defId, 2);
         ctx.notify(
           "THE ERASER vào PHASE 2! Đánh thắp sáng >= 2/4 Trụ Cơ Bản (Hỏa/Băng/Mộc/Lôi) trong 12s để bắn vỡ Khiên Vô Sắc!",
           "warn"
@@ -5374,7 +5385,7 @@ export class CombatSystem {
         b.enrageBuffTime = 10.0;
         b.totemChannelTimer = 12.0;
         spawner.spawnEraserTotems(b.homeX, b.homeY, vfx, 3);
-        sfx.playBossRoar();
+        sfx.playBossPhaseRoar(b.defId, 3);
         ctx.notify(
           "THE ERASER vào PHASE 3 NGUYÊN SINH! Thắp sáng >= 2 Trụ Nguyên Sinh (Hư Không/Sắc Độ/Gió/Chấn Động) để kích Đại Cộng Hưởng!",
           "epic"
@@ -5415,7 +5426,7 @@ export class CombatSystem {
       b.phase = 2;
       b.bleachShield = b.maxBleachShield;
       b.enrageBuffTime = 9.0; // Stripped by Void / Void Flare Burst!
-      sfx.playBossRoar();
+      sfx.playBossPhaseRoar(b.defId, 2);
       ctx.notify(
         `${ENEMIES[b.defId]?.name ?? "BOSS"} vào GIAI ĐOẠN 2 (Cuồng Nộ & Giáp Trắng)! Dùng Chấn Động / Quá Tải phá giáp hoặc Hư Không xóa buff!`,
         "warn"
@@ -5441,6 +5452,7 @@ export class CombatSystem {
 
       if (ai === "boss_warden") {
         // Hộ Vệ Cổ Thụ: Cầu Lục Bảo fired from chest heart!
+        sfx.playBossSkill("barrage");
         this._startEnemyAnim(b, "emerald_orb", 0.54, toPlayerAng);
         const count = enraged ? 5 : 3;
         const mid = Math.floor(count / 2);
@@ -5473,6 +5485,7 @@ export class CombatSystem {
         }
       } else if (ai === "boss_root") {
         // Rồng Lăng Kính: Hơi Thở Lăng Kính (Prism Breath Beam + crackling lightning + crystal spread)!
+        sfx.playBossSkill("beam");
         this._startEnemyAnim(b, "prism_breath", 0.78, toPlayerAng);
         const offX = Math.cos(toPlayerAng) * 14;
         const offY = -22 + Math.sin(toPlayerAng) * 8;
@@ -5521,6 +5534,7 @@ export class CombatSystem {
         // CHÚA TỂ HỔ PHÁCH (boss_gilded_null): Kẹp Càng Dung Nham / Mưa Mảnh Hổ Phách!
         const alt = (b.skillCycle++) & 1;
         if (alt === 0) {
+          sfx.playBossSkill("slam");
           this._startEnemyAnim(b, "claw_clamp", 0.56, toPlayerAng);
           b.dashTime = 0.26;
           b.dashVx = Math.cos(toPlayerAng) * 195;
@@ -5564,6 +5578,7 @@ export class CombatSystem {
             });
           }
         } else {
+          sfx.playBossSkill("barrage");
           this._startEnemyAnim(b, "ember_volley", 0.54, toPlayerAng, true);
           vfx.spawnPooled("explode-fire", { x: b.x, y: b.y - 16, scale: 0.92 });
           const count = enraged ? 8 : 6;
@@ -5593,6 +5608,7 @@ export class CombatSystem {
         const alt = (b.skillCycle++) & 1;
         if (alt === 0) {
           // Quét Xóa Sắc Màu: wide color-erasing crescent wave + void volley!
+          sfx.playBossSkill("glitch");
           this._startEnemyAnim(b, "void_barrage", 0.58, toPlayerAng);
           const dir = this._toDirectionalVfx(toPlayerAng, 0.65);
           const offX = Math.cos(toPlayerAng) * 12;
@@ -5634,6 +5650,7 @@ export class CombatSystem {
           }
         } else {
           // Tia Tẩy Trắng: blinding white-violet eraser beam!
+          sfx.playBossSkill("beam");
           this._startEnemyAnim(b, "thin_laser", 0.78, toPlayerAng);
           const beamAng = toPlayerAng + disruptJitter;
           const offX = Math.cos(beamAng) * 14;
@@ -5670,6 +5687,7 @@ export class CombatSystem {
         // Hộ Vệ Cổ Thụ: Rễ Trồi Mặt Đất / Bão Lá Cổ Thụ!
         const alt = (b.skillCycle++) & 1;
         if (alt === 0) {
+          sfx.playBossSkill("telegraph");
           this._startEnemyAnim(b, "ground_roots", 0.68, toPlayerAng);
           for (let k = 0; k < (enraged ? 4 : 3); k++) {
             const tx = b.x + Math.cos(toPlayerAng) * (32 + k * 28);
@@ -5697,6 +5715,7 @@ export class CombatSystem {
             });
           }
         } else {
+          sfx.playBossSkill("slam");
           this._startEnemyAnim(b, "leaf_storm", 0.85, toPlayerAng, true);
           vfx.spawnLive("pixtel/leaf-storm", {
             x: b.x,
@@ -5713,6 +5732,7 @@ export class CombatSystem {
         // Rồng Lăng Kính: Mưa Mảnh Khúc Xạ / Bão Cầu Vồng Tinh Thể!
         const alt = (b.skillCycle++) & 1;
         if (alt === 0) {
+          sfx.playBossSkill("telegraph");
           this._startEnemyAnim(b, "refract_rain", 0.72, toPlayerAng);
           vfx.spawnPooled("ice-nova", { x: b.x, y: b.y - 4, scale: 0.85 });
           for (let k = 0; k < (enraged ? 4 : 3); k++) {
@@ -5741,6 +5761,7 @@ export class CombatSystem {
             });
           }
         } else {
+          sfx.playBossSkill("summon");
           this._startEnemyAnim(b, "rainbow_storm", 0.9, toPlayerAng, true);
           vfx.spawnLive("pixtel/rainbow-burst", {
             x: b.x,
@@ -5785,6 +5806,7 @@ export class CombatSystem {
         // CHÚA TỂ HỔ PHÁCH (boss_gilded_null): Mưa Mảnh Hổ Phách / Vùng Trói Nhựa Sôi!
         const alt = (b.skillCycle++) & 1;
         if (alt === 0) {
+          sfx.playBossSkill("telegraph");
           this._startEnemyAnim(b, "shard_rain", 0.78, toPlayerAng, true);
           vfx.spawnPooled("explode-fire", { x: b.x, y: b.y - 16, scale: 0.92 });
           for (let k = 0; k < (enraged ? 4 : 3); k++) {
@@ -5815,6 +5837,7 @@ export class CombatSystem {
           }
         } else {
           // Vùng Trói Nhựa Sôi: molten slam + boiling amber resin pools!
+          sfx.playBossSkill("slam");
           this._startEnemyAnim(b, "molten_slam", 0.82, toPlayerAng);
           vfx.spawnLive("pixtel/boss-telegraph", {
             x: b.x,
@@ -5859,6 +5882,7 @@ export class CombatSystem {
         }
       } else {
         // World Boss THE ERASER: Bão Nhiễu Toàn Sàn (Floor Erase Zones + Glitch Lightning + Cross Lasers!)
+        sfx.playBossSkill("glitch");
         this._startEnemyAnim(b, "erase_cast", 0.88, toPlayerAng, true);
         vfx.spawnLive("pixtel/prism-storm", {
           x: b.x,

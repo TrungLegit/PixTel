@@ -9,6 +9,7 @@ import {
   type WsServerToClientMsg,
 } from "./protocol";
 import { DEFAULT_HERO_NAME, sanitizePlayerName } from "../utils/playerName";
+import { sfx, type SpatialSfxKind } from "../audio/chiptuneSynth";
 
 export type CoopConnectionStatus = "offline" | "connecting" | "connected" | "error";
 
@@ -37,6 +38,7 @@ const PEER_ROOM_PREFIX = "pixtel-coop-v27-";
  * Dual-Transport Co-op Network Manager:
  * 1. `webrtc` (Default on HTTPS / GitHub Pages): Serverless P2P DataChannels via PeerJS Cloud using a 6-char Room Code!
  * 2. `ws` (Dedicated Node Server `server/coopServer.ts`): Ultra-low-latency WebSocket Room Relay (`ws://` or `wss://`).
+ * Includes automatic 2D Spatial Audio attenuation & stereo panning for incoming teammate packets!
  */
 export class CoopClient {
   mode: CoopTransportMode = "webrtc";
@@ -51,6 +53,8 @@ export class CoopClient {
 
   private cb: CoopClientCallbacks;
   private wsFactory: WebSocketFactory;
+  private listenerPosProvider: (() => { x: number; y: number } | null) | null = null;
+  private peerStepState = new Map<string, { walkStep: number; animState: string }>();
 
   // WebRTC PeerJS state
   private peer: Peer | null = null;
@@ -65,6 +69,62 @@ export class CoopClient {
     this.wsFactory =
       customWsFactory ??
       ((url: string) => new WebSocket(url) as unknown as WebSocketLike);
+  }
+
+  /** Registers local player world coordinates so incoming Co-op packets play distance-attenuated spatial SFX. */
+  setListenerPositionProvider(provider: (() => { x: number; y: number } | null) | null) {
+    this.listenerPosProvider = provider;
+  }
+
+  private _emitPeerPacket(fromId: string, pkt: NetGamePacket) {
+    const listener = this.listenerPosProvider?.();
+    if (listener) {
+      if (pkt.type === "hero_fx" && pkt.playerId !== this.localId) {
+        const inferredKind: SpatialSfxKind =
+          pkt.sfxKind ??
+          (pkt.preset.includes("legendary")
+            ? "ult"
+            : pkt.preset.includes("crit")
+              ? "charge"
+              : pkt.preset.includes("zap")
+                ? "skill"
+                : pkt.preset.includes("poof")
+                  ? "dash"
+                  : "slash");
+        sfx.playSpatialSfx(inferredKind, listener.x, listener.y, pkt.x, pkt.y, {
+          classId: pkt.classId,
+          element: pkt.element,
+        });
+      } else if (pkt.type === "ping_beacon" && pkt.playerId !== this.localId) {
+        sfx.playSpatialSfx("ping", listener.x, listener.y, pkt.x, pkt.y, { maxDist: 900 });
+      } else if (pkt.type === "waypoint_unlocked") {
+        sfx.playSpatialSfx("waypoint", listener.x, listener.y, pkt.wx, pkt.wy, { maxDist: 720 });
+      } else if (pkt.type === "reaction_vfx" && !this.isHost) {
+        sfx.playSpatialSfx("reaction", listener.x, listener.y, pkt.x, pkt.y);
+      } else if (pkt.type === "enemy_killed" && !this.isHost) {
+        sfx.playSpatialSfx(
+          pkt.isBoss ? "boss_roar" : "explosion",
+          listener.x,
+          listener.y,
+          pkt.x,
+          pkt.y,
+          { bossDefId: pkt.defId }
+        );
+      } else if (pkt.type === "player_state" && pkt.player.id !== this.localId) {
+        const rp = pkt.player;
+        const prev = this.peerStepState.get(rp.id);
+        const curStep = Math.floor(rp.walkTime * 0.75);
+        if (rp.animState === "dash" && prev?.animState !== "dash") {
+          sfx.playSpatialSfx("dash", listener.x, listener.y, rp.x, rp.y, { classId: rp.classId });
+        } else if (rp.animState === "run" && prev && curStep !== prev.walkStep) {
+          sfx.playSpatialSfx("footstep", listener.x, listener.y, rp.x, rp.y, { maxDist: 280 });
+        }
+        this.peerStepState.set(rp.id, { walkStep: curStep, animState: rp.animState });
+      } else if (pkt.type === "peer_left") {
+        this.peerStepState.delete(pkt.playerId);
+      }
+    }
+    this.cb.onPacket(fromId, pkt);
   }
 
   get isConnected(): boolean {
@@ -204,6 +264,7 @@ export class CoopClient {
     this.isHost = false;
     this.hostId = "";
     this.roomCode = "";
+    this.peerStepState.clear();
     if (wasConnected) {
       this._setStatus("offline", "Đã rời phòng Co-op.");
     }
@@ -265,13 +326,14 @@ export class CoopClient {
         } else if (msg.op === "peer_joined") {
           this.cb.onPeerJoined(msg.clientId);
         } else if (msg.op === "peer_left") {
+          this.peerStepState.delete(msg.clientId);
           this.hostId = msg.newHostId;
           if (msg.newHostId === this.localId) {
             this.isHost = true;
           }
           this.cb.onPeerLeft(msg.clientId);
         } else if (msg.op === "relay") {
-          this.cb.onPacket(msg.fromId, msg.packet);
+          this._emitPeerPacket(msg.fromId, msg.packet);
         } else if (msg.op === "error") {
           this._setStatus("error", msg.message);
           if (!settled) {
@@ -340,7 +402,7 @@ export class CoopClient {
         conn.on("data", (raw) => {
           const pkt = raw as NetGamePacket;
           if (!pkt || typeof pkt !== "object" || !("type" in pkt)) return;
-          this.cb.onPacket(conn.peer, pkt);
+          this._emitPeerPacket(conn.peer, pkt);
           // Relay common broadcast events from one Guest to other Guests!
           if (
             pkt.type === "player_state" ||
@@ -357,6 +419,7 @@ export class CoopClient {
         });
         const cleanup = () => {
           if (this.guestConns.delete(conn.peer)) {
+            this.peerStepState.delete(conn.peer);
             this.cb.onPeerLeft(conn.peer);
             for (const c of this.guestConns.values()) {
               if (c.open) c.send({ type: "peer_left", playerId: conn.peer } satisfies NetGamePacket);
@@ -424,7 +487,7 @@ export class CoopClient {
         conn.on("data", (raw) => {
           const pkt = raw as NetGamePacket;
           if (!pkt || typeof pkt !== "object" || !("type" in pkt)) return;
-          this.cb.onPacket(hostPeerId, pkt);
+          this._emitPeerPacket(hostPeerId, pkt);
         });
 
         conn.on("close", () => {

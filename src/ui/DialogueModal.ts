@@ -27,6 +27,8 @@ export class DialogueModalUI {
   private bodyEl: HTMLElement;
   private titleEl: HTMLElement;
   private currentNpcId = "npc_elder";
+  private typeTimer = 0;
+  private animateGreetingOnce = false;
 
   constructor(game: PixTelOpenWorldGame) {
     this.game = game;
@@ -46,22 +48,36 @@ export class DialogueModalUI {
     });
   }
 
+  private _stopTypewriter() {
+    if (this.typeTimer) {
+      window.clearInterval(this.typeTimer);
+      this.typeTimer = 0;
+    }
+  }
+
   show(npcId: string) {
+    this._stopTypewriter();
     this.currentNpcId = npcId;
+    this.animateGreetingOnce = true;
     this.root.classList.remove("hidden");
+    sfx.playNpcVoice(npcId, "a", this.game.player.classId);
     this.render();
   }
 
   hide() {
+    this._stopTypewriter();
     this.root.classList.add("hidden");
   }
 
   render() {
+    this._stopTypewriter();
     const npc = TOWN_NPCS.find((n) => n.id === this.currentNpcId) ?? TOWN_NPCS[0];
     this.titleEl.innerHTML = `<span style="color:${npc.accent}">${npc.name}</span> <small>— ${npc.role}</small>`;
 
     const heroName = sanitizePlayerName(this.game.player.name || this.game.pendingPlayerName, DEFAULT_HERO_NAME);
-    let html = `<div class="npc-speech">Chào <b style="color:#ffe066">${heroName}</b>! "${npc.greeting}"</div>`;
+    const shouldType = this.animateGreetingOnce;
+    this.animateGreetingOnce = false;
+    let html = `<div class="npc-speech" id="dialogue-speech-box" title="Nhấn để hiện nhanh lời thoại">Chào <b style="color:#ffe066">${heroName}</b>! "<span id="dialogue-greeting-text">${shouldType ? "" : npc.greeting}</span>"</div>`;
 
     // Blacksmith Forge launch button
     if (npc.kind === "blacksmith") {
@@ -219,6 +235,33 @@ export class DialogueModalUI {
     }
 
     this.bodyEl.innerHTML = html;
+
+    if (shouldType) {
+      const greetEl = this.bodyEl.querySelector<HTMLElement>("#dialogue-greeting-text");
+      const speechBox = this.bodyEl.querySelector<HTMLElement>("#dialogue-speech-box");
+      if (greetEl) {
+        const full = npc.greeting;
+        let idx = 0;
+        const finishNow = () => {
+          this._stopTypewriter();
+          greetEl.textContent = full;
+        };
+        speechBox?.addEventListener("click", finishNow, { once: true });
+        this.typeTimer = window.setInterval(() => {
+          if (this.root.classList.contains("hidden")) {
+            this._stopTypewriter();
+            return;
+          }
+          idx = Math.min(full.length, idx + 2);
+          greetEl.textContent = full.slice(0, idx);
+          const ch = full[idx - 1] ?? "a";
+          sfx.playNpcVoice(npc.id, ch, this.game.player.classId);
+          if (idx >= full.length) {
+            this._stopTypewriter();
+          }
+        }, 28);
+      }
+    }
 
     // Paint codixel icons & attach live pixelfx high-rarity slot auras
     uiRarityFx.syncContainer(this.bodyEl);

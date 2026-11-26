@@ -1,0 +1,155 @@
+{
+  "version": 1,
+  "sampleRate": 22050,
+  "channels": 1,
+  "targetDbfs": -3.0,
+  "bitrate": "64k",
+  "totalOggBytes": 108289,
+  "totalMp3Bytes": 58999,
+  "clips": {
+    "boss_roar_blight": {
+      "id": "boss_roar_blight",
+      "ogg": "./sfx/boss_roar_blight.ogg",
+      "mp3": "./sfx/boss_roar_blight.mp3",
+      "durationMs": 640,
+      "peakDbfs": -3.0,
+      "oggBytes": 9072,
+      "mp3Bytes": 5895
+    },
+    "boss_roar_eraser": {
+      "id": "boss_roar_eraser",
+      "ogg": "./sfx/boss_roar_eraser.ogg",
+      "mp3": "./sfx/boss_roar_eraser.mp3",
+      "durationMs": 720,
+      "peakDbfs": -3.0,
+      "oggBytes": 9905,
+      "mp3Bytes": 6522
+    },
+    "boss_roar_gilded": {
+      "id": "boss_roar_gilded",
+      "ogg": "./sfx/boss_roar_gilded.ogg",
+      "mp3": "./sfx/boss_roar_gilded.mp3",
+      "durationMs": 650,
+      "peakDbfs": -3.0,
+      "oggBytes": 9436,
+      "mp3Bytes": 5895
+    },
+    "boss_roar_warden": {
+      "id": "boss_roar_warden",
+      "ogg": "./sfx/boss_roar_warden.ogg",
+      "mp3": "./sfx/boss_roar_warden.mp3",
+      "durationMs": 620,
+      "peakDbfs": -3.0,
+      "oggBytes": 8824,
+      "mp3Bytes": 5686
+    },
+    "chest_open": {
+      "id": "chest_open",
+      "ogg": "./sfx/chest_open.ogg",
+      "mp3": "./sfx/chest_open.mp3",
+      "durationMs": 580,
+      "peakDbfs": -3.0,
+      "oggBytes": 8803,
+      "mp3Bytes": 5477
+    },
+    "coop_ping": {
+      "id": "coop_ping",
+      "ogg": "./sfx/coop_ping.ogg",
+      "mp3": "./sfx/coop_ping.mp3",
+      "durationMs": 320,
+      "peakDbfs": -3.0,
+      "oggBytes": 5271,
+      "mp3Bytes": 3387
+    },
+    "forge_anvil": {
+      "id": "forge_anvil",
+      "ogg": "./sfx/forge_anvil.ogg",
+      "mp3": "./sfx/forge_anvil.mp3",
+      "durationMs": 380,
+      "peakDbfs": -3.0,
+      "oggBytes": 6754,
+      "mp3Bytes": 3805
+    },
+    "mine_break": {
+      "id": "mine_break",
+      "ogg": "./sfx/mine_break.ogg",
+      "mp3": "./sfx/mine_break.mp3",
+      "durationMs": 340,
+      "peakDbfs": -3.0,
+      "oggBytes": 6964,
+      "mp3Bytes": 3596
+    },
+    "mine_hit": {
+      "id": "mine_hit",
+      "ogg": "./sfx/mine_hit.ogg",
+      "mp3": "./sfx/mine_hit.mp3",
+      "durationMs": 150,
+      "peakDbfs": -3.0,
+      "oggBytes": 5035,
+      "mp3Bytes": 1924
+    },
+    "step_amber": {
+      "id": "step_amber",
+      "ogg": "./sfx/step_amber.ogg",
+      "mp3": "./sfx/step_amber.mp3",
+      "durationMs": 115,
+      "peakDbfs": -3.0,
+      "oggBytes": 4933,
+      "mp3Bytes": 1715
+    },
+    "step_meadow": {
+      "id": "step_meadow",
+      "ogg": "./sfx/step_meadow.ogg",
+      "mp3": "./sfx/step_meadow.mp3",
+      "durationMs": 110,
+      "peakDbfs": -3.0,
+      "oggBytes": 4973,
+      "mp3Bytes": 1715
+    },
+    "step_quartz": {
+      "id": "step_quartz",
+      "ogg": "./sfx/step_quartz.ogg",
+      "mp3": "./sfx/step_quartz.mp3",
+      "durationMs": 120,
+      "peakDbfs": -3.0,
+      "oggBytes": 4881,
+      "mp3Bytes": 1715
+    },
+    "step_ruins": {
+      "id": "step_ruins",
+      "ogg": "./sfx/step_ruins.ogg",
+      "mp3": "./sfx/step_ruins.mp3",
+      "durationMs": 135,
+      "peakDbfs": -3.0,
+      "oggBytes": 5014,
+      "mp3Bytes": 1924
+    },
+    "step_town": {
+      "id": "step_town",
+      "ogg": "./sfx/step_town.ogg",
+      "mp3": "./sfx/step_town.mp3",
+      "durationMs": 95,
+      "peakDbfs": -3.0,
+      "oggBytes": 4666,
+      "mp3Bytes": 1506
+    },
+    "step_water": {
+      "id": "step_water",
+      "ogg": "./sfx/step_water.ogg",
+      "mp3": "./sfx/step_water.mp3",
+      "durationMs": 135,
+      "peakDbfs": -3.0,
+      "oggBytes": 5118,
+      "mp3Bytes": 1924
+    },
+    "waypoint_chime": {
+      "id": "waypoint_chime",
+      "ogg": "./sfx/waypoint_chime.ogg",
+      "mp3": "./sfx/waypoint_chime.mp3",
+      "durationMs": 680,
+      "peakDbfs": -3.0,
+      "oggBytes": 8640,
+      "mp3Bytes": 6313
+    }
+  }
+}
